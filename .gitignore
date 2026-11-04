@@ -3,6 +3,7 @@ node_modules
 
 # next.js
 .next
+.next-e2e
 out
 build
 next-env.d.ts
@@ -26,3 +27,4 @@ coverage
 playwright-report
 test-results
 credentials.local.txt
+e2e/.auth
