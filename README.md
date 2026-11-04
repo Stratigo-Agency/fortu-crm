@@ -17,7 +17,23 @@ npm run dev
 
 Open http://localhost:3000. You land on the sign-in page (`/masuk`) until Google sign-in is set up (below).
 
+## Email and password sign-in
+
+Until the team's work addresses have Google accounts, people sign in with email and password.
+Only users registered in `users` can sign in, and only a hash is stored in the database.
+
+```bash
+npm run db:seed                                          # registers users from db/seeds/*.sql
+npm run db:set-password -- rudy@fortu.co.id verry@fortu.co.id
+```
+
+The script sets a random password per user and writes them to `credentials.local.txt` (gitignored).
+Give each person their line, then delete the file. To choose one password: `--password '<password>'`.
+Real team users live in `db/seeds/90_users.local.sql` (gitignored), shaped like `90_users.example.sql`.
+
 ## Google sign-in
+
+Optional. The "Masuk dengan Google" button shows only when `AUTH_GOOGLE_ID` is set.
 
 Only people with an active row in `users` can sign in. Nobody self-registers.
 
@@ -39,6 +55,7 @@ Only people with an active row in `users` can sign in. Nobody self-registers.
 | --- | --- |
 | `npm run db:up` | Starts the `fortu-pg` container (Postgres 16, password `dev`). Does nothing if it already runs. |
 | `npm run db:migrate` | Applies new files in `db/migrations/` in order and records them in `schema_migrations`. |
+| `npm run db:set-password -- <email>...` | Sets random passwords (hash in the database, text in `credentials.local.txt`). |
 | `npm run db:seed` | Runs `db/seeds/*.sql` (safe to repeat): example users, products, and your `*.local.sql` seeds, which stay out of git. |
 | `npm run db:test:reset` | Recreates the `fortu_test` database and migrates it. `npm test` does this once per run. |
 | `npm test` | Vitest (uses `DATABASE_URL_TEST`). |
