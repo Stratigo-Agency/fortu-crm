@@ -3,7 +3,15 @@ import { InvalidPhoneError } from "@/lib/ingest/errors";
 import { formatPhone, normalizePhone } from "@/lib/ingest/phone";
 
 describe("normalizePhone", () => {
-  it.each(["0812-3456-7890", "62812 3456 7890", "+62 812-3456-7890", "812 3456 7890", "(0812) 3456.7890"])(
+  it.each([
+    "0812-3456-7890",
+    "62812 3456 7890",
+    "+62 812-3456-7890",
+    "812 3456 7890",
+    "(0812) 3456.7890",
+    "+62 (0)812-3456-7890",
+    "62 0812 3456 7890",
+  ])(
     "%s → +6281234567890",
     (input) => expect(normalizePhone(input)).toBe("+6281234567890"),
   );

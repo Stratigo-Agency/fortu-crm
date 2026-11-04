@@ -10,6 +10,8 @@ export function normalizePhone(input: string): string {
   let digits = input.replace(/\D/g, "");
   if (digits.startsWith("0")) digits = `62${digits.slice(1)}`;
   else if (digits.startsWith("8")) digits = `62${digits}`;
+  // "+62 (0)812…" / "62 0812…": the trunk 0 doesn't belong after the country code.
+  if (digits.startsWith("620")) digits = `62${digits.slice(3)}`;
   const e164 = `+${digits}`;
   if (!E164_ID.test(e164)) throw new InvalidPhoneError(input);
   return e164;
