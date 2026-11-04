@@ -7,10 +7,12 @@ import { sql } from "@/lib/db";
 export const SALES_COOKIE = "crm_sales";
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** The owner id a cookie value stands for, or null for all sales (also for unknown or inactive users). */
+/** The owner id a cookie value stands for, or null for all sales (also for anyone the filter doesn't list). */
 export async function resolveSalesFilter(value: string | null | undefined): Promise<string | null> {
   if (!value || value === "all" || !UUID.test(value)) return null;
-  const [row] = await sql<{ id: string }[]>`SELECT id FROM users WHERE id = ${value} AND is_active`;
+  // Exactly the people salesOptions() lists, so the select always shows what is applied.
+  const [row] = await sql<{ id: string }[]>`
+    SELECT id FROM users WHERE id = ${value} AND is_active AND role IN ('sales_rep', 'sales_lead')`;
   return row?.id ?? null;
 }
 

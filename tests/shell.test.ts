@@ -52,6 +52,10 @@ describe("resolveSalesFilter", () => {
     const gone = await createUser({ isActive: false });
     expect(await resolveSalesFilter(rep.id)).toBe(rep.id);
     expect(await resolveSalesFilter(gone.id)).toBeNull();
+    const ceo = await createUser({ role: "ceo" });
+    expect(await resolveSalesFilter(ceo.id)).toBeNull();
+    const lead = await createUser({ role: "sales_lead" });
+    expect(await resolveSalesFilter(lead.id)).toBe(lead.id);
     expect(await resolveSalesFilter("00000000-0000-0000-0000-000000000000")).toBeNull();
     expect(await resolveSalesFilter("all")).toBeNull();
     expect(await resolveSalesFilter("'; drop table users; --")).toBeNull();
