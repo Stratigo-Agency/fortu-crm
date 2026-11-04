@@ -10,7 +10,8 @@
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "db:up": "node scripts/db-up.mjs",
     "db:seed": "node --env-file-if-exists=.env.local scripts/seed.mjs",
-    "db:test:reset": "node --env-file-if-exists=.env.local scripts/test-db-reset.mjs"
+    "db:test:reset": "node --env-file-if-exists=.env.local scripts/test-db-reset.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "next": "16.4.5",
@@ -26,7 +27,8 @@
     "eslint": "9.39.5",
     "eslint-config-next": "16.4.5",
     "tailwindcss": "4.3.4",
-    "typescript": "5.9.3"
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
   },
   "engines": {
     "node": ">=24"
