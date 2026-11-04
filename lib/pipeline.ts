@@ -1,7 +1,17 @@
-import { sql } from "@/lib/db";
-import type { Column, DealCard } from "@/lib/pipelineTypes";
+import type { SessionUser } from "@/lib/auth";
+import { assertCanEditDeal, ForbiddenError } from "@/lib/authz";
+import { pgError, sql } from "@/lib/db";
+import {
+  type Column,
+  type DealCard,
+  type MoveResult,
+  STAGE_KEYS,
+  STAGE_RULES,
+  type StageKey,
+  type StageRule,
+} from "@/lib/pipelineTypes";
 
-// Reads for /pipeline. Numbers come from SQL (v_pipeline_summary_by_owner and
+// Reads and the stage move for /pipeline. Numbers come from SQL (v_pipeline_summary_by_owner and
 // aggregates over v_pipeline_board), never from sums in components (CLAUDE.md rule 5).
 
 export type PipelineStats = {
@@ -104,4 +114,73 @@ export async function boardCards(f: BoardFilter, limit = 500): Promise<DealCard[
               CASE WHEN b.is_won OR b.is_lost THEN NULL ELSE b.next_step_date END ASC NULLS LAST,
               b.closed_on DESC NULLS LAST, b.updated_at DESC, b.id
      LIMIT ${limit}`;
+}
+
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A stage key that isn't one of pipeline_stages. */
+export class UnknownStageError extends Error {
+  readonly code = "unknown_stage";
+  constructor(key: string) {
+    super(`Unknown stage ${key}`);
+  }
+}
+
+type Actor = Pick<SessionUser, "id">;
+export type Restore = { nextStep?: string | null; nextStepDate?: string | null };
+
+/**
+ * Moves a deal to another stage as the actor (CLAUDE.md rules 3, 4, 11):
+ * assertCanEditDeal first, then in one transaction `SET LOCAL app.user_id` (the stage history
+ * records who) and an UPDATE that repeats can_edit_deal in its WHERE. The stage rules live in the
+ * database trigger; its `stage_rule:<key>` error comes back as { ok: false, rule }.
+ * `restore` is for undo: it puts back a next step that a move to Done deal or Lost cleared.
+ */
+export async function moveDeal(
+  actor: Actor,
+  dealId: string,
+  toKey: string,
+  restore?: Restore,
+): Promise<MoveResult> {
+  if (!(STAGE_KEYS as readonly string[]).includes(toKey)) throw new UnknownStageError(toKey);
+  if (!UUID.test(dealId)) throw new ForbiddenError();
+  await assertCanEditDeal(actor, dealId);
+  const nextStep = restore?.nextStep?.trim().slice(0, 200) || null;
+  const nextStepDate = restore?.nextStepDate && DATE.test(restore.nextStepDate) ? restore.nextStepDate : null;
+
+  try {
+    return await sql.begin(async (tx) => {
+      await tx`SELECT set_config('app.user_id', ${actor.id}, true)`; // = SET LOCAL app.user_id
+      const [before] = await tx<{ key: StageKey; next_step: string | null; next_step_date: string | null }[]>`
+        SELECT s.key, d.next_step, to_char(d.next_step_date, 'YYYY-MM-DD') AS next_step_date
+          FROM deals d JOIN pipeline_stages s ON s.id = d.stage_id
+         WHERE d.id = ${dealId} FOR UPDATE OF d`;
+      if (!before) throw new ForbiddenError();
+      const previous = { nextStep: before.next_step, nextStepDate: before.next_step_date };
+      if (before.key === toKey) return { ok: true as const, from: before.key, previous };
+
+      const rows = await tx`
+        UPDATE deals
+           SET stage_id = (SELECT id FROM pipeline_stages WHERE key = ${toKey}),
+               next_step = COALESCE(next_step, ${nextStep}),
+               next_step_date = COALESCE(next_step_date, ${nextStepDate}::date)
+         WHERE id = ${dealId} AND can_edit_deal(${actor.id}, id)
+        RETURNING id`;
+      if (rows.length === 0) throw new ForbiddenError();
+      return { ok: true as const, from: before.key, previous };
+    });
+  } catch (err) {
+    const rule = stageRuleOf(err);
+    if (rule) return { ok: false, rule };
+    throw err;
+  }
+}
+
+/** "stage_rule:products" from the trg_deal_stage trigger → "products". */
+export function stageRuleOf(err: unknown): StageRule | null {
+  const pg = pgError(err);
+  if (!pg) return null;
+  const m = /^stage_rule:(\w+)/.exec(pg.message);
+  return m && (STAGE_RULES as readonly string[]).includes(m[1]) ? (m[1] as StageRule) : null;
 }
