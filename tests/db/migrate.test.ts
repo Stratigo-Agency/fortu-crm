@@ -19,6 +19,7 @@ const MIGRATIONS = [
   "002_routing_products.sql",
   "003_bahasa_targets_authz.sql",
   "004_jovian_flow.sql",
+  "005_password_login.sql",
 ];
 
 describe("migrations", () => {
