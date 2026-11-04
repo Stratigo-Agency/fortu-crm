@@ -5,6 +5,8 @@ import { refreshToken, signInGate } from "@/lib/auth";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
   session: { strategy: "jwt" },
+  // A refused sign-in comes back as /masuk?error=AccessDenied.
+  pages: { signIn: "/masuk", error: "/masuk" },
   callbacks: {
     signIn: ({ profile }) => signInGate(profile),
     jwt: ({ token, profile }) => refreshToken(token, profile),
