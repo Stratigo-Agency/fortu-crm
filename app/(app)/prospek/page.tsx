@@ -6,7 +6,8 @@ import { relTime } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { listProspects, PAGE_SIZE, parseLimit, parseTab, type ProspekRow, type ProspekTab, prospekStats } from "@/lib/prospek";
 import { prospekHref } from "@/lib/prospekHref";
-import { getSalesFilter } from "@/lib/salesFilter";
+import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
+import { LeadActions } from "./LeadActions";
 
 const COLS = "md:grid-cols-[1.2fr_2.2fr_1.5fr_0.6fr_0.9fr_0.7fr_1.4fr]";
 
@@ -28,9 +29,12 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
   const limit = parseLimit(params.limit);
   const ownerId = await getSalesFilter();
 
-  const [{ rows, hasMore }, stats] = await Promise.all([
+  // Only sales leads, the CEO and admins hand leads to someone else.
+  const canReassign = user.role === "sales_lead" || user.role === "ceo" || user.role === "admin";
+  const [{ rows, hasMore }, stats, owners] = await Promise.all([
     listProspects({ viewerId: user.id, ownerId, tab, q, limit }),
     prospekStats(ownerId),
+    canReassign ? salesOptions() : Promise.resolve([]),
   ]);
 
   return (
@@ -103,7 +107,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
             </div>
             <ul>
               {rows.map((row) => (
-                <Row key={row.id} row={row} />
+                <Row key={row.id} row={row} canReassign={canReassign} owners={owners} />
               ))}
             </ul>
           </>
@@ -148,7 +152,15 @@ function TabLink({ tab, current, q, label }: { tab: ProspekTab; current: Prospek
   );
 }
 
-function Row({ row }: { row: ProspekRow }) {
+function Row({
+  row,
+  canReassign,
+  owners,
+}: {
+  row: ProspekRow;
+  canReassign: boolean;
+  owners: { id: string; full_name: string }[];
+}) {
   const code = row.ad_code ?? (row.click_code ? `#${row.click_code}` : null);
   return (
     <li className={`grid gap-x-4 gap-y-2 border-t border-line px-5 py-4 md:items-start ${COLS}`}>
@@ -175,12 +187,22 @@ function Row({ row }: { row: ProspekRow }) {
       </div>
       <div className="flex items-center gap-2">
         {row.can_edit ? (
-          <Link
-            href={`/pipeline?fromLead=${row.id}`}
-            className="flex h-11 items-center rounded-sm bg-navy px-4 font-bold text-white md:h-10"
-          >
-            {t("prospek.toDeal")}
-          </Link>
+          <>
+            <Link
+              href={`/pipeline?fromLead=${row.id}`}
+              className="flex h-11 items-center rounded-sm bg-navy px-4 font-bold text-white md:h-10"
+            >
+              {t("prospek.toDeal")}
+            </Link>
+            <LeadActions
+              leadId={row.id}
+              name={row.contact_name ?? formatPhone(row.phone_e164)}
+              isNew={row.status === "new"}
+              canReassign={canReassign}
+              currentOwnerId={row.owner_user_id}
+              owners={owners}
+            />
+          </>
         ) : (
           <span className="flex items-center gap-2 text-slate">
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
