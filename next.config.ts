@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Railway runs `node .next/standalone/server.js` (see railway.json).
+  output: "standalone",
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {

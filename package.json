@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "postbuild": "node scripts/copy-standalone-assets.mjs",
+    "start": "node .next/standalone/server.js",
     "lint": "eslint",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "db:up": "node scripts/db-up.mjs",
