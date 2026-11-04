@@ -206,7 +206,15 @@
     "toDeal": "Jadikan deal",
     "notFit": "Tidak cocok",
     "moreActions": "Aksi lain untuk {name}",
-    "empty": "Belum ada chat baru."
+    "empty": "Belum ada chat baru.",
+    "noResults": "Tidak ada prospek yang cocok.",
+    "loadMore": "Muat lebih banyak",
+    "unowned": "Belum ada pemilik",
+    "minutes": "{n} menit",
+    "markContacted": "Tandai sudah dihubungi",
+    "notFitTitle": "Kenapa tidak cocok?",
+    "reassignTo": "Alihkan ke",
+    "alreadyHandled": "Prospek ini sudah diproses."
   },
   "quickAdd": {
     "title": "Prospek baru",

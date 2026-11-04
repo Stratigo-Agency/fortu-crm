@@ -51,13 +51,30 @@ export async function createDeal(ownerId: string) {
 }
 
 // Test fixture only: app code creates leads through ingestLead() (T04).
-export async function createLead(ownerId: string | null) {
+export async function createLead(
+  ownerId: string | null,
+  o: {
+    status?: string;
+    receivedAt?: string;
+    loggedAt?: string;
+    message?: string;
+    name?: string;
+    source?: string;
+    adId?: string;
+    product?: string;
+  } = {},
+) {
   const contact = await createContact();
+  if (o.name) await sql`UPDATE contacts SET full_name = ${o.name} WHERE id = ${contact.id}`;
   const [lead] = await sql<{ id: string }[]>`
-    INSERT INTO leads (contact_id, source_channel, owner_user_id)
-    VALUES (${contact.id}, 'whatsapp_direct', ${ownerId})
+    INSERT INTO leads (contact_id, owner_user_id, source_channel, status, first_message, ad_id,
+                       product_interest, received_at, logged_at)
+    VALUES (${contact.id}, ${ownerId}, ${o.source ?? "whatsapp_direct"}, ${o.status ?? "new"},
+            ${o.message ?? null}, ${o.adId ?? null}, ${o.product ?? null},
+            COALESCE(${o.receivedAt ?? null}::timestamptz, now()),
+            COALESCE(${o.loggedAt ?? null}::timestamptz, ${o.receivedAt ?? null}::timestamptz, now()))
     RETURNING id`;
-  return lead;
+  return { ...lead, contactId: contact.id };
 }
 
 /** A random Indonesian mobile number written the way a rep would type it. */
