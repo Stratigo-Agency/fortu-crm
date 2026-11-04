@@ -1,7 +1,6 @@
 import type { Profile } from "next-auth";
 import type { JWT } from "next-auth/jwt";
-import postgres from "postgres";
-import { sql } from "@/lib/db";
+import { pgError, sql } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password.mjs";
 
 export type Role = "admin" | "ceo" | "sales_lead" | "sales_rep" | "marketing";
@@ -31,7 +30,7 @@ export async function signInGate(profile: Profile | undefined): Promise<boolean>
     return rows.length === 1;
   } catch (err) {
     // This Google account is already bound to another user row.
-    if (err instanceof postgres.PostgresError && err.code === "23505") return false;
+    if (pgError(err)?.code === "23505") return false;
     throw err;
   }
 }

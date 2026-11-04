@@ -13,3 +13,15 @@ export const sql =
   });
 
 if (process.env.NODE_ENV !== "production") globalForDb.sql = sql;
+
+/**
+ * The SQLSTATE code and message of a Postgres error, or null. Checked by shape, not instanceof:
+ * Next can load the postgres package more than once, so its PostgresError class isn't always the same.
+ */
+export function pgError(err: unknown): { code: string; message: string } | null {
+  if (typeof err !== "object" || err === null) return null;
+  const e = err as { name?: unknown; code?: unknown; message?: unknown };
+  return e.name === "PostgresError" && typeof e.code === "string" && typeof e.message === "string"
+    ? { code: e.code, message: e.message }
+    : null;
+}
