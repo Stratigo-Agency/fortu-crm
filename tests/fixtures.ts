@@ -10,10 +10,17 @@ export async function createUser({
   isActive = true,
   email = `user-${randomUUID()}@example.com`,
   googleSub = null,
-}: { role?: Role; isActive?: boolean; email?: string; googleSub?: string | null } = {}) {
+  passwordHash = null,
+}: {
+  role?: Role;
+  isActive?: boolean;
+  email?: string;
+  googleSub?: string | null;
+  passwordHash?: string | null;
+} = {}) {
   const [user] = await sql<{ id: string; email: string }[]>`
-    INSERT INTO users (full_name, email, role, is_active, google_sub)
-    VALUES (${`Uji ${role}`}, ${email}, ${role}, ${isActive}, ${googleSub})
+    INSERT INTO users (full_name, email, role, is_active, google_sub, password_hash)
+    VALUES (${`Uji ${role}`}, ${email}, ${role}, ${isActive}, ${googleSub}, ${passwordHash})
     RETURNING id, email`;
   return user;
 }

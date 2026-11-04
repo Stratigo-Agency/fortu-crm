@@ -2,6 +2,7 @@ import type { Profile } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import postgres from "postgres";
 import { sql } from "@/lib/db";
+import { hashPassword, verifyPassword } from "@/lib/password.mjs";
 
 export type Role = "admin" | "ceo" | "sales_lead" | "sales_rep" | "marketing";
 
@@ -57,10 +58,13 @@ export async function refreshToken(
   token: JWT,
   profile?: Profile,
   now = Date.now(),
+  signedInUserId?: string,
 ): Promise<JWT | null> {
   let user: SessionUser | null;
   if (profile?.sub) {
     user = await loadSessionUser({ sub: profile.sub });
+  } else if (signedInUserId) {
+    user = await loadSessionUser({ id: signedInUserId });
   } else if (!token.id) {
     return null;
   } else if (now - (token.roleCheckedAt ?? 0) < ROLE_RECHECK_MS) {
@@ -77,4 +81,24 @@ export async function refreshToken(
     full_name: user.full_name,
     roleCheckedAt: now,
   };
+}
+
+// Hash checked when the email is unknown, so a wrong email and a wrong password take the same time.
+const DUMMY_HASH = hashPassword("tidak-ada-user");
+
+/**
+ * Email + password sign-in. Returns the user id, or null for an unknown email,
+ * an inactive user, a user with no password, or a wrong password.
+ */
+export async function authorizeCredentials(
+  email: unknown,
+  password: unknown,
+): Promise<{ id: string } | null> {
+  if (typeof email !== "string" || typeof password !== "string" || !email || !password) return null;
+  const [user] = await sql<{ id: string; password_hash: string | null }[]>`
+    SELECT id, password_hash FROM users WHERE lower(email) = lower(${email.trim()}) AND is_active`;
+  const ok = await verifyPassword(password, user?.password_hash ?? (await DUMMY_HASH));
+  if (!user || !user.password_hash || !ok) return null;
+  await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
+  return { id: user.id };
 }

@@ -1,15 +1,25 @@
 import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { refreshToken, signInGate } from "@/lib/auth";
+import { authorizeCredentials, refreshToken, signInGate } from "@/lib/auth";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  providers: [Google],
+  providers: [
+    // Email + password for people whose work address has no Google account yet.
+    Credentials({
+      credentials: { email: {}, password: {} },
+      authorize: ({ email, password }) => authorizeCredentials(email, password),
+    }),
+    Google,
+  ],
   session: { strategy: "jwt" },
-  // A refused sign-in comes back as /masuk?error=AccessDenied.
+  // A refused sign-in comes back as /masuk?error=AccessDenied (Google) or CredentialsSignin (password).
   pages: { signIn: "/masuk", error: "/masuk" },
   callbacks: {
-    signIn: ({ profile }) => signInGate(profile),
-    jwt: ({ token, profile }) => refreshToken(token, profile),
+    // Credentials sign-ins are already checked in authorize(); only Google needs the gate.
+    signIn: ({ account, profile }) =>
+      account?.provider === "credentials" ? true : signInGate(profile),
+    jwt: ({ token, profile, user }) => refreshToken(token, profile, undefined, user?.id),
     session: ({ session, token }) => ({
       ...session,
       user: {
