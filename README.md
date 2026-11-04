@@ -24,7 +24,7 @@ Only users registered in `users` can sign in, and only a hash is stored in the d
 
 ```bash
 npm run db:seed                                          # registers users from db/seeds/*.sql
-npm run db:set-password -- rudy@fortu.co.id verry@fortu.co.id
+npm run db:set-password -- nama@fortu.co.id nama2@fortu.co.id
 ```
 
 The script sets a random password per user and writes them to `credentials.local.txt` (gitignored).

@@ -16,8 +16,8 @@ async function signInWithPassword(formData: FormData) {
       redirectTo: next,
     });
   } catch (err) {
-    // A successful sign-in throws a redirect, which must pass through.
-    if (!(err instanceof AuthError)) throw err;
+    // A successful sign-in throws a redirect, and a database error is not a wrong password: both pass through.
+    if (!(err instanceof AuthError) || err.type !== "CredentialsSignin") throw err;
     redirect(`/masuk?error=CredentialsSignin&next=${encodeURIComponent(next)}`);
   }
 }
