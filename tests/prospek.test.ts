@@ -78,6 +78,15 @@ describe("listProspects", () => {
     expect((await list(rep.id, { q: "tidak-ada-yang-cocok-xyz" })).rows).toHaveLength(0);
   });
 
+  it("finds the last digits of a number even when they start with 0 or 8", async () => {
+    const rep = await createUser();
+    const l = await createLead(rep.id);
+    await sql`UPDATE contacts SET phone_e164 = '+62811230812' WHERE id = (SELECT contact_id FROM leads WHERE id = ${l.id})`;
+    for (const q of ["0812", "30812", "8112", "811230", "0811 2308"]) {
+      expect((await list(rep.id, { q })).rows.map((r) => r.id), q).toContain(l.id);
+    }
+  });
+
   it("shows the ad code, pages by 50 and says whether there is more", async () => {
     const rep = await createUser();
     const code = await freeAdCode("F-IFP");

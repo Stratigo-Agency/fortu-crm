@@ -31,11 +31,14 @@ export class InvalidInputError extends Error {
   }
 }
 
-/** 0 rows changed: the lead isn't open (LeadClosedError) or the actor may not edit it (ForbiddenError). */
-async function whyNotChanged(actorId: string, leadId: string): Promise<Error> {
+/**
+ * 0 rows changed: the actor may edit the lead but its status doesn't fit this action (LeadClosedError),
+ * or the actor may not edit it (ForbiddenError).
+ */
+async function whyNotChanged(actorId: string, leadId: string, allowed: readonly string[]): Promise<Error> {
   const [row] = await sql<{ status: string; ok: boolean }[]>`
     SELECT status, can_edit_lead(${actorId}, id) AS ok FROM leads WHERE id = ${leadId}`;
-  return row?.ok && !OPEN.includes(row.status) ? new LeadClosedError() : new ForbiddenError();
+  return row?.ok && !allowed.includes(row.status) ? new LeadClosedError() : new ForbiddenError();
 }
 
 /** Tandai sudah dihubungi: new → contacted, and the first response time is kept. */
@@ -45,7 +48,7 @@ export async function markContacted(actor: Actor, leadId: string): Promise<void>
     UPDATE leads SET status = 'contacted', first_response_at = COALESCE(first_response_at, now())
      WHERE id = ${leadId} AND status IN ('new', 'contacted') AND can_edit_lead(${actor.id}, id)
     RETURNING id`;
-  if (rows.length === 0) throw await whyNotChanged(actor.id, leadId);
+  if (rows.length === 0) throw await whyNotChanged(actor.id, leadId, ["new", "contacted"]);
 }
 
 /** Tidak cocok: the lead is disqualified with a reason; a note, if given, goes to the contact's activity. */
@@ -58,7 +61,7 @@ export async function markNotFit(actor: Actor, leadId: string, reason: string, n
       UPDATE leads SET status = 'disqualified', disqualify_reason = ${reason}
        WHERE id = ${leadId} AND status = ANY(${OPEN}) AND can_edit_lead(${actor.id}, id)
       RETURNING contact_id`;
-    if (rows.length === 0) throw await whyNotChanged(actor.id, leadId);
+    if (rows.length === 0) throw await whyNotChanged(actor.id, leadId, OPEN);
     if (text) {
       await tx`
         INSERT INTO activities (type, contact_id, lead_id, user_id, body, metadata)
@@ -88,7 +91,7 @@ export async function reassignLead(actor: Actor, leadId: string, newOwnerId: str
          AND EXISTS (SELECT 1 FROM users a WHERE a.id = ${actor.id} AND a.is_active
                        AND a.role IN ('sales_lead', 'ceo', 'admin'))
       RETURNING id`;
-    if (rows.length === 0) throw await whyNotChanged(actor.id, leadId);
+    if (rows.length === 0) throw await whyNotChanged(actor.id, leadId, OPEN);
     await tx`
       INSERT INTO ownership_changes (lead_id, from_user_id, to_user_id, reason, changed_by)
       VALUES (${leadId}, ${before?.owner_user_id ?? null}, ${newOwnerId}, 'manual_reassign', ${actor.id})`;

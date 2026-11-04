@@ -55,7 +55,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
       </dl>
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <nav aria-label={t("prospek.title")} className="flex overflow-hidden rounded-sm border border-input bg-white">
+        <nav aria-label={t("prospek.tabsLabel")} className="flex overflow-hidden rounded-sm border border-input bg-white">
           <TabLink tab="baru" current={tab} q={q} label={`${t("prospek.tabNew")} · ${stats.new_count}`} />
           <TabLink tab="dihubungi" current={tab} q={q} label={`${t("prospek.tabContacted")} · ${stats.contacted_count}`} />
           <TabLink tab="semua" current={tab} q={q} label={t("common.all")} />

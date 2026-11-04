@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
 import { t } from "@/lib/copy";
 import { NOT_FIT_REASONS } from "@/lib/leadReasons";
 import {
@@ -67,7 +67,7 @@ export function LeadActions({ leadId, name, isNew, canReassign, currentOwnerId, 
         </summary>
         <div className="absolute right-0 z-10 mt-1 w-60 rounded-md bg-white p-1 shadow-card ring-1 ring-line">
           {isNew && (
-            <form action={contactedAction}>
+            <form action={contactedAction} onSubmit={() => setTimeout(() => menu.current?.removeAttribute("open"), 0)}>
               <input type="hidden" name="leadId" value={leadId} />
               <button type="submit" className={item}>
                 {t("prospek.markContacted")}
@@ -82,13 +82,13 @@ export function LeadActions({ leadId, name, isNew, canReassign, currentOwnerId, 
               {t("common.reassign")}
             </button>
           )}
-          {contactedState.error && (
-            <p role="alert" className="px-3 py-2 text-sm font-bold text-ink">
-              {contactedState.error}
-            </p>
-          )}
         </div>
       </details>
+      {contactedState.error && (
+        <p role="alert" className="basis-full text-sm font-bold text-ink">
+          {contactedState.error}
+        </p>
+      )}
 
       <NotFitDialog dialog={notFit} leadId={leadId} />
       {canReassign && (
@@ -114,18 +114,23 @@ function Dialog({
     if (state.seq > 0) dialog.current?.close();
   }, [state.seq, dialog]);
 
+  // An error is shown until the dialog is closed; a new attempt brings a new state, so it shows again.
+  const [seen, setSeen] = useState<LeadActionState | null>(null);
+  const error = state !== seen ? state.error : undefined;
+
   return (
     <dialog
       ref={dialog}
       aria-label={title}
+      onClose={() => setSeen(state)}
       className="m-auto w-[min(92vw,28rem)] rounded-lg bg-white p-6 text-ink shadow-card backdrop:bg-ink/40"
     >
       <h2 className="text-xl font-bold">{title}</h2>
       <div className="mt-4 flex flex-col gap-4">
         {children}
-        {state.error && (
+        {error && (
           <p role="alert" className="font-bold">
-            {state.error}
+            {error}
           </p>
         )}
         <div className="flex justify-end gap-2">

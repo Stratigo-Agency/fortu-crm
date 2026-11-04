@@ -43,13 +43,18 @@ function likePattern(q: string): string {
   return `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
 }
 
-/** Digits of a typed number as stored (+62…): "0812 33" → "6281233". */
-function phoneDigits(q: string): string | null {
-  let d = q.replace(/\D/g, "");
-  if (d.length < 3) return null;
-  if (d.startsWith("0")) d = `62${d.slice(1)}`;
-  else if (d.startsWith("8")) d = `62${d}`;
-  return d;
+/**
+ * What to look for in phone_e164 (stored as +62…) for a typed number. A full number written locally
+ * ("0812 33…") is also tried as +62812…, and the digits as typed are always tried, so the last
+ * digits of a number that happen to start with 0 or 8 are still found.
+ */
+function phonePatterns(q: string): string[] {
+  const raw = q.replace(/\D/g, "");
+  if (raw.length < 3) return [];
+  const patterns = new Set([raw]);
+  if (raw.startsWith("0")) patterns.add(`62${raw.slice(1)}`);
+  else if (raw.startsWith("8")) patterns.add(`62${raw}`);
+  return [...patterns].map((d) => `%${d}%`);
 }
 
 type ListOptions = {
@@ -66,10 +71,10 @@ type ListOptions = {
 export async function listProspects(o: ListOptions): Promise<{ rows: ProspekRow[]; hasMore: boolean }> {
   const q = o.q.trim().slice(0, 100);
   const statuses = o.tab === "baru" ? ["new"] : o.tab === "dihubungi" ? ["contacted"] : OPEN_STATUSES;
-  const digits = phoneDigits(q);
+  const phones = phonePatterns(q);
   const search = q
     ? sql`AND (contact_name ILIKE ${likePattern(q)} OR first_message ILIKE ${likePattern(q)}
-               ${digits ? sql`OR phone_e164 LIKE ${`%${digits}%`}` : sql``})`
+               ${phones.length ? sql`OR phone_e164 LIKE ANY(${phones})` : sql``})`
     : sql``;
   const owner = o.ownerId ? sql`AND owner_user_id = ${o.ownerId}` : sql``;
 

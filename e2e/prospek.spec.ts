@@ -68,13 +68,13 @@ test("the tab, the search and the sales filter survive a reload", async ({ page 
   await expect(row(page, "Andi")).toHaveCount(0);
 
   // the global sales filter (cookie) also stays
+  const cookie = async () => (await page.context().cookies()).find((c) => c.name === "crm_sales")?.value;
   await page.getByLabel("Tampilkan sales").selectOption({ label: "Rep Lain" });
-  await expect(page.getByLabel("Tampilkan sales")).toHaveValue(otherId);
-  await page.waitForTimeout(500);
+  await expect.poll(cookie).toBe(otherId); // the choice is saved before we reload
   await page.reload();
   await expect(page.getByLabel("Tampilkan sales")).toHaveValue(otherId);
   await page.getByLabel("Tampilkan sales").selectOption("all"); // leave it as found
-  await page.waitForTimeout(500);
+  await expect.poll(cookie).toBe("all");
 });
 
 test("a new chat over 2 hours old gets the orange chip, a fresh one doesn't", async ({ page }) => {

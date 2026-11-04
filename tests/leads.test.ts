@@ -80,6 +80,14 @@ describe("markContacted", () => {
     expect((await lead(someones.id)).status).toBe("contacted");
   });
 
+  it("says a qualified lead is closed for this action, not that it is forbidden", async () => {
+    const owner = await createUser();
+    const l = await createLead(owner.id, { status: "qualified" });
+    await expect(markContacted(owner, l.id)).rejects.toBeInstanceOf(LeadClosedError);
+    const other = await createUser();
+    await expect(markContacted(other, l.id)).rejects.toBeInstanceOf(ForbiddenError); // still not theirs
+  });
+
   it("says the lead is closed once it is not a fit", async () => {
     const owner = await createUser();
     const l = await createLead(owner.id, { status: "disqualified" });

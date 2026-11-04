@@ -214,7 +214,8 @@
     "markContacted": "Tandai sudah dihubungi",
     "notFitTitle": "Kenapa tidak cocok?",
     "reassignTo": "Alihkan ke",
-    "alreadyHandled": "Prospek ini sudah diproses."
+    "alreadyHandled": "Prospek ini sudah diproses.",
+    "tabsLabel": "Status prospek"
   },
   "quickAdd": {
     "title": "Prospek baru",
