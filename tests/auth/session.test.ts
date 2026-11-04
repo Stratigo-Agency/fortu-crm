@@ -60,5 +60,9 @@ describe("safeNext", () => {
     ["https://evil.example", "/"],
     ["//evil.example", "/"],
     ["/\\evil.example", "/"],
+    ["/\t/evil.example", "/"],
+    ["/\n/evil.example", "/"],
+    ["/\r//evil.example", "/"],
+    ["/%2F%2Fevil.example", "/%2F%2Fevil.example"],
   ])("%s → %s", (input, out) => expect(safeNext(input)).toBe(out));
 });
