@@ -12,6 +12,7 @@
   },
   "common": {
     "appName": "CRM",
+    "placeholder": "Halaman ini sedang disiapkan.",
     "save": "Simpan",
     "cancel": "Batal",
     "close": "Tutup",
@@ -369,6 +370,7 @@
     "forbidden": "Kamu hanya bisa mengubah data milikmu sendiri.",
     "notInvited": "Akun Google ini belum terdaftar. Minta admin menambahkan email kamu.",
     "signInWithGoogle": "Masuk dengan Google",
+    "settingsOnly": "Pengaturan hanya untuk admin dan CEO.",
     "email": "Email",
     "password": "Password",
     "signIn": "Masuk",
@@ -377,10 +379,5 @@
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",
     "offline": "Koneksi terputus. Perubahan belum tersimpan."
-  },
-  "home": {
-    "appName": "CRM",
-    "dbConnected": "Database terhubung · {n} produk",
-    "dbOffline": "Database belum terhubung. Jalankan npm run db:up."
   }
 }
