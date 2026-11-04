@@ -51,6 +51,16 @@ export async function resolveOwner(
     if (input.productInterest) reason = "specialisation";
   }
 
+  const conflict = await findOwnerConflict(tx, contactId, ownerId);
+  return { ownerId, reason, ...(conflict && { conflict }) };
+}
+
+/** An open deal of this contact owned by someone other than ownerId, as names for the screen. */
+export async function findOwnerConflict(
+  tx: Tx,
+  contactId: string,
+  ownerId: string | null,
+): Promise<OwnerConflict | undefined> {
   const [other] = await tx<{ full_name: string | null; phone_e164: string; rep: string }[]>`
     SELECT c.full_name, c.phone_e164, u.full_name AS rep
       FROM deals d
@@ -62,14 +72,7 @@ export async function resolveOwner(
        AND d.owner_user_id IS DISTINCT FROM ${ownerId}
      ORDER BY d.updated_at DESC
      LIMIT 1`;
-
-  return {
-    ownerId,
-    reason,
-    ...(other && {
-      conflict: { contactName: other.full_name ?? formatPhone(other.phone_e164), repName: other.rep },
-    }),
-  };
+  return other && { contactName: other.full_name ?? formatPhone(other.phone_e164), repName: other.rep };
 }
 
 /** Writes the assignment to ownership_changes (after the lead exists). Unowned leads write nothing. */
