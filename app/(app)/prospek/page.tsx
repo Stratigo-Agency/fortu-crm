@@ -44,7 +44,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
         <p className="text-slate">{t("prospek.summary", { n: stats.new_count })}</p>
       </div>
 
-      <dl className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+      <dl className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3 md:gap-4">
         <Stat label={t("prospek.statToday")} value={String(stats.received_today)} />
         <Stat
           label={t("prospek.statLogDelay")}
@@ -60,7 +60,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
           <TabLink tab="dihubungi" current={tab} q={q} label={`${t("prospek.tabContacted")} · ${stats.contacted_count}`} />
           <TabLink tab="semua" current={tab} q={q} label={t("common.all")} />
         </nav>
-        <form action="/prospek" method="get" role="search" className="min-w-0 flex-1 md:max-w-xl">
+        <form action="/prospek" method="get" role="search" className="min-w-0 basis-full md:flex-1 md:basis-0 md:max-w-xl">
           {tab !== "baru" && <input type="hidden" name="tab" value={tab} />}
           <div className="relative">
             <svg
@@ -82,7 +82,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
         </form>
         <Link
           href="/tambah"
-          className="ml-auto flex h-11 items-center gap-2 rounded-sm bg-navy px-5 text-base font-bold text-white"
+          className="flex h-11 w-full items-center justify-center gap-2 rounded-sm bg-navy px-5 text-base font-bold text-white md:ml-auto md:w-auto"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
             <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -131,9 +131,9 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
 
 function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
-    <div className="rounded-lg bg-white px-5 py-4 shadow-card md:min-h-24">
+    <div className="rounded-lg bg-white px-5 py-3 shadow-card md:min-h-24 md:py-4">
       <dt className="text-slate">{label}</dt>
-      <dd className="tabular mt-1 text-3xl font-bold text-ink">{value}</dd>
+      <dd className="tabular mt-1 text-2xl font-bold text-ink md:text-3xl">{value}</dd>
       {hint && <p className="mt-1 text-sm text-slate">{hint}</p>}
     </div>
   );
