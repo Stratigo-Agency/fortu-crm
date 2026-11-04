@@ -132,7 +132,10 @@ function ViewLink({ view, current, q, lost }: { view: PipelineView; current: Pip
 
 function Stat({ label, value, hint, late }: { label: string; value: string; hint?: string; late?: boolean }) {
   return (
-    <div className={`rounded-lg px-5 py-3 shadow-card md:min-h-24 md:py-4 ${late ? "bg-late-bg" : "bg-white"}`}>
+    // the fifth tile would sit alone on a phone's two-column grid: let it take the row
+    <div
+      className={`rounded-lg px-5 py-3 shadow-card last:col-span-2 md:min-h-24 md:py-4 md:last:col-span-1 ${late ? "bg-late-bg" : "bg-white"}`}
+    >
       <dt className={late ? "text-late" : "text-slate"}>{label}</dt>
       <dd className={`tabular mt-1 text-2xl font-bold md:text-3xl ${late ? "text-late" : "text-ink"}`}>{value}</dd>
       {hint && <p className="mt-1 text-sm text-slate">{hint}</p>}
