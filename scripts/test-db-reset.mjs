@@ -1,6 +1,6 @@
 // Drops and recreates the test database named in DATABASE_URL_TEST, then
 // applies all migrations to it. Refuses any database whose name doesn't end in _test.
-import { connect } from "./lib.mjs";
+import { connect, isMain } from "./lib.mjs";
 import { runMigrations } from "./migrate.mjs";
 
 export async function resetTestDatabase({ url = process.env.DATABASE_URL_TEST, log = console.log } = {}) {
@@ -24,7 +24,7 @@ export async function resetTestDatabase({ url = process.env.DATABASE_URL_TEST, l
   await runMigrations({ url, log });
 }
 
-if (import.meta.main) {
+if (isMain(import.meta)) {
   try {
     await resetTestDatabase();
   } catch (err) {

@@ -3,7 +3,7 @@
 //   node scripts/migrate.mjs          uses DATABASE_URL
 //   node scripts/migrate.mjs --test   uses DATABASE_URL_TEST
 import path from "node:path";
-import { connect, databaseUrl, root, runFile, sqlFiles } from "./lib.mjs";
+import { connect, databaseUrl, isMain, root, runFile, sqlFiles } from "./lib.mjs";
 
 const LOCK_KEY = 5_130_141; // pg_advisory_lock key: one migrator at a time
 
@@ -44,7 +44,7 @@ export async function runMigrations({
   }
 }
 
-if (import.meta.main) {
+if (isMain(import.meta)) {
   try {
     await runMigrations({ url: databaseUrl() });
   } catch (err) {

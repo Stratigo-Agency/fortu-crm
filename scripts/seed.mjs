@@ -4,7 +4,7 @@
 //   node scripts/seed.mjs          uses DATABASE_URL
 //   node scripts/seed.mjs --test   uses DATABASE_URL_TEST
 import path from "node:path";
-import { connect, databaseUrl, root, runFile, sqlFiles } from "./lib.mjs";
+import { connect, databaseUrl, isMain, root, runFile, sqlFiles } from "./lib.mjs";
 
 export async function runSeeds({ url, dir = path.join(root, "db/seeds"), log = console.log }) {
   const sql = connect(url);
@@ -23,7 +23,7 @@ export async function runSeeds({ url, dir = path.join(root, "db/seeds"), log = c
   }
 }
 
-if (import.meta.main) {
+if (isMain(import.meta)) {
   try {
     await runSeeds({ url: databaseUrl() });
   } catch (err) {

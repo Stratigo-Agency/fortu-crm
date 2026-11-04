@@ -5,6 +5,11 @@ import postgres from "postgres";
 
 export const root = path.resolve(import.meta.dirname, "..");
 
+/** True when the module was started with `node <file>` (not imported). */
+export function isMain(meta) {
+  return Boolean(process.argv[1]) && meta.filename === path.resolve(process.argv[1]);
+}
+
 /** DATABASE_URL, or DATABASE_URL_TEST when the script runs with --test. */
 export function databaseUrl(argv = process.argv) {
   const key = argv.includes("--test") ? "DATABASE_URL_TEST" : "DATABASE_URL";
