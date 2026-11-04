@@ -84,7 +84,9 @@ export async function refreshToken(
 }
 
 // Hash checked when the email is unknown, so a wrong email and a wrong password take the same time.
-const DUMMY_HASH = hashPassword("tidak-ada-user");
+// Computed on first use: random bytes at import time break prerendering.
+let dummyHash: Promise<string> | undefined;
+const getDummyHash = () => (dummyHash ??= hashPassword("tidak-ada-user"));
 
 /**
  * Email + password sign-in. Returns the user id, or null for an unknown email,
@@ -97,7 +99,7 @@ export async function authorizeCredentials(
   if (typeof email !== "string" || typeof password !== "string" || !email || !password) return null;
   const [user] = await sql<{ id: string; password_hash: string | null }[]>`
     SELECT id, password_hash FROM users WHERE lower(email) = lower(${email.trim()}) AND is_active`;
-  const ok = await verifyPassword(password, user?.password_hash ?? (await DUMMY_HASH));
+  const ok = await verifyPassword(password, user?.password_hash ?? (await getDummyHash()));
   if (!user || !user.password_hash || !ok) return null;
   await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
   return { id: user.id };

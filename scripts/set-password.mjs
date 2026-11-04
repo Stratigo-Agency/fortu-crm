@@ -11,7 +11,7 @@ if (isMain(import.meta)) {
   const args = process.argv.slice(2);
   const pi = args.indexOf("--password");
   const chosen = pi >= 0 ? args[pi + 1] : undefined;
-  const emails = args.filter((a, i) => !a.startsWith("--") && i !== pi + 1);
+  const emails = args.filter((a, i) => !a.startsWith("--") && (pi < 0 || i !== pi + 1));
   if (!emails.length || (pi >= 0 && !chosen)) {
     console.error("usage: node scripts/set-password.mjs <email>... [--password <password>]");
     process.exit(1);
