@@ -2,7 +2,7 @@
 
 export class IngestError extends Error {
   constructor(
-    readonly code: "invalid_phone" | "unknown_line" | "missing_actor",
+    readonly code: "invalid_phone" | "unknown_line" | "missing_actor" | "invalid_actor" | "invalid_time",
     message: string,
   ) {
     super(message);
@@ -28,5 +28,19 @@ export class UnknownLineError extends IngestError {
 export class MissingActorError extends IngestError {
   constructor() {
     super("missing_actor", "manual_quick_add needs opts.actorId");
+  }
+}
+
+/** The logging user isn't an active rep, sales lead, CEO or admin. */
+export class InvalidActorError extends IngestError {
+  constructor(actorId: string) {
+    super("invalid_actor", `User ${actorId} can't log leads`);
+  }
+}
+
+/** receivedAt isn't a readable time, or is in the future. */
+export class InvalidTimeError extends IngestError {
+  constructor(input: string) {
+    super("invalid_time", `Not a usable received time: ${input}`);
   }
 }

@@ -1,7 +1,7 @@
 import type postgres from "postgres";
 import { sql } from "@/lib/db";
 import { parseCodes } from "./codes";
-import { MissingActorError, UnknownLineError } from "./errors";
+import { InvalidActorError, InvalidTimeError, MissingActorError, UnknownLineError } from "./errors";
 import {
   type CaptureMethod,
   findOwnerConflict,
@@ -31,7 +31,7 @@ export type LeadInput = {
   firstMessage?: string; // scanned for [F-IFP-01] and #W7K2 codes
   productInterest?: ProductInterest;
   utm?: Partial<Record<"source" | "medium" | "campaign" | "content", string>>;
-  receivedAt?: string; // ISO 8601; defaults to now
+  receivedAt?: string; // ISO 8601; a time without a zone is Jakarta time; defaults to now
   external?: { provider: "whatsapp" | "web_form"; id: string; payload: unknown };
 };
 
@@ -48,7 +48,21 @@ export type LeadResult = {
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const clean = (s: string | undefined) => s?.trim() || null;
 
-type Line = { id: string; user_id: string | null };
+type Line = { id: string; user_id: string | null; user_available: boolean | null };
+
+const ZONED = /(Z|[+-]\d{2}:?\d{2})$/i;
+const LOCAL = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?$/;
+const FUTURE_ALLOWANCE_MS = 5 * 60_000;
+
+/** ISO time with a zone, or a bare local time read as Asia/Jakarta (rule 8); never in the future. */
+function parseReceivedAt(value: string | undefined): string | null {
+  if (value === undefined) return null;
+  const v = value.trim();
+  const iso = ZONED.test(v) ? v : LOCAL.test(v) ? `${v}+07:00` : null;
+  const ms = iso ? Date.parse(iso) : Number.NaN;
+  if (!Number.isFinite(ms) || ms > Date.now() + FUTURE_ALLOWANCE_MS) throw new InvalidTimeError(value);
+  return new Date(ms).toISOString();
+}
 type Utm = { source: string | null; medium: string | null; campaign: string | null; content: string | null };
 
 export async function ingestLead(input: LeadInput, opts: { actorId?: string } = {}): Promise<LeadResult> {
@@ -56,9 +70,18 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
   const actorId = opts.actorId ?? null;
   if (input.captureMethod === "manual_quick_add" && !actorId) throw new MissingActorError();
   if (input.waLineId && !UUID.test(input.waLineId)) throw new UnknownLineError(input.waLineId);
-  const receivedAt = input.receivedAt ?? null;
+  if (actorId && !UUID.test(actorId)) throw new InvalidActorError(actorId);
+  const receivedAt = parseReceivedAt(input.receivedAt);
 
   return sql.begin(async (tx) => {
+    // The logging user must be someone who may own leads (not marketing, not deactivated).
+    if (actorId) {
+      const [actor] = await tx`
+        SELECT 1 FROM users WHERE id = ${actorId} AND is_active
+           AND role IN ('sales_rep', 'sales_lead', 'ceo', 'admin')`;
+      if (!actor) throw new InvalidActorError(actorId);
+    }
+
     // 1. Idempotency: a retried delivery returns the lead it made the first time.
     let eventId: string | null = null;
     if (input.external) {
@@ -84,6 +107,20 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
     const company = clean(input.company);
     if (company && !contact.company_id) await attachCompany(tx, contact.id, company);
 
+    // 6. Dedupe: a new lead from this contact on this line in the last 24 h gets an activity instead.
+    // A quick-add without a line only merges into the same rep's own lead.
+    const sameRepOnly = !line && input.captureMethod === "manual_quick_add" ? actorId : null;
+    const [recent] = await tx<{ id: string; owner_user_id: string | null; ad_id: string | null }[]>`
+      SELECT id, owner_user_id, ad_id FROM leads
+       WHERE contact_id = ${contact.id}
+         AND status = 'new'
+         AND wa_line_id IS NOT DISTINCT FROM ${line?.id ?? null}
+         AND (${sameRepOnly}::uuid IS NULL OR owner_user_id = ${sameRepOnly})
+         AND received_at > COALESCE(${receivedAt}::timestamptz, now()) - interval '24 hours'
+       ORDER BY received_at DESC
+       LIMIT 1
+       FOR UPDATE`;
+
     // 5. Attribution codes in the first message.
     const codes = parseCodes(input.firstMessage);
     const [ad] = codes.adCode
@@ -94,7 +131,10 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
       ? await tx<{ id: string; utm_source: string | null; utm_medium: string | null;
                    utm_campaign: string | null; utm_content: string | null }[]>`
           SELECT id, utm_source, utm_medium, utm_campaign, utm_content
-            FROM wa_click_events WHERE upper(ref_code) = ${codes.clickCode}`
+            FROM wa_click_events
+           WHERE upper(ref_code) = ${codes.clickCode}
+             -- one click is one lead: a code already matched elsewhere (a forwarded message) is ignored
+             AND (matched_lead_id IS NULL OR matched_lead_id = ${recent?.id ?? null})`
       : [];
     const utm: Utm = {
       source: clean(input.utm?.source) ?? click?.utm_source ?? null,
@@ -109,16 +149,6 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
       ...(eventId && { inbound_event_id: eventId }),
     };
 
-    // 6. Dedupe: a new lead from this contact on this line in the last 24 h gets an activity instead.
-    const [recent] = await tx<{ id: string; owner_user_id: string | null; ad_id: string | null }[]>`
-      SELECT id, owner_user_id, ad_id FROM leads
-       WHERE contact_id = ${contact.id}
-         AND status = 'new'
-         AND wa_line_id IS NOT DISTINCT FROM ${line?.id ?? null}
-         AND received_at > COALESCE(${receivedAt}::timestamptz, now()) - interval '24 hours'
-       ORDER BY received_at DESC
-       LIMIT 1
-       FOR UPDATE`;
     if (recent) {
       await tx`
         UPDATE leads SET ad_id        = COALESCE(ad_id, ${ad?.id ?? null}),
@@ -145,7 +175,12 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
     // 4. The owner (only for a new lead).
     const decision = await resolveOwner(
       tx,
-      { captureMethod: input.captureMethod, lineUserId: line?.user_id, productInterest: input.productInterest },
+      {
+        captureMethod: input.captureMethod,
+        lineUserId: line?.user_id,
+        lineUserAvailable: line?.user_available ?? false,
+        productInterest: input.productInterest,
+      },
       contact.id,
       actorId ?? undefined,
     );
@@ -181,13 +216,15 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
 async function findLine(tx: Tx, input: LeadInput, actorId: string | null): Promise<Line | undefined> {
   if (input.waLineId) {
     const [line] = await tx<Line[]>`
-      SELECT id, user_id FROM wa_lines WHERE id = ${input.waLineId} AND is_active`;
+      SELECT l.id, l.user_id, (u.is_active AND u.accepting_leads) AS user_available
+        FROM wa_lines l LEFT JOIN users u ON u.id = l.user_id
+       WHERE l.id = ${input.waLineId} AND l.is_active`;
     if (!line) throw new UnknownLineError(input.waLineId);
     return line;
   }
   if (input.captureMethod === "manual_quick_add" && actorId) {
     const [line] = await tx<Line[]>`
-      SELECT id, user_id FROM wa_lines WHERE user_id = ${actorId} AND is_active
+      SELECT id, user_id, true AS user_available FROM wa_lines WHERE user_id = ${actorId} AND is_active
        ORDER BY connected_at DESC NULLS LAST LIMIT 1`;
     return line;
   }
@@ -221,14 +258,19 @@ async function addActivity(
 
 /** A retried delivery: the lead the first delivery made or was deduped into. */
 async function replay(tx: Tx, provider: string, externalId: string): Promise<LeadResult> {
-  const [row] = await tx<{ id: string; contact_id: string; owner_user_id: string | null; ad_id: string | null }[]>`
-    SELECT l.id, l.contact_id, l.owner_user_id, l.ad_id
-      FROM inbound_events e
-      JOIN leads l ON l.inbound_event_id = e.id
-                   OR l.id = (SELECT a.lead_id FROM activities a
-                               WHERE a.metadata->>'inbound_event_id' = e.id::text LIMIT 1)
-     WHERE e.provider = ${provider} AND e.external_id = ${externalId}
-     LIMIT 1`;
+  type Row = { id: string; contact_id: string; owner_user_id: string | null; ad_id: string | null };
+  const [event] = await tx<{ id: string }[]>`
+    SELECT id FROM inbound_events WHERE provider = ${provider} AND external_id = ${externalId}`;
+  let [row] = await tx<Row[]>`
+    SELECT id, contact_id, owner_user_id, ad_id FROM leads WHERE inbound_event_id = ${event.id}`;
+  if (!row) {
+    // the first delivery was deduped into an earlier lead: its activity names the event
+    [row] = await tx<Row[]>`
+      SELECT l.id, l.contact_id, l.owner_user_id, l.ad_id
+        FROM activities a JOIN leads l ON l.id = a.lead_id
+       WHERE a.metadata->>'inbound_event_id' = ${event.id}
+       LIMIT 1`;
+  }
   if (!row) throw new Error(`inbound event ${provider}/${externalId} has no lead`);
   return {
     leadId: row.id,

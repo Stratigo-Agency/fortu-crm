@@ -7,7 +7,7 @@ import { formatPhone } from "./phone";
 export type Tx = postgres.TransactionSql;
 export type ProductInterest = "IFP" | "DSS" | "LED";
 export type CaptureMethod = "manual_quick_add" | "web_form" | "wa_link_ref" | "cloud_api_webhook" | "import";
-type OwnershipReason = "auto_assign" | "specialisation";
+type OwnershipReason = "auto_assign" | "specialisation" | "rep_unavailable";
 
 export type OwnerConflict = { contactName: string; repName: string };
 
@@ -22,11 +22,14 @@ type OwnerInput = {
   captureMethod: CaptureMethod;
   /** The rep the WhatsApp line belongs to, if the lead came in on a line. */
   lineUserId?: string | null;
+  /** That rep is active and accepting leads. */
+  lineUserAvailable?: boolean;
   productInterest?: ProductInterest;
 };
 
 /**
- * Quick-add → the rep who logged it (the chat is on their phone). A line → its rep.
+ * Quick-add → the rep who logged it (the chat is on their phone). A line → its rep, unless
+ * that rep is inactive or not accepting leads (then pick_lead_owner, reason rep_unavailable).
  * Otherwise pick_lead_owner(product): active reps accepting leads whose product lines
  * cover it, fewest new leads first. Also reports an open deal of this contact that
  * another rep owns, so the screen can say so.
@@ -42,13 +45,15 @@ export async function resolveOwner(
   if (input.captureMethod === "manual_quick_add") {
     if (!actorId) throw new MissingActorError();
     ownerId = actorId;
-  } else if (input.lineUserId) {
+  } else if (input.lineUserId && input.lineUserAvailable) {
     ownerId = input.lineUserId;
   } else {
     const [row] = await tx<{ id: string | null }[]>`
       SELECT pick_lead_owner(${input.productInterest ?? null}::product_line) AS id`;
     ownerId = row.id;
-    if (input.productInterest) reason = "specialisation";
+    // The line's own rep is away or gone: say so, so the handoff is visible.
+    if (input.lineUserId) reason = "rep_unavailable";
+    else if (input.productInterest) reason = "specialisation";
   }
 
   const conflict = await findOwnerConflict(tx, contactId, ownerId);

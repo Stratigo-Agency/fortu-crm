@@ -1,7 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it } from "vitest";
 import { sql } from "@/lib/db";
-import { MissingActorError, UnknownLineError } from "@/lib/ingest/errors";
+import {
+  InvalidActorError,
+  InvalidTimeError,
+  MissingActorError,
+  UnknownLineError,
+} from "@/lib/ingest/errors";
 import { ingestLead, type LeadInput, type SourceChannel } from "@/lib/ingest/ingestLead";
 import { normalizePhone } from "@/lib/ingest/phone";
 import {
@@ -304,5 +309,85 @@ describe("ingestLead · one transaction", () => {
     const [e] = await sql`SELECT count(*)::int AS n FROM inbound_events WHERE external_id = ${id}`;
     const [co] = await sql`SELECT count(*)::int AS n FROM companies WHERE name = ${`PT Batal ${id}`}`;
     expect([c.n, e.n, co.n]).toEqual([0, 0, 0]);
+  });
+});
+
+describe("ingestLead · review fixes", () => {
+  beforeEach(async () => {
+    await sql`UPDATE users SET accepting_leads = false`;
+  });
+
+  const quickAdd = (phone = randomPhone()): LeadInput => ({
+    phone,
+    sourceChannel: "whatsapp_direct",
+    captureMethod: "manual_quick_add",
+  });
+
+  it("refuses a logging user who is marketing, inactive or not a user id, writing nothing", async () => {
+    const marketing = await createUser({ role: "marketing" });
+    const inactive = await createUser({ isActive: false });
+    for (const actorId of [marketing.id, inactive.id, randomUUID(), "abc"]) {
+      const phone = randomPhone();
+      await expect(ingestLead(quickAdd(phone), { actorId })).rejects.toBeInstanceOf(InvalidActorError);
+      const [c] = await sql`SELECT count(*)::int AS n FROM contacts WHERE phone_e164 = ${normalizePhone(phone)}`;
+      expect(c.n).toBe(0);
+    }
+  });
+
+  it("hands a lead on an unavailable rep's line to another rep, saying why", async () => {
+    const away = await createUser({ fullName: "Rep Cuti" });
+    const backup = await createUser({ fullName: "Rep Cadangan" });
+    await onlyTheseRepsAccept(backup.id); // away is not accepting leads
+    const line = await createWaLine(away.id);
+    const r = await ingestLead({
+      phone: randomPhone(),
+      sourceChannel: "meta_ctwa",
+      captureMethod: "cloud_api_webhook",
+      waLineId: line.id,
+    });
+    expect(r.ownerId).toBe(backup.id);
+    const [oc] = await sql`SELECT reason FROM ownership_changes WHERE lead_id = ${r.leadId}`;
+    expect(oc.reason).toBe("rep_unavailable");
+    const [lead] = await sql`SELECT wa_line_id FROM leads WHERE id = ${r.leadId}`;
+    expect(lead.wa_line_id).toBe(line.id);
+  });
+
+  it("reads a time without a zone as Jakarta time and refuses future or unreadable times", async () => {
+    const r = await ingestLead(webForm(randomPhone(), { receivedAt: "2026-11-01T10:00" }));
+    const [lead] = await sql`SELECT received_at FROM leads WHERE id = ${r.leadId}`;
+    expect((lead.received_at as Date).toISOString()).toBe("2026-11-01T03:00:00.000Z");
+
+    const future = new Date(Date.now() + 3_600_000).toISOString();
+    for (const receivedAt of [future, "kemarin", "2026-11-01", ""]) {
+      await expect(ingestLead(webForm(randomPhone(), { receivedAt }))).rejects.toBeInstanceOf(InvalidTimeError);
+    }
+  });
+
+  it("doesn't reuse a click already matched to another lead (a forwarded message)", async () => {
+    const ref = randomUUID().replace(/-/g, "").slice(0, 4).toUpperCase();
+    const click = await createClick(ref, { source: "google", campaign: "sekolah-nov" });
+    const first = await ingestLead(webForm(randomPhone(), { firstMessage: `halo #${ref}` }));
+    const forwarded = await ingestLead(webForm(randomPhone(), { firstMessage: `halo #${ref}` }));
+
+    const [lead] = await sql`SELECT utm_source, utm_campaign FROM leads WHERE id = ${forwarded.leadId}`;
+    expect(lead).toEqual({ utm_source: null, utm_campaign: null });
+    const [act] = await sql`SELECT metadata FROM activities WHERE lead_id = ${forwarded.leadId}`;
+    expect(act.metadata.code).toBeNull();
+    const [c] = await sql`SELECT matched_lead_id FROM wa_click_events WHERE id = ${click.id}`;
+    expect(c.matched_lead_id).toBe(first.leadId);
+  });
+
+  it("keeps quick-adds without a line apart per rep", async () => {
+    const a = await createUser();
+    const b = await createUser();
+    const phone = randomPhone();
+    const ra = await ingestLead(quickAdd(phone), { actorId: a.id });
+    const rb = await ingestLead(quickAdd(phone), { actorId: b.id });
+    expect(rb.deduped).toBe(false);
+    expect(rb.leadId).not.toBe(ra.leadId);
+    expect(rb.ownerId).toBe(b.id);
+    // the same rep again within 24 h is still deduped
+    const ra2 = await ingestLead(quickAdd(phone), { actorId: a.id });
+    expect(ra2).toMatchObject({ leadId: ra.leadId, deduped: true });
   });
 });
