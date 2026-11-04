@@ -69,7 +69,7 @@ test("the tab, the search and the sales filter survive a reload", async ({ page 
 
   // the global sales filter (cookie) also stays
   const cookie = async () => (await page.context().cookies()).find((c) => c.name === "crm_sales")?.value;
-  await page.getByLabel("Tampilkan sales").selectOption({ label: "Rep Lain" });
+  await page.getByLabel("Tampilkan sales").selectOption(otherId); // by id: other specs add reps too
   await expect.poll(cookie).toBe(otherId); // the choice is saved before we reload
   await page.reload();
   await expect(page.getByLabel("Tampilkan sales")).toHaveValue(otherId);
