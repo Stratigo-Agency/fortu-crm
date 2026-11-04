@@ -365,7 +365,12 @@
   },
   "authz": {
     "forbidden": "Kamu hanya bisa mengubah data milikmu sendiri.",
-    "notInvited": "Akun Google ini belum terdaftar. Minta admin menambahkan email kamu."
+    "notInvited": "Akun Google ini belum terdaftar. Minta admin menambahkan email kamu.",
+    "signInWithGoogle": "Masuk dengan Google",
+    "email": "Email",
+    "password": "Password",
+    "signIn": "Masuk",
+    "wrongCredentials": "Email atau password salah."
   },
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",

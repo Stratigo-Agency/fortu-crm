@@ -12,10 +12,12 @@
     "db:up": "node scripts/db-up.mjs",
     "db:seed": "node --env-file-if-exists=.env.local scripts/seed.mjs",
     "db:test:reset": "node --env-file-if-exists=.env.local scripts/test-db-reset.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:set-password": "node --env-file-if-exists=.env.local scripts/set-password.mjs"
   },
   "dependencies": {
     "next": "16.4.5",
+    "next-auth": "5.0.0-beta.32",
     "postgres": "3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0"

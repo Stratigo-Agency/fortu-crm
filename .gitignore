@@ -25,3 +25,4 @@ db/seeds/*.local.sql
 coverage
 playwright-report
 test-results
+credentials.local.txt
