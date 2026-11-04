@@ -15,7 +15,7 @@ import {
   createDealFor,
   createUser,
   createWaLine,
-  nextCodeNumber,
+  freeAdCode,
   randomPhone,
 } from "../fixtures";
 
@@ -70,7 +70,7 @@ describe("ingestLead · contact and phone", () => {
 
 describe("ingestLead · attribution", () => {
   it("links [F-IFP-01] in the first message to the ad, in any letter case", async () => {
-    const code = `F-IFP-${nextCodeNumber()}`;
+    const code = await freeAdCode("F-IFP");
     const ad = await createAd(code, "Iklan IFP Sekolah");
     const r = await ingestLead(
       webForm(randomPhone(), {

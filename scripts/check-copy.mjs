@@ -31,6 +31,14 @@ function isUiText(text) {
   return /\p{L}/u.test(s) && !ALLOWED.has(s);
 }
 
+// Operators whose operands can end up on screen; comparisons like === only decide something.
+const RENDERS_OPERAND = new Set([
+  ts.SyntaxKind.BarBarToken,
+  ts.SyntaxKind.AmpersandAmpersandToken,
+  ts.SyntaxKind.QuestionQuestionToken,
+  ts.SyntaxKind.PlusToken,
+]);
+
 /**
  * The string literals an expression can render: walks ternaries, ||, ??, &&, +,
  * parentheses and template strings. Stops at calls, so t("key") is never flagged.
@@ -43,7 +51,9 @@ function literalsIn(expr) {
   }
   if (ts.isParenthesizedExpression(expr)) return literalsIn(expr.expression);
   if (ts.isConditionalExpression(expr)) return [...literalsIn(expr.whenTrue), ...literalsIn(expr.whenFalse)];
-  if (ts.isBinaryExpression(expr)) return [...literalsIn(expr.left), ...literalsIn(expr.right)];
+  if (ts.isBinaryExpression(expr) && RENDERS_OPERAND.has(expr.operatorToken.kind)) {
+    return [...literalsIn(expr.left), ...literalsIn(expr.right)];
+  }
   return [];
 }
 
