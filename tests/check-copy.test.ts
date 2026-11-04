@@ -18,6 +18,21 @@ describe("checkSource", () => {
     expect(check(`<span> Done deal </span>`)).toEqual([]);
   });
 
+  it("flags literals inside ternaries, fallbacks, templates and fragments", () => {
+    expect(check(`<p>{ok ? "Save now" : t("x")}</p>`)).toEqual(["Save now"]);
+    expect(check(`<p>{name || "Unknown"}</p>`)).toEqual(["Unknown"]);
+    expect(check(`<p>{name ?? ("Nobody")}</p>`)).toEqual(["Nobody"]);
+    expect(check("<p>{`Save ${n} items`}</p>")).toEqual(["Save … items"]);
+    expect(check(`<>{"Save now"}</>`)).toEqual(["Save now"]);
+    expect(check(`<button aria-label={x ? "Close" : "Open"} />`)).toEqual(['aria-label="Close"', 'aria-label="Open"']);
+    expect(check("<input placeholder={`Search ${x}`} />")).toEqual(['placeholder="Search …"']);
+  });
+
+  it("flags text props on our own components", () => {
+    expect(check(`<Btn label="Save now" emptyText={"No deals"} />`)).toEqual(['label="Save now"', 'emptyText="No deals"']);
+    expect(check(`<Btn label={t("x")} aria-labelledby="title-id" />`)).toEqual([]);
+  });
+
   it("ignores non-UI attributes like className and type", () => {
     expect(check(`<input className="h-11 w-full" type="email" name="email" />`)).toEqual([]);
   });

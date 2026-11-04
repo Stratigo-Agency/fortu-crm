@@ -20,12 +20,35 @@ export const ALLOWED = new Set([
 ]);
 
 const ATTRIBUTES = new Set(["placeholder", "title", "aria-label", "alt"]);
+// Props on our own components that carry text, e.g. label="…", emptyText="…".
+const TEXT_PROP = /label|text|title|placeholder|message/i;
+const NOT_TEXT = new Set(["aria-labelledby", "aria-describedby"]);
 const DIRS = ["app", "components"];
 
 /** Text a person would read: contains a letter, and isn't an allowed word. */
 function isUiText(text) {
   const s = text.replace(/\s+/g, " ").trim();
   return /\p{L}/u.test(s) && !ALLOWED.has(s);
+}
+
+/**
+ * The string literals an expression can render: walks ternaries, ||, ??, &&, +,
+ * parentheses and template strings. Stops at calls, so t("key") is never flagged.
+ */
+function literalsIn(expr) {
+  if (!expr) return [];
+  if (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr)) return [expr.text];
+  if (ts.isTemplateExpression(expr)) {
+    return [expr.head.text + expr.templateSpans.map((s) => `…${s.literal.text}`).join("")];
+  }
+  if (ts.isParenthesizedExpression(expr)) return literalsIn(expr.expression);
+  if (ts.isConditionalExpression(expr)) return [...literalsIn(expr.whenTrue), ...literalsIn(expr.whenFalse)];
+  if (ts.isBinaryExpression(expr)) return [...literalsIn(expr.left), ...literalsIn(expr.right)];
+  return [];
+}
+
+function isTextAttribute(name) {
+  return !NOT_TEXT.has(name) && (ATTRIBUTES.has(name) || TEXT_PROP.test(name));
 }
 
 /** Problems in one source file, as { line, text }. */
@@ -35,19 +58,15 @@ export function checkSource(fileName, source) {
   const report = (node, text) =>
     problems.push({ line: file.getLineAndCharacterOfPosition(node.getStart()).line + 1, text: text.trim() });
 
-  const literal = (expr) =>
-    expr && (ts.isStringLiteral(expr) || ts.isNoSubstitutionTemplateLiteral(expr)) ? expr.text : null;
-
   function visit(node) {
     if (ts.isJsxText(node) && isUiText(node.text)) report(node, node.text);
-    if (ts.isJsxExpression(node) && ts.isJsxElement(node.parent)) {
-      const text = literal(node.expression);
-      if (text !== null && isUiText(text)) report(node, text);
+    if (ts.isJsxExpression(node) && (ts.isJsxElement(node.parent) || ts.isJsxFragment(node.parent))) {
+      for (const text of literalsIn(node.expression)) if (isUiText(text)) report(node, text);
     }
-    if (ts.isJsxAttribute(node) && ATTRIBUTES.has(node.name.getText(file))) {
+    if (ts.isJsxAttribute(node) && isTextAttribute(node.name.getText(file))) {
       const init = node.initializer;
-      const text = init && (ts.isStringLiteral(init) ? init.text : ts.isJsxExpression(init) ? literal(init.expression) : null);
-      if (text != null && isUiText(text)) report(node, `${node.name.getText(file)}="${text}"`);
+      const texts = !init ? [] : ts.isStringLiteral(init) ? [init.text] : ts.isJsxExpression(init) ? literalsIn(init.expression) : [];
+      for (const text of texts) if (isUiText(text)) report(node, `${node.name.getText(file)}="${text}"`);
     }
     ts.forEachChild(node, visit);
   }
