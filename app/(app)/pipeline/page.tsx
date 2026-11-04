@@ -3,10 +3,11 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { rupiahShort } from "@/lib/format";
-import { pipelineStats } from "@/lib/pipeline";
+import { boardCards, boardColumns, pipelineStats } from "@/lib/pipeline";
 import { parseView, pipelineHref } from "@/lib/pipelineHref";
 import type { PipelineView } from "@/lib/pipelineTypes";
 import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
+import { Board } from "./Board";
 import { LostToggle } from "./LostToggle";
 
 export default function Page(props: PageProps<"/pipeline">) {
@@ -20,13 +21,19 @@ export default function Page(props: PageProps<"/pipeline">) {
 }
 
 async function Content({ searchParams }: { searchParams: PageProps<"/pipeline">["searchParams"] }) {
-  await requireUser();
+  const user = await requireUser();
   const params = await searchParams;
   const view = parseView(params.view);
   const q = (typeof params.q === "string" ? params.q : "").trim().slice(0, 100);
   const showLost = params.lost === "1";
   const ownerId = await getSalesFilter();
-  const [stats, owners] = await Promise.all([pipelineStats(ownerId), salesOptions()]);
+  const filter = { viewerId: user.id, ownerId, q, showLost };
+  const [stats, owners, columns, cards] = await Promise.all([
+    pipelineStats(ownerId),
+    salesOptions(),
+    boardColumns(filter),
+    boardCards(filter),
+  ]);
   const ownerName = owners.find((o) => o.id === ownerId)?.full_name;
 
   return (
@@ -93,6 +100,14 @@ async function Content({ searchParams }: { searchParams: PageProps<"/pipeline">[
           {t("pipeline.newDeal")}
         </Link>
       </div>
+
+      {cards.length === 0 ? (
+        <p className="mt-6 rounded-lg bg-white p-8 text-center text-slate shadow-card">
+          {q ? t("pipeline.noMatch") : t("pipeline.empty")}
+        </p>
+      ) : (
+        <Board columns={columns} cards={cards} compact={view === "ringkas"} />
+      )}
     </>
   );
 }
