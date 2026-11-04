@@ -289,11 +289,13 @@ function Fields({
             aria-label={t("quickAdd.pickTime")}
             value={time}
             onChange={(e) => setTime(e.target.value)}
+            aria-invalid={state.field === "receivedAt" || undefined}
+            aria-describedby={state.field === "receivedAt" ? "time-error" : undefined}
             className={`${field} mt-3`}
           />
         )}
         {state.field === "receivedAt" && (
-          <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+          <p id="time-error" role="alert" className="mt-1.5 text-sm font-bold text-ink">
             {state.message}
           </p>
         )}

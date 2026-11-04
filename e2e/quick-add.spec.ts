@@ -80,6 +80,15 @@ test.describe.serial("Tambah cepat on a phone", () => {
     expect(await leadsOf("+6212345")).toHaveLength(0);
   });
 
+  test("choosing Pilih jam without a time shows the error on the time field", async ({ page }) => {
+    await page.getByLabel("Nomor WhatsApp").fill("0812 5550 0002");
+    await page.getByRole("radio", { name: "Pilih jam" }).check({ force: true });
+    await page.getByRole("button", { name: "Simpan prospek" }).click();
+    await expect(page.locator("#time-error")).toHaveText("Isi jam chat masuknya.");
+    await expect(page.getByLabel("Pilih jam", { exact: true }).last()).toHaveAttribute("aria-invalid", "true");
+    expect(await leadsOf("+6281255500002")).toHaveLength(0);
+  });
+
   test("without a code a source can be picked, and a time today can be chosen", async ({ page }) => {
     await page.getByLabel("Nomor WhatsApp").fill("0812 5550 0001");
     await page.getByLabel("Pesan pertama").fill("Tanya harga LED");

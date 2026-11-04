@@ -11,16 +11,23 @@ import {
   submitQuickAdd,
 } from "@/lib/quickAdd";
 
+// Server Actions can be called with anything, so the lookups check what they were given.
+const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : undefined);
+
 /** The ad or link behind a code found in the first message, for the "Dari iklan" card. */
 export async function lookupCode(codes: Codes): Promise<CodeInfo | null> {
   await requireUser();
-  return describeCodes({ adCode: codes.adCode?.slice(0, 20), clickCode: codes.clickCode?.slice(0, 8) });
+  const adCode = str(codes?.adCode, 20);
+  const clickCode = str(codes?.clickCode, 8);
+  if (!adCode && !clickCode) return null;
+  return describeCodes({ adCode, clickCode });
 }
 
 /** Whether the number typed so far is a known contact, for the hint under the phone field. */
 export async function lookupPhone(raw: string): Promise<PhoneStatus | null> {
   await requireUser();
-  return lookupPhoneStatus(raw.slice(0, 40));
+  const phone = str(raw, 40);
+  return phone ? lookupPhoneStatus(phone) : null;
 }
 
 export type QuickAddState = {
