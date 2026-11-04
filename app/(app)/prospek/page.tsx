@@ -40,6 +40,16 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
         <p className="text-slate">{t("prospek.summary", { n: stats.new_count })}</p>
       </div>
 
+      <dl className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Stat label={t("prospek.statToday")} value={String(stats.received_today)} />
+        <Stat
+          label={t("prospek.statLogDelay")}
+          value={stats.median_log_delay_min === null ? "—" : t("prospek.minutes", { n: stats.median_log_delay_min })}
+          hint={stats.median_log_delay_min === null ? undefined : t("prospek.statLogDelayHint")}
+        />
+        <Stat label={t("prospek.statNoCode")} value={String(stats.meta_without_code)} />
+      </dl>
+
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <nav aria-label={t("prospek.title")} className="flex overflow-hidden rounded-sm border border-input bg-white">
           <TabLink tab="baru" current={tab} q={q} label={`${t("prospek.tabNew")} · ${stats.new_count}`} />
@@ -112,6 +122,16 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
         </div>
       )}
     </>
+  );
+}
+
+function Stat({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <div className="rounded-lg bg-white px-5 py-4 shadow-card md:min-h-24">
+      <dt className="text-slate">{label}</dt>
+      <dd className="tabular mt-1 text-3xl font-bold text-ink">{value}</dd>
+      {hint && <p className="mt-1 text-sm text-slate">{hint}</p>}
+    </div>
   );
 }
 
