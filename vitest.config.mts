@@ -1,3 +1,4 @@
+import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 // Same env as the npm db:* scripts. Values already in the environment win.
@@ -8,11 +9,16 @@ try {
 }
 
 export default defineConfig({
+  resolve: {
+    alias: { "@": path.resolve(import.meta.dirname) },
+  },
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
     exclude: ["node_modules/**", ".next/**"],
     globalSetup: ["tests/global-setup.ts"],
+    // App code (lib/db.ts) talks to the test database, never the dev one.
+    env: { DATABASE_URL: process.env.DATABASE_URL_TEST ?? "" },
     // All DB tests share one fortu_test database.
     fileParallelism: false,
   },
