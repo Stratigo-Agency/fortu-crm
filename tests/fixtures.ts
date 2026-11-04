@@ -11,16 +11,23 @@ export async function createUser({
   email = `user-${randomUUID()}@example.com`,
   googleSub = null,
   passwordHash = null,
+  fullName = `Uji ${role}`,
+  acceptingLeads = true,
+  productLines = [],
 }: {
   role?: Role;
   isActive?: boolean;
   email?: string;
   googleSub?: string | null;
   passwordHash?: string | null;
+  fullName?: string;
+  acceptingLeads?: boolean;
+  productLines?: string[];
 } = {}) {
   const [user] = await sql<{ id: string; email: string; role: Role }[]>`
-    INSERT INTO users (full_name, email, role, is_active, google_sub, password_hash)
-    VALUES (${`Uji ${role}`}, ${email}, ${role}, ${isActive}, ${googleSub}, ${passwordHash})
+    INSERT INTO users (full_name, email, role, is_active, google_sub, password_hash, accepting_leads, product_lines)
+    VALUES (${fullName}, ${email}, ${role}, ${isActive}, ${googleSub}, ${passwordHash}, ${acceptingLeads},
+            ${productLines}::product_line[])
     RETURNING id, email, role`;
   return user;
 }
@@ -51,4 +58,61 @@ export async function createLead(ownerId: string | null) {
     VALUES (${contact.id}, 'whatsapp_direct', ${ownerId})
     RETURNING id`;
   return lead;
+}
+
+/** A random Indonesian mobile number written the way a rep would type it. */
+export function randomPhone() {
+  return `0812${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
+}
+
+let codeCounter = 0;
+/** A unique 2-digit number for ad prefill codes within one test run. */
+export function nextCodeNumber() {
+  codeCounter += 1;
+  return String(codeCounter % 100).padStart(2, "0");
+}
+
+/** An ad with a prefill code like "F-IFP-01", with the campaign and ad set it needs. */
+export async function createAd(prefillCode: string, name = "Iklan IFP Sekolah") {
+  const key = randomUUID();
+  const [ad] = await sql<{ id: string }[]>`
+    WITH c AS (INSERT INTO ad_campaigns (meta_campaign_id, name) VALUES (${`c-${key}`}, 'Kampanye uji') RETURNING id),
+         s AS (INSERT INTO ad_sets (meta_adset_id, campaign_id, name) SELECT ${`s-${key}`}, id, 'Set uji' FROM c RETURNING id)
+    INSERT INTO ads (meta_ad_id, ad_set_id, name, prefill_code)
+    SELECT ${`a-${key}`}, id, ${name}, ${prefillCode} FROM s
+    RETURNING id`;
+  return ad;
+}
+
+/** A rep's WhatsApp Business line. */
+export async function createWaLine(userId: string | null, isActive = true) {
+  const phone = `+62813${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
+  const [line] = await sql<{ id: string }[]>`
+    INSERT INTO wa_lines (user_id, phone_e164, label, is_active)
+    VALUES (${userId}, ${phone}, 'WA uji', ${isActive}) RETURNING id`;
+  return line;
+}
+
+/** A tracked /go/wa click with a ref code. */
+export async function createClick(refCode: string, utm: { source?: string; campaign?: string } = {}) {
+  const [click] = await sql<{ id: string }[]>`
+    INSERT INTO wa_click_events (ref_code, source_channel, utm_source, utm_campaign)
+    VALUES (${refCode}, 'website_wa_link', ${utm.source ?? null}, ${utm.campaign ?? null}) RETURNING id`;
+  return click;
+}
+
+/** An open deal (stage chat) of a contact, owned by a rep; lost = closed as Lost. */
+export async function createDealFor(contactId: string, ownerId: string, { lost = false } = {}) {
+  const [deal] = await sql<{ id: string }[]>`
+    INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date, est_amount)
+    SELECT 'Uji deal', ${contactId}, ${ownerId}, id, 'Telepon', current_date, 1000000
+      FROM pipeline_stages WHERE key = 'chat'
+    RETURNING id`;
+  if (lost) {
+    await sql`
+      UPDATE deals SET stage_id = (SELECT id FROM pipeline_stages WHERE key = 'lost'),
+                       lost_reason = 'harga', closed_on = current_date
+       WHERE id = ${deal.id}`;
+  }
+  return deal;
 }
