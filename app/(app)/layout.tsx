@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
 import { canOpenSettings, newLeadCount } from "@/lib/shell";
+import { HideOnPhone } from "./HideOnPhone";
 import { SalesFilter } from "./SalesFilter";
 import { type NavItem, TopNav } from "./TopNav";
 import { UserChip } from "./UserChip";
@@ -52,9 +53,11 @@ async function TopBar() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <Suspense fallback={<div className="h-16 bg-navy" />}>
-        <TopBar />
-      </Suspense>
+      <HideOnPhone path="/tambah">
+        <Suspense fallback={<div className="h-16 bg-navy" />}>
+          <TopBar />
+        </Suspense>
+      </HideOnPhone>
       <div className="flex-1">{children}</div>
     </>
   );

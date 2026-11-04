@@ -226,7 +226,9 @@
     "submit": "Simpan prospek",
     "saved": "Prospek tersimpan.",
     "duplicate": "Customer ini sudah chat hari ini. Digabung ke prospek yang sama.",
-    "invalidPhone": "Nomor belum benar. Contoh: 0812 3456 7890."
+    "invalidPhone": "Nomor belum benar. Contoh: 0812 3456 7890.",
+    "futureTime": "Jam itu belum lewat. Pilih jam yang sudah lewat hari ini.",
+    "source": "Sumber chat"
   },
   "kontak": {
     "title": "Kontak",

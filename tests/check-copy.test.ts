@@ -28,6 +28,11 @@ describe("checkSource", () => {
     expect(check("<input placeholder={`Search ${x}`} />")).toEqual(['placeholder="Search …"']);
   });
 
+  it("doesn't flag the strings in comparisons that only pick what to show", () => {
+    expect(check(`<>{when === "time" && <input />}{a !== "x" ? <b /> : null}</>`)).toEqual([]);
+    expect(check(`<p>{when === "time" && "Save now"}</p>`)).toEqual(["Save now"]);
+  });
+
   it("flags text props on our own components", () => {
     expect(check(`<Btn label="Save now" emptyText={"No deals"} />`)).toEqual(['label="Save now"', 'emptyText="No deals"']);
     expect(check(`<Btn label={t("x")} aria-labelledby="title-id" />`)).toEqual([]);
