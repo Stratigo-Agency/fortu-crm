@@ -56,6 +56,16 @@ function shortDate(day: string, today: string): string {
   return new Intl.DateTimeFormat("id-ID", opts).format(new Date(Date.UTC(y, m - 1, dd)));
 }
 
+/** "21 Nov", or "21 Nov 2025" outside this year (Jakarta). For Done / Lost dates and close dates. */
+export function dayMonth(d: Date | string, now: Date = new Date()): string {
+  return shortDate(dayOf(d), jakartaDay(now));
+}
+
+/** "10%" from a probability like "0.100" (pipeline_stages.probability). */
+export function percent(p: number | string): string {
+  return `${Math.round(toNumber(p) * 100)}%`;
+}
+
 /** hari ini · besok · kemarin · 3 hari lalu (< 31) · dalam 3 hari (< 8) · 24 Nov · 24 Nov 2025 */
 export function relDate(d: Date | string, now: Date = new Date()): string {
   const day = dayOf(d);

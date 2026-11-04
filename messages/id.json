@@ -139,7 +139,12 @@
     "tagStale": "{n} hari tanpa update",
     "tagDemo": "Sudah demo",
     "doneOn": "Done {date}",
-    "lostOn": "Lost {date}"
+    "lostOn": "Lost {date}",
+    "colDeal": "Deal",
+    "colStage": "Tahap",
+    "moveTo": "Pindah ke tahap",
+    "views": "Tampilan",
+    "dealsAmount": "{n} deal · {amount}"
   },
   "deal": {
     "kind": "Deal",
