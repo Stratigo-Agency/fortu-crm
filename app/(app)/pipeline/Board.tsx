@@ -17,6 +17,7 @@ import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/copy";
 import { percent, rupiahShort } from "@/lib/format";
 import { type Column, type DealCard, STAGE_KEYS, type StageKey } from "@/lib/pipelineTypes";
+import type { Restore } from "@/lib/pipeline";
 import { moveDealAction } from "./actions";
 import { DealCardBody, DealCardCompact } from "./DealCardView";
 
@@ -32,7 +33,7 @@ const MARKER: Record<StageKey, string> = {
   lost: "border border-slate bg-white",
 };
 
-type Toast = { id: number; text: string };
+type Toast = { id: number; text: string; undo?: () => void };
 type Props = { columns: Column[]; cards: DealCard[]; compact: boolean };
 
 export function Board({ columns, cards, compact }: Props) {
@@ -53,7 +54,7 @@ export function Board({ columns, cards, compact }: Props) {
     return () => clearTimeout(timer);
   }, [toast]);
   const toastSeq = useRef(0);
-  const say = (text: string) => setToast({ id: ++toastSeq.current, text });
+  const say = (text: string, undo?: () => void) => setToast({ id: ++toastSeq.current, text, undo });
 
   const [active, setActive] = useState<DealCard | null>(null);
   // Mouse and keyboard only: on phones the stage select moves a card, so scrolling stays scrolling.
@@ -85,11 +86,35 @@ export function Board({ columns, cards, compact }: Props) {
     setMoves((m) => ({ ...m, [card.id]: to }));
     const r = await moveDealAction(card.id, to);
     if (r.ok) {
-      say(t("stage.moved", { stage: t(`stage.${to}`) }));
+      // Undo is the same move back, putting back what the move cleared (Done deal / Lost clear the next step).
+      say(t("stage.moved", { stage: t(`stage.${to}`) }), () => void undo(card, to, r.from, r.previous));
       router.refresh();
       return;
     }
     setMoves((m) => ({ ...m, [card.id]: from }));
+    if ("rule" in r) {
+      say(t(`stageRule.${r.rule}`));
+      // The deal panel (T08) opens from these params with the target stage chosen and the missing field marked.
+      const params = new URLSearchParams(window.location.search);
+      params.set("deal", card.id);
+      params.set("stage", to);
+      params.set("missing", r.rule);
+      router.replace(`/pipeline?${params}`, { scroll: false });
+    } else {
+      say(r.error);
+    }
+  }
+
+  async function undo(card: DealCard, now: StageKey, back: StageKey, previous: Restore) {
+    setToast(null);
+    setMoves((m) => ({ ...m, [card.id]: back }));
+    const r = await moveDealAction(card.id, back, previous);
+    if (r.ok) {
+      say(t("stage.moved", { stage: t(`stage.${back}`) }));
+      router.refresh();
+      return;
+    }
+    setMoves((m) => ({ ...m, [card.id]: now }));
     say("rule" in r ? t(`stageRule.${r.rule}`) : r.error);
   }
 
@@ -141,6 +166,15 @@ export function Board({ columns, cards, compact }: Props) {
           className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-md items-center gap-4 rounded-md bg-navy px-4 py-3 text-white shadow-card"
         >
           <span className="flex-1">{toast.text}</span>
+          {toast.undo && (
+            <button
+              type="button"
+              onClick={toast.undo}
+              className="-my-1 h-11 shrink-0 rounded-sm px-3 font-bold text-white underline underline-offset-2"
+            >
+              {t("common.undo")}
+            </button>
+          )}
         </div>
       )}
     </DndContext>
