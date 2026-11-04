@@ -44,3 +44,30 @@ describe("newLeadCount", () => {
     expect(await newLeadCount({ id: rep.id, role: "ceo" })).toBe(allBefore + 4);
   });
 });
+
+describe("resolveSalesFilter", () => {
+  it("keeps an active user's id and falls back to all sales otherwise", async () => {
+    const { resolveSalesFilter } = await import("@/lib/salesFilter");
+    const rep = await createUser();
+    const gone = await createUser({ isActive: false });
+    expect(await resolveSalesFilter(rep.id)).toBe(rep.id);
+    expect(await resolveSalesFilter(gone.id)).toBeNull();
+    expect(await resolveSalesFilter("00000000-0000-0000-0000-000000000000")).toBeNull();
+    expect(await resolveSalesFilter("all")).toBeNull();
+    expect(await resolveSalesFilter("'; drop table users; --")).toBeNull();
+    expect(await resolveSalesFilter(undefined)).toBeNull();
+  });
+
+  it("lists active reps and sales leads only", async () => {
+    const { salesOptions } = await import("@/lib/salesFilter");
+    const rep = await createUser({ role: "sales_rep" });
+    const lead = await createUser({ role: "sales_lead" });
+    const ceo = await createUser({ role: "ceo" });
+    const gone = await createUser({ role: "sales_rep", isActive: false });
+    const ids = (await salesOptions()).map((o) => o.id);
+    expect(ids).toContain(rep.id);
+    expect(ids).toContain(lead.id);
+    expect(ids).not.toContain(ceo.id);
+    expect(ids).not.toContain(gone.id);
+  });
+});
