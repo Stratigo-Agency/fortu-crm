@@ -1,7 +1,17 @@
 import { t } from "@/lib/copy";
 import { dayMonth, relDate, rupiahShort } from "@/lib/format";
-import type { DealCard } from "@/lib/pipelineTypes";
+import type { DealCard, StageKey } from "@/lib/pipelineTypes";
 import { initials } from "@/lib/shellInitials";
+
+/** The square stage marker: the stage ramp from light to dark; Lost is an outline. */
+export const MARKER: Record<StageKey, string> = {
+  chat: "bg-stage-1",
+  quotation: "bg-stage-2",
+  negotiation: "bg-stage-3",
+  po: "bg-stage-4",
+  done: "bg-stage-5",
+  lost: "border border-slate bg-white",
+};
 
 function Tag({ tone, children }: { tone: "navy" | "late" | "plain"; children: React.ReactNode }) {
   const cls =

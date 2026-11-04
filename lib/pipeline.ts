@@ -101,7 +101,7 @@ export async function boardColumns(f: BoardFilter): Promise<Column[]> {
 export async function boardCards(f: BoardFilter, limit = 500): Promise<DealCard[]> {
   return sql<DealCard[]>`
     SELECT b.id, b.name, b.stage_key, b.owner_user_id, b.owner_name, b.company_name, b.contact_name,
-           b.amount::text AS amount, b.has_products, b.screen_units::int AS screen_units,
+           b.amount::text AS amount, b.weighted_amount::text AS weighted_amount, b.has_products, b.screen_units::int AS screen_units,
            to_char(b.expected_close_date, 'YYYY-MM-DD') AS expected_close_date,
            b.next_step, to_char(b.next_step_date, 'YYYY-MM-DD') AS next_step_date,
            b.next_step_overdue, b.days_overdue, b.days_in_stage, b.is_stale, b.days_since_update,

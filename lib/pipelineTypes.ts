@@ -17,6 +17,8 @@ export type DealCard = {
   company_name: string | null;
   contact_name: string | null;
   amount: string;
+  /** amount × stage probability, from v_deals_enriched */
+  weighted_amount: string;
   has_products: boolean;
   screen_units: number;
   expected_close_date: string | null;

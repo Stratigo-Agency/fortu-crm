@@ -19,19 +19,10 @@ import { percent, rupiahShort } from "@/lib/format";
 import { type Column, type DealCard, STAGE_KEYS, type StageKey } from "@/lib/pipelineTypes";
 import type { Restore } from "@/lib/pipeline";
 import { moveDealAction } from "./actions";
-import { DealCardBody, DealCardCompact } from "./DealCardView";
+import { DealCardBody, DealCardCompact, MARKER } from "./DealCardView";
 
 /** Cards shown per column; the rest is "+n deal lainnya". */
 export const CARDS_PER_COLUMN = 30;
-
-const MARKER: Record<StageKey, string> = {
-  chat: "bg-stage-1",
-  quotation: "bg-stage-2",
-  negotiation: "bg-stage-3",
-  po: "bg-stage-4",
-  done: "bg-stage-5",
-  lost: "border border-slate bg-white",
-};
 
 type Toast = { id: number; text: string; undo?: () => void };
 type Props = { columns: Column[]; cards: DealCard[]; compact: boolean };

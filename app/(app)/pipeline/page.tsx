@@ -8,6 +8,7 @@ import { parseView, pipelineHref } from "@/lib/pipelineHref";
 import type { PipelineView } from "@/lib/pipelineTypes";
 import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
 import { Board } from "./Board";
+import { DealList } from "./DealList";
 import { LostToggle } from "./LostToggle";
 
 export default function Page(props: PageProps<"/pipeline">) {
@@ -105,6 +106,8 @@ async function Content({ searchParams }: { searchParams: PageProps<"/pipeline">[
         <p className="mt-6 rounded-lg bg-white p-8 text-center text-slate shadow-card">
           {q ? t("pipeline.noMatch") : t("pipeline.empty")}
         </p>
+      ) : view === "list" ? (
+        <DealList cards={cards} />
       ) : (
         <Board columns={columns} cards={cards} compact={view === "ringkas"} />
       )}
