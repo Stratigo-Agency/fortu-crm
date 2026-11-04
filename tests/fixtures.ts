@@ -65,11 +65,14 @@ export function randomPhone() {
   return `0812${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
 }
 
-let codeCounter = 0;
-/** A unique 2-digit number for ad prefill codes within one test run. */
-export function nextCodeNumber() {
-  codeCounter += 1;
-  return String(codeCounter % 100).padStart(2, "0");
+/** An ad prefill code like "F-IFP-07" that no ad in the test database uses yet (tests share one database). */
+export async function freeAdCode(prefix: string) {
+  const [row] = await sql<{ code: string }[]>`
+    SELECT ${prefix} || '-' || lpad(n::text, 2, '0') AS code
+      FROM generate_series(1, 99) n
+     WHERE NOT EXISTS (SELECT 1 FROM ads WHERE prefill_code = ${prefix} || '-' || lpad(n::text, 2, '0'))
+     ORDER BY random() LIMIT 1`;
+  return row.code;
 }
 
 /** An ad with a prefill code like "F-IFP-01", with the campaign and ad set it needs. */
