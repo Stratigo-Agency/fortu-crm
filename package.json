@@ -7,7 +7,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs"
+    "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
+    "db:up": "node scripts/db-up.mjs",
+    "db:seed": "node --env-file-if-exists=.env.local scripts/seed.mjs",
+    "db:test:reset": "node --env-file-if-exists=.env.local scripts/test-db-reset.mjs"
   },
   "dependencies": {
     "next": "16.4.5",
