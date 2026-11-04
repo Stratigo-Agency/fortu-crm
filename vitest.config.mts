@@ -19,6 +19,8 @@ export default defineConfig({
     globalSetup: ["tests/global-setup.ts"],
     // App code (lib/db.ts) talks to the test database, never the dev one.
     env: { DATABASE_URL: process.env.DATABASE_URL_TEST ?? "" },
+    // next-auth imports "next/server" without an extension; let Vite resolve it.
+    server: { deps: { inline: ["next-auth"] } },
     // All DB tests share one fortu_test database.
     fileParallelism: false,
   },

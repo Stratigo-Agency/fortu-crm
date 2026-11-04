@@ -17,3 +17,31 @@ export async function createUser({
     RETURNING id, email`;
   return user;
 }
+
+export async function createContact() {
+  const phone = `+628${String(Math.floor(Math.random() * 1e10)).padStart(10, "0")}`;
+  const [contact] = await sql<{ id: string }[]>`
+    INSERT INTO contacts (phone_e164) VALUES (${phone}) RETURNING id`;
+  return contact;
+}
+
+/** An open deal at stage chat, with the next step the stage rules require. */
+export async function createDeal(ownerId: string) {
+  const contact = await createContact();
+  const [deal] = await sql<{ id: string }[]>`
+    INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date)
+    SELECT 'Uji deal', ${contact.id}, ${ownerId}, id, 'Telepon', current_date
+      FROM pipeline_stages WHERE key = 'chat'
+    RETURNING id`;
+  return deal;
+}
+
+// Test fixture only: app code creates leads through ingestLead() (T04).
+export async function createLead(ownerId: string | null) {
+  const contact = await createContact();
+  const [lead] = await sql<{ id: string }[]>`
+    INSERT INTO leads (contact_id, source_channel, owner_user_id)
+    VALUES (${contact.id}, 'whatsapp_direct', ${ownerId})
+    RETURNING id`;
+  return lead;
+}
