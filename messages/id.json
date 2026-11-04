@@ -10,6 +10,7 @@
     "signOut": "Keluar"
   },
   "common": {
+    "appName": "CRM",
     "save": "Simpan",
     "cancel": "Batal",
     "close": "Tutup",

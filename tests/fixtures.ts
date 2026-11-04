@@ -18,10 +18,10 @@ export async function createUser({
   googleSub?: string | null;
   passwordHash?: string | null;
 } = {}) {
-  const [user] = await sql<{ id: string; email: string }[]>`
+  const [user] = await sql<{ id: string; email: string; role: Role }[]>`
     INSERT INTO users (full_name, email, role, is_active, google_sub, password_hash)
     VALUES (${`Uji ${role}`}, ${email}, ${role}, ${isActive}, ${googleSub}, ${passwordHash})
-    RETURNING id, email`;
+    RETURNING id, email, role`;
   return user;
 }
 
