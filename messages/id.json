@@ -228,6 +228,7 @@
     "duplicate": "Customer ini sudah chat hari ini. Digabung ke prospek yang sama.",
     "invalidPhone": "Nomor belum benar. Contoh: 0812 3456 7890.",
     "futureTime": "Jam itu belum lewat. Pilih jam yang sudah lewat hari ini.",
+    "timeMissing": "Isi jam chat masuknya.",
     "source": "Sumber chat"
   },
   "kontak": {

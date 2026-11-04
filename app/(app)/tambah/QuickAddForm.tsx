@@ -1,24 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { t } from "@/lib/copy";
 import { parseCodes } from "@/lib/ingest/codes";
 import { normalizePhone } from "@/lib/ingest/phone";
 import type { CodeInfo, PhoneStatus } from "@/lib/quickAdd";
-import { lookupCode, lookupPhone } from "./actions";
+import { QUICK_ADD_SOURCES, type QuickAddSource } from "@/lib/quickAddSources";
+import { createLead, lookupCode, lookupPhone, type QuickAddState } from "./actions";
 
 const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink";
 const label = "mb-1.5 block text-base text-slate";
 
 type Interest = "IFP" | "DSS" | "LED" | "unknown";
 const INTERESTS: Interest[] = ["IFP", "DSS", "LED", "unknown"];
-
-// Sources a rep can pick when the message has no code (default: an ad chat).
-const SOURCES = [
-  "meta_ctwa", "whatsapp_direct", "instagram_dm", "website_wa_link", "google_ads", "referral",
-  "partner_si", "repeat_order", "event", "walk_in", "tender", "other",
-] as const;
-type Source = (typeof SOURCES)[number];
 
 /** The result of a lookup for a given input, so a stale answer is never shown for newer input. */
 type Looked<T> = { key: string; value: T };
@@ -47,12 +41,49 @@ function Chip(props: {
 
 const noSubscribe = () => () => {};
 
+const initialState: QuickAddState = { seq: 0, status: "idle" };
+
+/** The form and its toast. Each finished save remounts the fields, which clears them. */
 export function QuickAddForm() {
+  const [state, formAction, pending] = useActionState(createLead, initialState);
+  const [dismissed, setDismissed] = useState(0);
+  const toast = state.seq > 0 && state.seq > dismissed && state.status !== "error" ? state.message : null;
+
+  useEffect(() => {
+    if (!toast) return;
+    const timer = setTimeout(() => setDismissed(state.seq), 4000);
+    return () => clearTimeout(timer);
+  }, [toast, state.seq]);
+
+  return (
+    <>
+      <Fields key={state.seq} state={state} formAction={formAction} pending={pending} />
+      {toast && (
+        <p
+          role="status"
+          className="fixed inset-x-4 bottom-4 z-20 mx-auto max-w-md rounded-md bg-navy px-4 py-3 text-white shadow-card"
+        >
+          {toast}
+        </p>
+      )}
+    </>
+  );
+}
+
+function Fields({
+  state,
+  formAction,
+  pending,
+}: {
+  state: QuickAddState;
+  formAction: (formData: FormData) => void;
+  pending: boolean;
+}) {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [chosenInterest, setChosenInterest] = useState<Interest | null>(null);
-  const [source, setSource] = useState<Source>("meta_ctwa");
+  const [source, setSource] = useState<QuickAddSource>("meta_ctwa");
   const [when, setWhen] = useState<"now" | "time">("now");
   const [time, setTime] = useState("");
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -101,6 +132,12 @@ export function QuickAddForm() {
   // A code that names an ad sets the product, until the rep picks one by hand.
   const interest: Interest = chosenInterest ?? (codeInfo?.kind === "ad" ? codeInfo.productLine : "unknown");
 
+  // After a save the fields are new again: the next number goes straight in.
+  const afterSave = state.seq > 0;
+  useEffect(() => {
+    if (afterSave) phoneRef.current?.focus();
+  }, [afterSave]);
+
   // The Clipboard API reads need a secure context and permission; hide Tempel where unsupported.
   const canPaste = useSyncExternalStore(
     noSubscribe,
@@ -119,7 +156,7 @@ export function QuickAddForm() {
   }
 
   return (
-    <form className="mt-5 flex flex-col gap-5" noValidate>
+    <form action={formAction} className="mt-5 flex flex-col gap-5" noValidate>
       <div>
         <label htmlFor="phone" className={label}>
           {t("quickAdd.phone")}
@@ -134,7 +171,9 @@ export function QuickAddForm() {
             autoComplete="off"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            className={field}
+            aria-invalid={state.field === "phone" || undefined}
+            aria-describedby={state.field === "phone" ? "phone-error" : undefined}
+            className={`${field} ${state.field === "phone" ? "border-2 border-navy" : ""}`}
           />
           {canPaste && (
             <button
@@ -146,7 +185,12 @@ export function QuickAddForm() {
             </button>
           )}
         </div>
-        {phoneStatus && (
+        {state.field === "phone" && (
+          <p id="phone-error" role="alert" className="mt-1.5 text-sm font-bold text-ink">
+            {state.message}
+          </p>
+        )}
+        {phoneStatus && state.field !== "phone" && (
           <p className="mt-1.5 text-sm text-slate">
             {phoneStatus.state === "new"
               ? t("quickAdd.phoneNew")
@@ -199,10 +243,10 @@ export function QuickAddForm() {
             id="source"
             name="source"
             value={source}
-            onChange={(e) => setSource(e.target.value as Source)}
+            onChange={(e) => setSource(e.target.value as QuickAddSource)}
             className={field}
           >
-            {SOURCES.map((value) => (
+            {QUICK_ADD_SOURCES.map((value) => (
               <option key={value} value={value}>
                 {t(`sourceChannel.${value}`)}
               </option>
@@ -248,11 +292,25 @@ export function QuickAddForm() {
             className={`${field} mt-3`}
           />
         )}
+        {state.field === "receivedAt" && (
+          <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+            {state.message}
+          </p>
+        )}
       </fieldset>
 
-      <button type="submit" className="mt-2 h-13 w-full rounded-md bg-navy px-4 text-base font-bold text-white">
+      <button
+        type="submit"
+        disabled={pending}
+        className="mt-2 h-13 w-full rounded-md bg-navy px-4 text-base font-bold text-white disabled:opacity-60"
+      >
         {t("quickAdd.submit")}
       </button>
+      {state.field === "form" && (
+        <p role="alert" className="text-center font-bold text-ink">
+          {state.message}
+        </p>
+      )}
     </form>
   );
 }
