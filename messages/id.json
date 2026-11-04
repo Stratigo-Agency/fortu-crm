@@ -370,5 +370,10 @@
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",
     "offline": "Koneksi terputus. Perubahan belum tersimpan."
+  },
+  "home": {
+    "appName": "CRM",
+    "dbConnected": "Database terhubung · {n} produk",
+    "dbOffline": "Database belum terhubung. Jalankan npm run db:up."
   }
 }
