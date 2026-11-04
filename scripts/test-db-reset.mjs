@@ -28,7 +28,7 @@ if (isMain(import.meta)) {
   try {
     await resetTestDatabase();
   } catch (err) {
-    console.error(err.file ? `error ${err.file}: ${err.message}` : `error: ${err.message}`);
+    console.error(err.sqlFile ? `error ${err.sqlFile}: ${err.message}` : `error: ${err.message}`);
     process.exit(1);
   }
 }

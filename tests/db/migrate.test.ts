@@ -43,7 +43,7 @@ describe("migrations", () => {
       await writeFile(path.join(dir, "999_after.sql"), "create table t_after (id int);\n");
 
       await expect(runMigrations({ url, dir, log: () => {} })).rejects.toMatchObject({
-        file: "998_bad.sql",
+        sqlFile: "998_bad.sql",
       });
 
       const tables = await sql`

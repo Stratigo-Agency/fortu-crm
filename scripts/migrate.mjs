@@ -34,7 +34,7 @@ export async function runMigrations({
           await tx`insert into schema_migrations (filename) values (${file})`;
         });
       } catch (err) {
-        err.file = file;
+        err.sqlFile = file;
         throw err;
       }
       log(`applied ${file}`);
@@ -48,7 +48,7 @@ if (isMain(import.meta)) {
   try {
     await runMigrations({ url: databaseUrl() });
   } catch (err) {
-    console.error(err.file ? `error ${err.file}: ${err.message}` : `error: ${err.message}`);
+    console.error(err.sqlFile ? `error ${err.sqlFile}: ${err.message}` : `error: ${err.message}`);
     process.exit(1);
   }
 }
