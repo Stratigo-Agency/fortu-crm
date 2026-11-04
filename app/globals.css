@@ -41,3 +41,13 @@
     @apply bg-paper font-sans text-ink;
   }
 }
+
+/* The pipeline's stage select: phones, and any touch screen (tablets can't drag with a mouse). */
+.stage-select {
+  display: none;
+}
+@media (max-width: 767px), (pointer: coarse) {
+  .stage-select {
+    display: block;
+  }
+}

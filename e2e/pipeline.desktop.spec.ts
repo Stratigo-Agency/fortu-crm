@@ -46,7 +46,7 @@ const column = (page: Page, name: string) => page.locator(`section[aria-label="$
 
 /** A real mouse drag, in small steps, so dnd-kit's mouse sensor picks it up. */
 async function drag(page: Page, id: string, to: string) {
-  const from = await card(page, id).boundingBox();
+  const from = await card(page, id).locator("[data-drag-handle]").boundingBox();
   const target = await column(page, to).boundingBox();
   if (!from || !target) throw new Error("card or column not on screen");
   await page.mouse.move(from.x + from.width / 2, from.y + 20);
@@ -56,13 +56,17 @@ async function drag(page: Page, id: string, to: string) {
   await page.mouse.up();
 }
 
+// the board's live region (always mounted; its text is the toast)
 const toast = (page: Page) => page.locator("div[role=status].fixed");
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/pipeline");
   await expect(card(page, deals.ready)).toBeVisible();
   // wait until the board is interactive (dnd-kit sets this after hydration)
-  await expect(card(page, deals.ready)).toHaveAttribute("aria-roledescription", "draggable");
+  await expect(card(page, deals.ready).locator("[data-drag-handle]")).toHaveAttribute(
+    "aria-roledescription",
+    "kartu deal yang bisa dipindah",
+  );
 });
 
 test("dragging a card with products and a close date to Quotation moves it, records who, and can be undone", async ({ page }) => {
@@ -89,11 +93,11 @@ test("a card without products goes back, says what to add, and opens the panel U
 
 test("another rep's card shows the lock and can't be dragged", async ({ page }) => {
   const locked = card(page, deals.locked);
-  await expect(locked).toHaveAttribute("aria-disabled", "true");
+  await expect(locked.locator("[data-drag-handle]")).toHaveAttribute("aria-disabled", "true");
   await expect(locked).toHaveAttribute("data-locked", "true");
   await drag(page, deals.locked, "Quotation");
   await expect(column(page, "Chat masuk").locator(`[data-deal-id="${deals.locked}"]`)).toBeVisible();
-  await expect(toast(page)).toHaveCount(0);
+  await expect(toast(page)).toHaveText(""); // the live region stays mounted; nothing was said
   expect(await stage(deals.locked)).toBe("chat");
 });
 

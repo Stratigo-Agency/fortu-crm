@@ -34,16 +34,22 @@ export function Board({ columns, cards, compact }: Props) {
   const [prevCards, setPrevCards] = useState(cards);
   if (cards !== prevCards) {
     setPrevCards(cards);
-    setMoves({});
+    // keep a pending move until the server's board shows the card in its new stage
+    const pending = Object.fromEntries(
+      Object.entries(moves).filter(([id, to]) => cards.some((c) => c.id === id && c.stage_key !== to)),
+    );
+    setMoves(pending);
   }
   const shown = cards.map((c) => (moves[c.id] ? { ...c, stage_key: moves[c.id] } : c));
 
   const [toast, setToast] = useState<Toast | null>(null);
+  // The toast stays while the pointer or keyboard focus is on it, so Batalkan can be reached.
+  const [paused, setPaused] = useState(false);
   useEffect(() => {
-    if (!toast) return;
+    if (!toast || paused) return;
     const timer = setTimeout(() => setToast(null), 6000);
     return () => clearTimeout(timer);
-  }, [toast]);
+  }, [toast, paused]);
   const toastSeq = useRef(0);
   const say = (text: string, undo?: () => void) => setToast({ id: ++toastSeq.current, text, undo });
 
@@ -136,6 +142,7 @@ export function Board({ columns, cards, compact }: Props) {
               key={col.key}
               column={col}
               cards={shown.filter((c) => c.stage_key === col.key)}
+              serverShown={Math.min(CARDS_PER_COLUMN, cards.filter((c) => c.stage_key === col.key).length)}
               compact={compact}
               onMove={move}
             />
@@ -150,24 +157,34 @@ export function Board({ columns, cards, compact }: Props) {
           </div>
         )}
       </DragOverlay>
-      {toast && (
-        <div
-          key={toast.id}
-          role="status"
-          className="fixed inset-x-4 bottom-4 z-30 mx-auto flex max-w-md items-center gap-4 rounded-md bg-navy px-4 py-3 text-white shadow-card"
-        >
-          <span className="flex-1">{toast.text}</span>
-          {toast.undo && (
-            <button
-              type="button"
-              onClick={toast.undo}
-              className="-my-1 h-11 shrink-0 rounded-sm px-3 font-bold text-white underline underline-offset-2"
-            >
-              {t("common.undo")}
-            </button>
-          )}
-        </div>
-      )}
+      {/* One live region that stays mounted; only its text changes, so screen readers announce it. */}
+      <div
+        role="status"
+        aria-live="polite"
+        className="pointer-events-none fixed inset-x-4 bottom-4 z-30 mx-auto max-w-md"
+        onMouseEnter={() => setPaused(true)}
+        onMouseLeave={() => setPaused(false)}
+        onFocus={() => setPaused(true)}
+        onBlur={() => setPaused(false)}
+      >
+        {toast && (
+          <div
+            key={toast.id}
+            className="pointer-events-auto flex items-center gap-4 rounded-md bg-navy px-4 py-3 text-white shadow-card"
+          >
+            <span className="flex-1">{toast.text}</span>
+            {toast.undo && (
+              <button
+                type="button"
+                onClick={toast.undo}
+                className="-my-1 h-11 shrink-0 rounded-sm px-3 font-bold text-white underline underline-offset-2"
+              >
+                {t("common.undo")}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
     </DndContext>
   );
 }
@@ -175,14 +192,16 @@ export function Board({ columns, cards, compact }: Props) {
 type ColumnProps = {
   column: Column;
   cards: DealCard[];
+  /** cards of this column on the server's board, for "+n deal lainnya" (not the optimistic ones) */
+  serverShown: number;
   compact: boolean;
   onMove: (card: DealCard, to: StageKey) => void;
 };
 
-function BoardColumn({ column, cards, compact, onMove }: ColumnProps) {
+function BoardColumn({ column, cards, serverShown, compact, onMove }: ColumnProps) {
   const { setNodeRef, isOver } = useDroppable({ id: column.key });
   const shown = cards.slice(0, CARDS_PER_COLUMN);
-  const more = Math.max(0, column.deal_count - shown.length);
+  const more = Math.max(0, column.deal_count - serverShown);
   const closed = column.is_won || column.is_lost;
   return (
     <section
@@ -219,19 +238,27 @@ function BoardColumn({ column, cards, compact, onMove }: ColumnProps) {
 
 function Card({ card, compact, onMove }: { card: DealCard; compact: boolean; onMove: ColumnProps["onMove"] }) {
   // A card the user may not edit can't be picked up at all.
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: card.id, disabled: !card.can_edit });
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: card.id,
+    disabled: !card.can_edit,
+    attributes: { roleDescription: t("pipeline.cardRole") },
+  });
   return (
     <li
-      ref={setNodeRef}
-      {...listeners}
-      {...attributes}
       data-deal-id={card.id}
       data-locked={!card.can_edit || undefined}
-      className={`rounded-md bg-white shadow-card outline-navy ${compact ? "px-3 py-2.5" : "p-4"} ${
-        card.can_edit ? "cursor-grab" : "cursor-default"
-      } ${isDragging ? "opacity-40" : ""}`}
+      className={`rounded-md bg-white shadow-card ${compact ? "px-3 py-2.5" : "p-4"} ${isDragging ? "opacity-40" : ""}`}
     >
-      {compact ? <DealCardCompact card={card} /> : <DealCardBody card={card} />}
+      {/* the drag handle is the card body; the stage select stays outside it, reachable on its own */}
+      <div
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        data-drag-handle
+        className={`rounded-sm outline-offset-4 outline-navy ${card.can_edit ? "cursor-grab" : "cursor-default"}`}
+      >
+        {compact ? <DealCardCompact card={card} /> : <DealCardBody card={card} />}
+      </div>
       {card.can_edit && (
         <select
           aria-label={t("pipeline.moveTo")}
@@ -239,7 +266,7 @@ function Card({ card, compact, onMove }: { card: DealCard; compact: boolean; onM
           onChange={(e) => onMove(card, e.target.value as StageKey)}
           onPointerDown={(e) => e.stopPropagation()}
           onKeyDown={(e) => e.stopPropagation()}
-          className="mt-3 h-11 w-full rounded-sm border border-input bg-white px-3 text-base text-ink md:hidden"
+          className="stage-select mt-3 h-11 w-full rounded-sm border border-input bg-white px-3 text-base text-ink"
         >
           {STAGE_KEYS.map((key) => (
             <option key={key} value={key}>

@@ -164,7 +164,9 @@ export async function moveDeal(
         UPDATE deals
            SET stage_id = (SELECT id FROM pipeline_stages WHERE key = ${toKey}),
                next_step = COALESCE(next_step, ${nextStep}),
-               next_step_date = COALESCE(next_step_date, ${nextStepDate}::date)
+               next_step_date = COALESCE(next_step_date, ${nextStepDate}::date),
+               -- a drag records today: Lost → Done deal must not keep the lost date as the payment date
+               closed_on = NULL
          WHERE id = ${dealId} AND can_edit_deal(${actor.id}, id)
         RETURNING id`;
       if (rows.length === 0) throw new ForbiddenError();

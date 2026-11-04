@@ -149,7 +149,8 @@
     "dragStart": "{name} diambil.",
     "dragOver": "{name} di atas {stage}.",
     "dragEnd": "{name} dilepas di {stage}.",
-    "dragCancel": "{name} batal dipindah."
+    "dragCancel": "{name} batal dipindah.",
+    "cardRole": "kartu deal yang bisa dipindah"
   },
   "deal": {
     "kind": "Deal",

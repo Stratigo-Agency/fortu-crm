@@ -129,11 +129,25 @@ describe("board reads", () => {
   it("the stat strip follows the owner and flags overdue next steps", async () => {
     const rep = await createUser();
     const d = await createQuotableDeal(rep.id);
-    await sql`UPDATE deals SET next_step_date = current_date - 3 WHERE id = ${d.id}`;
+    await sql`UPDATE deals SET next_step_date = jakarta_today() - 3 WHERE id = ${d.id}`; // Jakarta, not UTC
     const s = await pipelineStats(rep.id);
     expect(s).toMatchObject({ open_deals: 1, open_amount: "50000000", next_step_overdue: 1 });
     const [card] = await boardCards({ viewerId: rep.id, ownerId: rep.id, q: "", showLost: false });
     expect(card).toMatchObject({ next_step_overdue: true, days_overdue: 3 });
+  });
+});
+
+describe("Lost → Done deal", () => {
+  it("records today as the payment date, not the day it was lost", async () => {
+    const rep = await createUser();
+    const deal = await createQuotableDeal(rep.id);
+    await sql`SELECT set_config('app.user_id', ${rep.id}, false)`;
+    await sql`UPDATE deals SET lost_reason = 'harga' WHERE id = ${deal.id}`;
+    expect((await moveDeal(rep, deal.id, "lost")).ok).toBe(true);
+    await sql`UPDATE deals SET closed_on = jakarta_today() - 10 WHERE id = ${deal.id}`; // lost ten days ago
+    expect((await moveDeal(rep, deal.id, "done")).ok).toBe(true);
+    const [row] = await sql`SELECT closed_on = jakarta_today() AS today FROM deals WHERE id = ${deal.id}`;
+    expect(row.today).toBe(true);
   });
 });
 
