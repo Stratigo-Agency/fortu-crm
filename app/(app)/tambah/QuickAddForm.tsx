@@ -1,13 +1,27 @@
 "use client";
 
-import { useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { t } from "@/lib/copy";
+import { parseCodes } from "@/lib/ingest/codes";
+import { normalizePhone } from "@/lib/ingest/phone";
+import type { CodeInfo, PhoneStatus } from "@/lib/quickAdd";
+import { lookupCode, lookupPhone } from "./actions";
 
 const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink";
 const label = "mb-1.5 block text-base text-slate";
 
 type Interest = "IFP" | "DSS" | "LED" | "unknown";
 const INTERESTS: Interest[] = ["IFP", "DSS", "LED", "unknown"];
+
+// Sources a rep can pick when the message has no code (default: an ad chat).
+const SOURCES = [
+  "meta_ctwa", "whatsapp_direct", "instagram_dm", "website_wa_link", "google_ads", "referral",
+  "partner_si", "repeat_order", "event", "walk_in", "tender", "other",
+] as const;
+type Source = (typeof SOURCES)[number];
+
+/** The result of a lookup for a given input, so a stale answer is never shown for newer input. */
+type Looked<T> = { key: string; value: T };
 
 function Chip(props: {
   name: string;
@@ -37,10 +51,55 @@ export function QuickAddForm() {
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
-  const [interest, setInterest] = useState<Interest>("unknown");
+  const [chosenInterest, setChosenInterest] = useState<Interest | null>(null);
+  const [source, setSource] = useState<Source>("meta_ctwa");
   const [when, setWhen] = useState<"now" | "time">("now");
   const [time, setTime] = useState("");
   const phoneRef = useRef<HTMLInputElement>(null);
+  const [phoneLook, setPhoneLook] = useState<Looked<PhoneStatus | null> | null>(null);
+  const [codeLook, setCodeLook] = useState<Looked<CodeInfo | null> | null>(null);
+
+  // Codes in the message are read here while typing; the server says which ad or link they are.
+  const codes = useMemo(() => parseCodes(message), [message]);
+  const codesKey = codes.adCode || codes.clickCode ? JSON.stringify(codes) : "";
+  useEffect(() => {
+    if (!codesKey) return;
+    let stale = false;
+    const timer = setTimeout(async () => {
+      const value = await lookupCode(JSON.parse(codesKey)).catch(() => null);
+      if (!stale) setCodeLook({ key: codesKey, value });
+    }, 300);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [codesKey]);
+  const codeInfo = codeLook?.key === codesKey ? codeLook.value : null;
+
+  // The hint under the phone field: new number or known contact.
+  const phoneKey = useMemo(() => {
+    try {
+      return normalizePhone(phone);
+    } catch {
+      return "";
+    }
+  }, [phone]);
+  useEffect(() => {
+    if (!phoneKey) return;
+    let stale = false;
+    const timer = setTimeout(async () => {
+      const value = await lookupPhone(phoneKey).catch(() => null);
+      if (!stale) setPhoneLook({ key: phoneKey, value });
+    }, 400);
+    return () => {
+      stale = true;
+      clearTimeout(timer);
+    };
+  }, [phoneKey]);
+  const phoneStatus = phoneLook?.key === phoneKey ? phoneLook.value : null;
+
+  // A code that names an ad sets the product, until the rep picks one by hand.
+  const interest: Interest = chosenInterest ?? (codeInfo?.kind === "ad" ? codeInfo.productLine : "unknown");
 
   // The Clipboard API reads need a secure context and permission; hide Tempel where unsupported.
   const canPaste = useSyncExternalStore(
@@ -87,6 +146,13 @@ export function QuickAddForm() {
             </button>
           )}
         </div>
+        {phoneStatus && (
+          <p className="mt-1.5 text-sm text-slate">
+            {phoneStatus.state === "new"
+              ? t("quickAdd.phoneNew")
+              : t("quickAdd.phoneKnown", { name: phoneStatus.name ?? phoneStatus.phone })}
+          </p>
+        )}
       </div>
 
       <div>
@@ -117,6 +183,34 @@ export function QuickAddForm() {
         />
       </div>
 
+      {codeInfo ? (
+        <div className="rounded-md border border-line bg-paper px-4 py-3">
+          <p className="font-bold text-ink">
+            {codeInfo.kind === "ad" ? t("quickAdd.fromAd", { ad: codeInfo.adName }) : t("quickAdd.fromLink")}
+          </p>
+          <p className="text-slate">{t("quickAdd.fromAdHint")}</p>
+        </div>
+      ) : (
+        <div>
+          <label htmlFor="source" className={label}>
+            {t("quickAdd.source")}
+          </label>
+          <select
+            id="source"
+            name="source"
+            value={source}
+            onChange={(e) => setSource(e.target.value as Source)}
+            className={field}
+          >
+            {SOURCES.map((value) => (
+              <option key={value} value={value}>
+                {t(`sourceChannel.${value}`)}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+
       <fieldset>
         <legend className={label}>{t("quickAdd.interest")}</legend>
         <div className="flex flex-wrap gap-2">
@@ -126,7 +220,7 @@ export function QuickAddForm() {
               name="interest"
               value={value}
               checked={interest === value}
-              onSelect={() => setInterest(value)}
+              onSelect={() => setChosenInterest(value)}
             >
               {t(`productLine.${value}`)}
             </Chip>
