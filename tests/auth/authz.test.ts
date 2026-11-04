@@ -74,6 +74,12 @@ describe("assertCanEditLead", async () => {
     await expect(assertCanEditLead(rep, unowned.id)).resolves.toBeUndefined();
   });
 
+  it("refuses marketing on an unowned lead (view only)", async () => {
+    const unowned = await createLead(null);
+    const marketing = await createUser({ role: "marketing" });
+    await expect(assertCanEditLead(marketing, unowned.id)).rejects.toThrow(ForbiddenError);
+  });
+
   it("refuses an inactive user, even on an unowned lead", async () => {
     const unowned = await createLead(null);
     const inactive = await createUser({ isActive: false });
