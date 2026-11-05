@@ -26,6 +26,7 @@ const MIGRATIONS = [
   "009_contact_integrity.sql",
   "010_reports.sql",
   "011_reports_full.sql",
+  "012_notification_dedupe.sql",
 ];
 
 describe("migrations", () => {

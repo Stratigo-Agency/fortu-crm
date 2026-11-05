@@ -23,10 +23,10 @@ describe("Beranda figures", () => {
               VALUES (${rep.id}, date_trunc('month', jakarta_today()::timestamp)::date, 100000000)`;
     const done = await createDeal(rep.id);
     await addLineItem(done.id, { qty: 1, unitPrice: 25_000_000 });
-    await sql`UPDATE deals SET stage_id = (SELECT id FROM pipeline_stages WHERE key = 'done'), expected_close_date = current_date,
+    await sql`UPDATE deals SET stage_id = (SELECT id FROM pipeline_stages WHERE key = 'done'), expected_close_date = jakarta_today(),
                      closed_on = jakarta_today() WHERE id = ${done.id}`;
     const late = await createDeal(rep.id);
-    await sql`UPDATE deals SET next_step_date = current_date - 2 WHERE id = ${late.id}`;
+    await sql`UPDATE deals SET next_step_date = jakarta_today() - 2 WHERE id = ${late.id}`;
 
     const home = await getHome(rep.id);
     const [s] = await sql<{ won: string; weighted: string; open: number; overdue: number }[]>`

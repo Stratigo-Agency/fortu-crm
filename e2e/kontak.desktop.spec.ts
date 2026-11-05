@@ -22,7 +22,7 @@ test.beforeAll(async () => {
     VALUES (${phone()}, ${dueName}, ${co.id}, now() - interval '20 days') RETURNING id`;
   await sql`
     INSERT INTO deals (name, contact_id, company_id, owner_user_id, stage_id, next_step, next_step_date, est_amount)
-    SELECT ${`Deal ${dueName}`}, ${c.id}, ${co.id}, ${repId}, id, 'Telepon', current_date + 1, 25000000 FROM pipeline_stages WHERE key = 'chat'`;
+    SELECT ${`Deal ${dueName}`}, ${c.id}, ${co.id}, ${repId}, id, 'Telepon', jakarta_today() + 1, 25000000 FROM pipeline_stages WHERE key = 'chat'`;
 
   // a contact of another rep
   const [other] = await sql<{ id: string }[]>`INSERT INTO users (full_name, email) VALUES (${`Rep Kontak ${tag}`}, ${`kontak-${tag}@e2e.example.com`}) RETURNING id`;
@@ -31,7 +31,7 @@ test.beforeAll(async () => {
   const [oc] = await sql<{ id: string }[]>`INSERT INTO contacts (phone_e164, full_name, created_at) VALUES (${p}, ${otherName}, now() - interval '3 days') RETURNING id`;
   await sql`
     INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date, est_amount)
-    SELECT ${`Deal ${otherName}`}, ${oc.id}, ${other.id}, id, 'Telepon', current_date + 1, 5000000 FROM pipeline_stages WHERE key = 'chat'`;
+    SELECT ${`Deal ${otherName}`}, ${oc.id}, ${other.id}, id, 'Telepon', jakarta_today() + 1, 5000000 FROM pipeline_stages WHERE key = 'chat'`;
 });
 
 test.describe.serial("Kontak", () => {

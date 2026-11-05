@@ -59,10 +59,11 @@ type Props = {
   bottomItems: NavItem[];
   labels: { search: string; add: string; menu: string; close: string; main: string; shortcutMac: string; shortcutOther: string };
   footer: React.ReactNode; // sales filter and the user menu, rendered on the server
+  bell: React.ReactNode; // the reminders bell (needs the unread count from the server)
 };
 
 /** Desktop: a quiet sidebar (Attio's layout, Sana's look). Phones: a slim white bar with a menu sheet. */
-export function Sidebar({ items, bottomItems, labels, footer }: Props) {
+export function Sidebar({ items, bottomItems, labels, footer, bell }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
@@ -130,9 +131,12 @@ export function Sidebar({ items, bottomItems, labels, footer }: Props) {
     <>
       {/* desktop */}
       <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col gap-5 border-r border-line bg-paper px-3 py-4 md:flex">
-        <Link href="/beranda" className="flex h-9 items-center px-3">
-          <Image src="/brand/fortu-logo-navy.png" alt="Fortu" width={84} height={25} priority />
-        </Link>
+        <div className="flex items-center justify-between pr-1">
+          <Link href="/beranda" className="flex h-9 items-center px-3">
+            <Image src="/brand/fortu-logo-navy.png" alt="Fortu" width={84} height={25} priority />
+          </Link>
+          {bell}
+        </div>
         {top}
         <nav aria-label={labels.main} className="flex flex-1 flex-col justify-between overflow-y-auto">
           <NavLinks items={items} />
@@ -147,6 +151,7 @@ export function Sidebar({ items, bottomItems, labels, footer }: Props) {
           <Image src="/brand/fortu-logo-navy.png" alt="Fortu" width={76} height={23} priority />
         </Link>
         <div className="flex items-center gap-1">
+          {bell}
           <Link href="/cari" aria-label={labels.search} className="flex h-11 w-11 items-center justify-center rounded-full text-ink">
             <Search size={20} strokeWidth={1.8} aria-hidden="true" />
           </Link>

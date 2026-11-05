@@ -44,7 +44,7 @@ export async function createDeal(ownerId: string) {
   const contact = await createContact();
   const [deal] = await sql<{ id: string }[]>`
     INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date)
-    SELECT 'Uji deal', ${contact.id}, ${ownerId}, id, 'Telepon', current_date
+    SELECT 'Uji deal', ${contact.id}, ${ownerId}, id, 'Telepon', jakarta_today()
       FROM pipeline_stages WHERE key = 'chat'
     RETURNING id`;
   return deal;
@@ -125,13 +125,13 @@ export async function createClick(refCode: string, utm: { source?: string; campa
 export async function createDealFor(contactId: string, ownerId: string, { lost = false } = {}) {
   const [deal] = await sql<{ id: string }[]>`
     INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date, est_amount)
-    SELECT 'Uji deal', ${contactId}, ${ownerId}, id, 'Telepon', current_date, 1000000
+    SELECT 'Uji deal', ${contactId}, ${ownerId}, id, 'Telepon', jakarta_today(), 1000000
       FROM pipeline_stages WHERE key = 'chat'
     RETURNING id`;
   if (lost) {
     await sql`
       UPDATE deals SET stage_id = (SELECT id FROM pipeline_stages WHERE key = 'lost'),
-                       lost_reason = 'harga', closed_on = current_date
+                       lost_reason = 'harga', closed_on = jakarta_today()
        WHERE id = ${deal.id}`;
   }
   return deal;
@@ -158,6 +158,6 @@ export async function createQuotableDeal(ownerId: string) {
   const contact = await createContact();
   const deal = await createDealFor(contact.id, ownerId);
   await addLineItem(deal.id);
-  await sql`UPDATE deals SET expected_close_date = current_date + 30 WHERE id = ${deal.id}`;
+  await sql`UPDATE deals SET expected_close_date = jakarta_today() + 30 WHERE id = ${deal.id}`;
   return deal;
 }

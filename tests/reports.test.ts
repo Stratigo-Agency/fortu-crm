@@ -10,14 +10,14 @@ type Mk = { stage: "chat" | "quotation" | "negotiation" | "po" | "done" | "lost"
 
 async function mk(ownerId: string, o: Mk) {
   const deal = await createDeal(ownerId);
-  const close = { month: "current_date + 3", later: "current_date + 40", past: "current_date - 10" }[o.closeIn ?? "month"];
+  const close = { month: "jakarta_today() + 3", later: "jakarta_today() + 40", past: "jakarta_today() - 10" }[o.closeIn ?? "month"];
   if (o.stage !== "chat" && o.stage !== "lost") await addLineItem(deal.id, { qty: o.qty ?? 2, unitPrice: o.unitPrice ?? 25_000_000 });
   if (o.stage === "lost") await addLineItem(deal.id, { qty: 1, unitPrice: 10_000_000 });
   await sql.unsafe(`
     UPDATE deals SET stage_id = (SELECT id FROM pipeline_stages WHERE key = '${o.stage}'),
            expected_close_date = ${close},
            lost_reason = ${o.stage === "lost" ? "'harga'" : "NULL"},
-           next_step_date = current_date + 5
+           next_step_date = jakarta_today() + 5
      WHERE id = '${deal.id}'`);
   return deal.id;
 }
@@ -76,10 +76,10 @@ describe("Laporan numbers match the database", () => {
     const rep = await createUser();
     const other = await createUser();
     const late = await mk(rep.id, { stage: "quotation" });
-    await sql`UPDATE deals SET next_step_date = current_date - 3 WHERE id = ${late}`;
+    await sql`UPDATE deals SET next_step_date = jakarta_today() - 3 WHERE id = ${late}`;
     const pastClose = await mk(rep.id, { stage: "negotiation", closeIn: "past" });
     const theirs = await mk(other.id, { stage: "quotation" });
-    await sql`UPDATE deals SET next_step_date = current_date - 9 WHERE id = ${theirs}`;
+    await sql`UPDATE deals SET next_step_date = jakarta_today() - 9 WHERE id = ${theirs}`;
 
     const mine = (await getReport(rep.id)).attention;
     expect(mine.rows.map((a) => a.dealId)).toEqual([late, pastClose]);
@@ -89,7 +89,7 @@ describe("Laporan numbers match the database", () => {
 
     for (let i = 0; i < 11; i++) {
       const id = await mk(rep.id, { stage: "quotation" });
-      await sql`UPDATE deals SET next_step_date = current_date - 1 WHERE id = ${id}`;
+      await sql`UPDATE deals SET next_step_date = jakarta_today() - 1 WHERE id = ${id}`;
     }
     const many = (await getReport(rep.id)).attention;
     expect(many.rows).toHaveLength(10);

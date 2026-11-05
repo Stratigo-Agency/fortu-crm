@@ -13,7 +13,7 @@ test.beforeAll(async () => {
   const [c] = await sql<{ id: string }[]>`INSERT INTO contacts (phone_e164, full_name) VALUES (${`+62858${String(Date.now()).slice(-8)}`}, ${`Pak ${tag}`}) RETURNING id`;
   await sql`
     INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date)
-    SELECT ${`Deal ${tag}`}, ${c.id}, ${id}, id, 'Telepon', current_date - 1 FROM pipeline_stages WHERE key = 'chat'`;
+    SELECT ${`Deal ${tag}`}, ${c.id}, ${id}, id, 'Telepon', jakarta_today() - 1 FROM pipeline_stages WHERE key = 'chat'`;
 });
 
 test("signing in lands on Beranda; its search finds deals and contacts, and opens them", async ({ page }) => {
