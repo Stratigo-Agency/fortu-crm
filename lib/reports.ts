@@ -128,17 +128,7 @@ export async function getReport(ownerId: string | null, period: ReportPeriod = "
      WHERE NOT s.is_won AND NOT s.is_lost
      ORDER BY s.position`;
 
-  const attentionRows = await sql<AttentionRow[]>`
-    SELECT a.deal_id AS "dealId", a.name, u.full_name AS "ownerName", a.amount::text AS amount, a.reason, a.severity,
-           a.next_step AS "nextStep",
-           CASE WHEN a.reason = 'next_step_overdue' THEN (jakarta_today() - a.next_step_date)::int END AS "daysOverdue",
-           CASE WHEN a.reason = 'stale' THEN (jakarta_today() - (a.updated_at AT TIME ZONE 'Asia/Jakarta')::date)::int END AS "daysStale"
-      FROM v_attention a LEFT JOIN users u ON u.id = a.owner_user_id
-     WHERE ${ownerId}::uuid IS NULL OR a.owner_user_id = ${ownerId}
-     ORDER BY a.severity, a.amount DESC, a.name
-     LIMIT 10`;
-  const [{ n }] = await sql<{ n: number }[]>`
-    SELECT count(*)::int AS n FROM v_attention a WHERE ${ownerId}::uuid IS NULL OR a.owner_user_id = ${ownerId}`;
+  const attention = await getAttention(ownerId, 10);
 
   const reps = await sql<RepRow[]>`
     SELECT c.user_id AS "userId", c.full_name AS name, c.open_deals::int AS "openDeals", c.open_amount::text AS "openAmount",
@@ -240,7 +230,7 @@ export async function getReport(ownerId: string | null, period: ReportPeriod = "
     months,
     monthTarget: monthTarget?.t ?? null,
     stages,
-    attention: { rows: attentionRows, total: n },
+    attention,
     reps,
     closeForecast,
     adsToCrm,
@@ -249,4 +239,20 @@ export async function getReport(ownerId: string | null, period: ReportPeriod = "
     demo: { with: demoOf(true), without: demoOf(false) },
     lostReasons,
   };
+}
+
+/** "Perlu perhatian": the most urgent open deals of one sales (null = everyone), and how many there are. */
+export async function getAttention(ownerId: string | null, limit: number): Promise<{ rows: AttentionRow[]; total: number }> {
+  const rows = await sql<AttentionRow[]>`
+    SELECT a.deal_id AS "dealId", a.name, u.full_name AS "ownerName", a.amount::text AS amount, a.reason, a.severity,
+           a.next_step AS "nextStep",
+           CASE WHEN a.reason = 'next_step_overdue' THEN (jakarta_today() - a.next_step_date)::int END AS "daysOverdue",
+           CASE WHEN a.reason = 'stale' THEN (jakarta_today() - (a.updated_at AT TIME ZONE 'Asia/Jakarta')::date)::int END AS "daysStale"
+      FROM v_attention a LEFT JOIN users u ON u.id = a.owner_user_id
+     WHERE ${ownerId}::uuid IS NULL OR a.owner_user_id = ${ownerId}
+     ORDER BY a.severity, a.amount DESC, a.name
+     LIMIT ${limit}`;
+  const [{ n }] = await sql<{ n: number }[]>`
+    SELECT count(*)::int AS n FROM v_attention a WHERE ${ownerId}::uuid IS NULL OR a.owner_user_id = ${ownerId}`;
+  return { rows, total: n };
 }
