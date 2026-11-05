@@ -7,6 +7,7 @@ import { getReport } from "@/lib/reports";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { Kpis } from "./Kpis";
+import { AdsToCrmCard } from "./Panels";
 import { Attention, RepTable } from "./Tables";
 
 export default function Page() {
@@ -44,8 +45,9 @@ async function Content() {
       <div className="mt-4">
         <RepTable reps={report.reps} canPick={!isRep} />
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Attention rows={report.attention.rows} total={report.attention.total} />
+        <AdsToCrmCard ads={report.adsToCrm} />
       </div>
     </>
   );
