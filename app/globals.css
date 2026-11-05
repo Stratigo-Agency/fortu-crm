@@ -1,35 +1,40 @@
 @import "tailwindcss";
 
-/* Fortu brand tokens (CVC "Fortu Towards 2027"). The default palette and
-   shadows are cleared so only brand values exist: monochrome, one accent. */
+/* Visual system after Sana and Attio: a white canvas, hairlines instead of boxes, near-black as the one
+   accent, soft rounded cards. The default palette and shadows are cleared so only these values exist.
+   Token names are kept so every screen picks the new look up. */
 @theme {
   --color-*: initial;
-  --color-ink: #101018;
-  --color-navy: #0d1730; /* top bar, primary buttons, Done deal */
-  --color-slate: #425172; /* secondary text */
-  --color-mist: #daddec; /* borders, avatars */
-  --color-paper: #f6f7fb; /* page */
-  --color-white: #ffffff; /* cards */
-  --color-late: #8a4b08; /* orange only means "late" */
-  --color-late-bg: #fdf1e3;
-  --color-line: #daddec; /* borders */
-  --color-input: #8a92a9; /* input borders, 3:1 on white */
+  --color-ink: #0a0a0b; /* text */
+  --color-navy: #18181b; /* primary buttons, Done deal: near-black */
+  --color-slate: #6b6b73; /* secondary text, 4.9:1 on white */
+  --color-faint: #9b9ba3; /* tertiary text, hints */
+  --color-mist: #ececef; /* avatars, tracks */
+  --color-paper: #f6f6f7; /* sidebar, tiles, hover */
+  --color-white: #ffffff; /* page and cards */
+  --color-late: #a24a00; /* orange only means "late" */
+  --color-late-bg: #fff3e8;
+  --color-good: #157f3c; /* won, done */
+  --color-good-bg: #ecf8f0;
+  --color-line: #ececef; /* hairlines */
+  --color-input: #8e8e96; /* input borders, 3:1 on white */
 
   /* stage ramp, light to dark */
-  --color-stage-1: #daddec;
-  --color-stage-2: #b8bed3;
-  --color-stage-3: #8a93ae;
-  --color-stage-4: #425172;
-  --color-stage-5: #0d1730;
+  --color-stage-1: #e4e4e7;
+  --color-stage-2: #c9c9cf;
+  --color-stage-3: #a1a1aa;
+  --color-stage-4: #52525b;
+  --color-stage-5: #18181b;
 
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
 
-  --radius-sm: 8px; /* controls */
-  --radius-md: 10px; /* cards */
-  --radius-lg: 12px; /* cards */
+  --radius-sm: 10px; /* controls */
+  --radius-md: 14px; /* cards */
+  --radius-lg: 18px; /* large cards, panels */
 
   --shadow-*: initial;
-  --shadow-card: 0 1px 3px 0 rgb(16 16 24 / 0.08);
+  --shadow-card: 0 0 0 1px rgb(10 10 11 / 0.06), 0 1px 2px rgb(10 10 11 / 0.04), 0 6px 20px -8px rgb(10 10 11 / 0.06);
+  --shadow-pop: 0 0 0 1px rgb(10 10 11 / 0.06), 0 12px 40px -12px rgb(10 10 11 / 0.18);
 }
 
 @utility tabular {
@@ -37,8 +42,27 @@
 }
 
 @layer base {
+  /* Phones keep 16px text and 44px targets. A desktop with a mouse is denser, like Sana: every rem shrinks
+     to 14px, so text-base is 14px and h-11 controls are 38px. */
+  html {
+    font-size: 16px;
+  }
+  @media (min-width: 768px) and (pointer: fine) {
+    html {
+      font-size: 14px;
+    }
+  }
   body {
-    @apply bg-paper font-sans text-ink;
+    @apply bg-white font-sans text-ink;
+    letter-spacing: -0.006em;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+  ::selection {
+    background: #e4e4e7;
   }
 }
 
