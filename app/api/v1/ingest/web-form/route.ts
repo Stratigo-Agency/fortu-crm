@@ -7,6 +7,27 @@ import { toLeadInput, webFormSchema } from "@/lib/webform/schema";
 
 const MAX_BODY_BYTES = 32 * 1024;
 
+/** The body as text, or null when it is larger than `max` bytes (checked before and while reading). */
+async function readCapped(request: Request, max: number): Promise<string | null> {
+  const declared = Number(request.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > max) return null;
+  if (!request.body) return "";
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > max) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
 /**
  * POST /api/v1/ingest/web-form: a lead from the fortu.co.id form, sent by its FastAPI backend.
  * 200 { leadId, deduped } (also for a repeated submission_id) · 400 bad body · 401 bad signature or old timestamp.
@@ -23,18 +44,20 @@ export async function POST(request: Request) {
     return reply(500, { error: "server_error" });
   }
 
-  // The signature covers the exact bytes sent, so read the raw text first.
-  const raw = await request.text();
-  const signed = verifySignature(
-    secret,
-    { timestamp: request.headers.get("x-fortu-timestamp"), signature: request.headers.get("x-fortu-signature") },
-    raw,
-  );
-  if (!signed.ok) {
-    console.warn("web-form ingest: rejected", { requestId, reason: signed.reason });
+  const headers = { timestamp: request.headers.get("x-fortu-timestamp"), signature: request.headers.get("x-fortu-signature") };
+  const reject = (reason: string) => {
+    console.warn("web-form ingest: rejected", { requestId, reason });
     return reply(401, { error: "unauthorized" });
-  }
-  if (Buffer.byteLength(raw) > MAX_BODY_BYTES) return reply(400, { error: "bad_request" });
+  };
+  // Cheap checks first: a request without usable headers or with an old clock never gets its body read.
+  const early = verifySignature(secret, headers, "");
+  if (!early.ok && early.reason !== "mismatch") return reject(early.reason);
+
+  // The signature covers the exact bytes sent, so read the raw text, but never more than the cap.
+  const raw = await readCapped(request, MAX_BODY_BYTES);
+  if (raw === null) return reply(413, { error: "too_large" });
+  const signed = verifySignature(secret, headers, raw);
+  if (!signed.ok) return reject(signed.reason);
 
   let json: unknown;
   try {

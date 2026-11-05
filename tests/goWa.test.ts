@@ -1,15 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { GET } from "@/app/go/wa/route";
+import { GET, HEAD } from "@/app/go/wa/route";
 import { sql } from "@/lib/db";
 import { ingestLead } from "@/lib/ingest/ingestLead";
 import { parseCodes } from "@/lib/ingest/codes";
+import { isPublicPath } from "@/lib/publicPaths";
 import { createRateLimiter } from "@/lib/webform/rateLimit";
-import { DEFAULT_TEXT, newRefCode } from "@/lib/webform/waLink";
+import { DEFAULT_TEXT, isBot, neutralizeCodes, newRefCode } from "@/lib/webform/waLink";
 import { createUser, createWaLine } from "./fixtures";
 
+const BROWSER = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1";
+const randomIp = () => `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
 const get = (qs: string, headers: Record<string, string> = {}) =>
-  GET(new Request(`http://localhost/go/wa?${qs}`, { headers: { "x-forwarded-for": `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`, ...headers } }));
+  GET(new Request(`http://localhost/go/wa?${qs}`, { headers: { "x-forwarded-for": randomIp(), "user-agent": BROWSER, ...headers } }));
+const clicks = async () => (await sql`SELECT count(*)::int AS n FROM wa_click_events`)[0].n as number;
 
 async function lineFor(label = `No_${randomUUID().slice(0, 6)}`) {
   const rep = await createUser();
@@ -115,5 +119,49 @@ describe("click codes and the limiter", () => {
     expect(l.hit("a", 1100)).toBe(true);
     for (const k of ["b", "c", "d", "e"]) l.hit(k, 1200);
     expect([l.hit("a", 1210), l.hit("a", 1220), l.hit("a", 1230)]).toEqual([true, true, false]); // "a" was dropped, so it counts afresh
+  });
+});
+
+describe("bots, spoofing and what a visitor can type", () => {
+  it("a HEAD request and a link-preview crawler reach the chat but record no click and get no code", async () => {
+    const { label } = await lineFor();
+    const before = await clicks();
+    const head = await HEAD(new Request(`http://localhost/go/wa?line=${label}`, { method: "HEAD" }));
+    expect(head.status).toBe(302);
+    expect(new URL(head.headers.get("location") as string).searchParams.get("text")).toBe(DEFAULT_TEXT);
+    for (const ua of ["WhatsApp/2.23.20 A", "facebookexternalhit/1.1", "Slackbot-LinkExpanding 1.0", "Googlebot/2.1", ""]) {
+      const res = await get(`line=${label}`, { "user-agent": ua });
+      expect(res.status, ua).toBe(302);
+      expect(new URL(res.headers.get("location") as string).searchParams.get("text")).toBe(DEFAULT_TEXT);
+    }
+    expect(await clicks()).toBe(before);
+    expect((await HEAD(new Request("http://localhost/go/wa?line=tidak-ada", { method: "HEAD" }))).status).toBe(404);
+    expect(isBot(BROWSER)).toBe(false);
+  });
+
+  it("a made-up first x-forwarded-for entry does not get around the limit", async () => {
+    const { label } = await lineFor();
+    const real = `192.168.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`;
+    const statuses: number[] = [];
+    for (let i = 0; i < 22; i++) statuses.push((await get(`line=${label}`, { "x-forwarded-for": `${randomIp()}, ${real}` })).status);
+    expect(statuses.slice(20)).toEqual([429, 429]);
+  });
+
+  it("a text can't carry a click code or an ad code of its own", async () => {
+    expect(neutralizeCodes("Halo #AB12 ya")).toBe("Halo AB12 ya");
+    expect(neutralizeCodes("[F-IFP-01] halo")).toBe("(F-IFP-01) halo");
+    expect(neutralizeCodes("Nomor #1 dan #12345")).toBe("Nomor #1 dan #12345");
+    const { label } = await lineFor();
+    const res = await get(`line=${label}&text=${encodeURIComponent("#ABCD [F-IFP-01]")}`);
+    const text = new URL(res.headers.get("location") as string).searchParams.get("text") as string;
+    expect(parseCodes(text).adCode).toBeUndefined();
+    expect(parseCodes(text).clickCode).toBe(/#(\w{4})$/.exec(text)?.[1]);
+  });
+});
+
+describe("public paths", () => {
+  it("only the ingest endpoints, /go/wa, sign-in and auth are open", () => {
+    for (const p of ["/api/v1/ingest/web-form", "/go/wa", "/masuk", "/api/auth/signin"]) expect(isPublicPath(p), p).toBe(true);
+    for (const p of ["/api/v1/other", "/api/v1", "/go/other", "/go", "/pipeline", "/kontak", "/api/v1/ingest"]) expect(isPublicPath(p), p).toBe(false);
   });
 });

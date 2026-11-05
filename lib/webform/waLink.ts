@@ -16,6 +16,11 @@ export function newRefCode(): string {
 
 const clip = (v: string | null | undefined, max: number) => v?.trim().slice(0, max) || null;
 
+/** A visitor's text can't carry an attribution code of its own (#W7K2, [F-IFP-01]): the CRM reads the first one it finds. */
+export function neutralizeCodes(text: string): string {
+  return text.replace(/#(?=[A-Z0-9]{4}\b)/gi, "").replace(/\[([A-Z]-(?:IFP|DSS|LED)-\d{2})\]/gi, "($1)");
+}
+
 export type Click = {
   line: string | null;
   text: string | null;
@@ -28,24 +33,41 @@ export function parseClick(url: URL, referrer: string | null): Click {
   const q = (k: string, max: number) => clip(url.searchParams.get(k), max);
   return {
     line: q("line", 60),
-    text: q("text", 300),
+    text: ((t) => (t ? neutralizeCodes(t) : null))(q("text", 300)),
     utm: { source: q("utm_source", 100), medium: q("utm_medium", 100), campaign: q("utm_campaign", 100), content: q("utm_content", 100) },
     referrer: clip(referrer, 500),
   };
 }
 
 /** The wa.me address with the prefilled text and the click code at its end. */
-export function waUrl(phoneE164: string, text: string | null, code: string): string {
-  return `https://wa.me/${phoneE164.replace(/\D/g, "")}?text=${encodeURIComponent(`${text ?? DEFAULT_TEXT} #${code}`)}`;
+export function waUrl(phoneE164: string, text: string | null, code: string | null): string {
+  const message = code ? `${text ?? DEFAULT_TEXT} #${code}` : (text ?? DEFAULT_TEXT);
+  return `https://wa.me/${phoneE164.replace(/\D/g, "")}?text=${encodeURIComponent(message)}`;
+}
+
+/** Link-preview fetchers and crawlers: they follow the link but are not a visitor, so they get no click code. */
+export function isBot(userAgent: string | null): boolean {
+  return !userAgent || /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|skype|curl|wget|python-requests|headless/i.test(userAgent);
+}
+
+async function findLine(label: string | null) {
+  if (!label) return null;
+  const [line] = await sql<{ phone_e164: string; user_id: string | null }[]>`
+    SELECT phone_e164, user_id FROM wa_lines
+     WHERE lower(label) = lower(${label}) AND is_active
+     ORDER BY id LIMIT 1`;
+  return line ?? null;
+}
+
+/** The plain WhatsApp chat address (no code), for a HEAD request or a crawler. Null when the line is unknown or off. */
+export async function plainTarget(click: Click): Promise<string | null> {
+  const line = await findLine(click.line);
+  return line ? waUrl(line.phone_e164, click.text, null) : null;
 }
 
 /** Records the click and returns the WhatsApp address, or null for a line that doesn't exist or is off. */
 export async function recordClick(click: Click): Promise<string | null> {
-  if (!click.line) return null;
-  const [line] = await sql<{ phone_e164: string; user_id: string | null }[]>`
-    SELECT phone_e164, user_id FROM wa_lines
-     WHERE lower(label) = lower(${click.line}) AND is_active
-     ORDER BY id LIMIT 1`;
+  const line = await findLine(click.line);
   if (!line) return null;
 
   for (let attempt = 0; attempt < 8; attempt++) {

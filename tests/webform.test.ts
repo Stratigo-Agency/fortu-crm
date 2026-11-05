@@ -133,7 +133,8 @@ describe("POST /api/v1/ingest/web-form", () => {
       const res = await POST(signed(body));
       expect(res.status, body).toBe(400);
     }
-    expect((await POST(signed(JSON.stringify({ ...payload(), message: "x".repeat(40_000) })))).status).toBe(400);
+    // a field longer than allowed, but a small body
+    expect((await POST(signed(JSON.stringify({ ...payload(), message: "x".repeat(2_500) })))).status).toBe(400);
   });
 
   it("optional fields can be missing or null; an unknown product is ignored; a future time falls back to now", async () => {
@@ -162,5 +163,28 @@ describe("POST /api/v1/ingest/web-form", () => {
     const res = await send(payload({ submission_id: "x" }));
     const text = JSON.stringify(await res.json());
     expect(text).not.toMatch(/postgres|stack|select|secret/i);
+  });
+
+  it("a body over 32 KiB is refused with 413, by its declared size and by its real size, before any work", async () => {
+    const big = JSON.stringify({ ...payload(), message: "x".repeat(40_000) });
+    const before = (await sql`SELECT count(*)::int AS n FROM inbound_events`)[0].n;
+    const declared = signed(big, { headers: { "content-length": String(Buffer.byteLength(big)) } });
+    expect((await POST(declared)).status).toBe(413);
+    // no content-length, a stream of the real size
+    const ts = String(Math.floor(Date.now() / 1000));
+    const streamed = new Request(URL_, {
+      method: "POST", duplex: "half", body: new Blob([big]).stream(),
+      headers: { "x-fortu-timestamp": ts, "x-fortu-signature": sign(SECRET, ts, big) },
+    } as RequestInit);
+    expect((await POST(streamed)).status).toBe(413);
+    expect((await sql`SELECT count(*)::int AS n FROM inbound_events`)[0].n).toBe(before);
+  });
+
+  it("an unusable timestamp is 401 without reading the body", async () => {
+    for (const ts of ["0001", "-5", "1".repeat(13), "1.5", String(Math.floor(Date.now() / 1000) + 3600)]) {
+      const body = JSON.stringify(payload());
+      const res = await POST(signed(body, { headers: { "x-fortu-timestamp": ts, "x-fortu-signature": sign(SECRET, ts, body) } }));
+      expect(res.status, ts).toBe(401);
+    }
   });
 });
