@@ -7,7 +7,7 @@ import { getReport } from "@/lib/reports";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { Kpis } from "./Kpis";
-import { AdsToCrmCard } from "./Panels";
+import { AdsToCrmCard, DemoLostCard, SkuTable, SourcesTable } from "./Panels";
 import { Attention, RepTable } from "./Tables";
 
 export default function Page() {
@@ -48,6 +48,11 @@ async function Content() {
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <Attention rows={report.attention.rows} total={report.attention.total} />
         <AdsToCrmCard ads={report.adsToCrm} />
+        <DemoLostCard demo={report.demo} reasons={report.lostReasons} />
+      </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+        <SkuTable rows={report.skus} />
+        <SourcesTable rows={report.sources} />
       </div>
     </>
   );
