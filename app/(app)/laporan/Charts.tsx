@@ -1,6 +1,6 @@
 import { t } from "@/lib/copy";
 import { monthShort, percent, rupiahShort } from "@/lib/format";
-import type { MonthBar, StageBar } from "@/lib/reports";
+import type { CloseBucket, MonthBar, StageBar } from "@/lib/reports";
 
 /** Done deal per bulan: six months, this one lighter, with the monthly target as a dashed line. Plain HTML. */
 export function DoneChart({ months, target }: { months: MonthBar[]; target: string | null }) {
@@ -76,6 +76,37 @@ export function StageChart({ stages, openDeals }: { stages: StageBar[]; openDeal
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+/** Perkiraan per bulan close: the weighted value of open deals by expected close month. "Lewat" is the only orange bar. */
+export function CloseChart({ buckets }: { buckets: CloseBucket[] }) {
+  const values = buckets.map((b) => Number(b.weighted));
+  const max = Math.max(...values, 1);
+  const label = (b: CloseBucket) =>
+    b.key === "past" ? t("laporan.closePassed") : b.key === "later" ? t("laporan.closeLater") : b.key === "none" ? t("laporan.closeEmpty") : monthShort(b.month as string);
+  return (
+    <section className="rounded-lg bg-white p-6 shadow-card" aria-label={t("laporan.byCloseMonth")}>
+      <h2 className="text-lg font-bold text-ink">{t("laporan.byCloseMonth")}</h2>
+      <ol className="mt-6 flex h-56 items-end gap-3 border-b border-line">
+        {buckets.map((b, i) => (
+          <li key={b.key} className="flex h-full flex-1 flex-col items-center justify-end" title={t("laporan.dealsCount", { n: b.deals })}>
+            {values[i] > 0 && <span className="tabular mb-1 whitespace-nowrap text-center text-sm font-bold text-ink">{rupiahShort(values[i])}</span>}
+            <div
+              className={`w-full max-w-14 rounded-t-sm ${b.key === "past" ? "bg-late" : b.key === "none" || b.key === "later" ? "bg-stage-2" : "bg-stage-4"}`}
+              style={{ height: `${(values[i] / max) * 82}%`, minHeight: values[i] > 0 ? 4 : 0 }}
+            />
+          </li>
+        ))}
+      </ol>
+      <ol className="mt-2 flex gap-3">
+        {buckets.map((b) => (
+          <li key={b.key} className="flex-1 text-center text-sm text-slate">
+            {label(b)}
+          </li>
+        ))}
+      </ol>
     </section>
   );
 }

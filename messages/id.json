@@ -361,13 +361,9 @@
     "periodMonth": "Bulan ini",
     "periodQuarter": "Kuartal ini",
     "periodYear": "Tahun ini",
-    "kpiDone": "Done deal bulan ini",
     "kpiDoneTarget": "{pct} dari target {target}",
     "kpiNoTarget": "Target belum diatur",
-    "kpiUnits": "Unit layar bulan ini",
     "kpiUnitsTarget": "Target {n} unit/bulan",
-    "kpiForecast": "Perkiraan akhir bulan",
-    "kpiForecastHint": "Done deal + perkiraan deal yang close bulan ini",
     "kpiRunRate": "Run rate bulanan",
     "kpiRunRateYear": "Kira-kira {v} setahun",
     "kpiRunRateEarly": "Awal bulan, angka belum stabil",
@@ -433,7 +429,31 @@
     "yourNumbers": "Angka kamu sendiri",
     "noRows": "Belum ada data.",
     "winRateNone": "Belum ada deal selesai",
-    "colSales": "Sales"
+    "colSales": "Sales",
+    "periodLabel": "Periode",
+    "periodNow": {
+      "month": "bulan ini",
+      "quarter": "kuartal ini",
+      "year": "tahun ini"
+    },
+    "periodEnd": {
+      "month": "bulan",
+      "quarter": "kuartal",
+      "year": "tahun"
+    },
+    "kpiDoneWhen": "Done deal {when}",
+    "kpiUnitsWhen": "Unit layar {when}",
+    "kpiForecastWhen": "Perkiraan akhir {end}",
+    "kpiForecastHintWhen": "Done deal + perkiraan deal yang close {when}",
+    "kpiUnitsTargetPeriod": "Target {n} unit",
+    "kpiRunRateNone": "Belum ada riwayat tiga bulan",
+    "adsNoneMissing": "Semua chat dari iklan tercatat.",
+    "adsMostMissing": "Paling banyak dari {ad}.",
+    "colReason": "Alasan lost",
+    "colDeals": "Deal",
+    "colSource": "Sumber",
+    "colRate": "Win rate",
+    "colSku": "SKU"
   },
   "pengaturan": {
     "title": "Pengaturan",
