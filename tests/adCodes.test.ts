@@ -1,5 +1,7 @@
+import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
-import { lineOf, prefillMessage, proposeCodes, repLetter, toCsv, type AdForCode } from "@/lib/adCodes";
+import { sql } from "@/lib/db";
+import { applyCodes, lineOf, prefillMessage, proposeCodes, repLetter, toCsv, type AdForCode } from "@/lib/adCodes";
 import { parseCodes } from "@/lib/ingest/codes";
 
 const ad = (o: Partial<AdForCode> & { id: string }): AdForCode => ({
@@ -52,7 +54,45 @@ describe("proposeCodes", () => {
     expect(parseCodes(proposals[0].message).adCode).toBe(proposals[0].code);
     expect(prefillMessage("DSS", "F-DSS-01")).toBe("Halo Fortu, saya mau info digital signage. [F-DSS-01]");
     const csv = toCsv(ads, proposals).split("\n");
-    expect(csv[0]).toBe("Kampanye,Set iklan,Nama iklan,ID iklan di Meta,Kode,Pesan awal WhatsApp");
+    expect(csv[0]).toBe("\uFEFFKampanye,Set iklan,Nama iklan,ID iklan di Meta,Kode,Pesan awal WhatsApp");
     expect(csv[1]).toContain('"Iklan ""satu"", baru"');
+  });
+});
+
+describe("existing and odd codes", () => {
+  it("treats any code in use as taken, also lower case or three digits", () => {
+    const { proposals } = proposeCodes([ad({ id: "1" }), ad({ id: "2", code: "f-ifp-01" }), ad({ id: "3", code: "F-IFP-100" })]);
+    expect(proposals.map((p) => p.code)).toEqual(["F-IFP-02"]);
+  });
+  it("says so when a rep and line have no numbers left", () => {
+    const { proposals, skipped } = proposeCodes([ad({ id: "1" }), ad({ id: "2", code: "F-IFP-99" })]);
+    expect(proposals).toEqual([]);
+    expect(skipped).toEqual([{ adId: "1", reason: "full" }]);
+  });
+  it("keeps spreadsheet formulas from running", () => {
+    const ads = [ad({ id: "1", name: "=HYPERLINK(\"x\")" })];
+    expect(toCsv(ads, proposeCodes(ads).proposals)).toContain("'=HYPERLINK");
+  });
+});
+
+describe("applyCodes", () => {
+  it("only fills ads that are still without a code, and explains a taken code", async () => {
+    const mk = async (code: string | null) => {
+      const key = randomUUID();
+      const [r] = await sql<{ ad: string }[]>`
+        WITH c AS (INSERT INTO ad_campaigns (meta_campaign_id, name) VALUES (${`c-${key}`}, 'No_Zed') RETURNING id),
+             s AS (INSERT INTO ad_sets (meta_adset_id, campaign_id, name) SELECT ${`s-${key}`}, id, 'Set IFP' FROM c RETURNING id),
+             a AS (INSERT INTO ads (meta_ad_id, ad_set_id, name, prefill_code) SELECT ${`a-${key}`}, id, 'Iklan', ${code} FROM s RETURNING id)
+        SELECT id AS ad FROM a`;
+      return r.ad;
+    };
+    const free = await mk(null);
+    const had = await mk("Z-LED-98");
+    const p = (adId: string, code: string) => ({ adId, code, line: "IFP", message: "" });
+    expect(await applyCodes([p(free, "Z-IFP-91"), p(had, "Z-IFP-92")])).toBe(1);
+    const [row] = await sql<{ prefill_code: string }[]>`SELECT prefill_code FROM ads WHERE id = ${had}`;
+    expect(row.prefill_code).toBe("Z-LED-98");
+    const other = await mk(null);
+    await expect(applyCodes([p(other, "Z-IFP-91")])).rejects.toThrow(/taken meanwhile/);
   });
 });

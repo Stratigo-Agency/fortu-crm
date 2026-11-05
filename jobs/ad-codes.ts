@@ -12,11 +12,12 @@ async function main() {
   if (!out || out.startsWith("--")) throw new Error("--out needs a file name");
   const ads = await adsForCodes();
   const { proposals, skipped } = proposeCodes(ads);
-  writeFileSync(out, toCsv(ads, proposals));
+  // a run with nothing new must not replace the file Nabil already has
+  if (proposals.length > 0) writeFileSync(out, toCsv(ads, proposals));
   const byId = new Map(ads.map((a) => [a.id, a]));
   for (const p of proposals) console.log(`${p.code}  ${byId.get(p.adId)!.name}`);
   for (const s of skipped) console.log(`SKIP (${s.reason})  ${byId.get(s.adId)!.name}`);
-  console.log(`ad-codes: ${proposals.length} proposed, ${skipped.length} skipped -> ${out}`);
+  console.log(`ad-codes: ${proposals.length} proposed, ${skipped.length} skipped ${proposals.length > 0 ? ` -> ${out}` : " (CSV not rewritten)"}`);
   if (process.argv.includes("--apply")) console.log(`ad-codes: saved ${await applyCodes(proposals)} codes`);
   else console.log("ad-codes: not saved (add --apply after checking the CSV)");
 }

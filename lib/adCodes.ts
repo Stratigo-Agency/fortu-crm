@@ -1,4 +1,4 @@
-import { sql } from "@/lib/db";
+import { pgError, sql } from "@/lib/db";
 
 // Ad codes rollout (T18): propose a code like F-IFP-01 for every ad without one, plus the message Nabil
 // puts in the ad's WhatsApp prefill. The code is parsed again by lib/ingest/codes.ts when the chat arrives.
@@ -16,7 +16,7 @@ export type AdForCode = {
 };
 
 export type CodeProposal = { adId: string; code: string; line: string; message: string };
-export type CodeSkip = { adId: string; reason: "noRep" | "noLine" };
+export type CodeSkip = { adId: string; reason: "noRep" | "noLine" | "full" };
 
 const LINES = ["IFP", "DSS", "LED"] as const;
 const PRODUCT: Record<string, string> = { IFP: "smartboard untuk sekolah", DSS: "digital signage", LED: "LED videowall" };
@@ -47,9 +47,11 @@ export function proposeCodes(ads: AdForCode[]): { proposals: CodeProposal[]; ski
   const next = new Map<string, number>();
   const used = new Set<string>();
   for (const a of ads) {
-    const m = a.code ? /^([A-Z])-(IFP|DSS|LED)-(\d{2})$/.exec(a.code) : null;
-    if (!a.code || !m) continue;
-    used.add(a.code);
+    if (!a.code) continue;
+    const code = a.code.trim().toUpperCase();
+    used.add(code); // any code in use is taken, even one that does not follow the pattern
+    const m = /^([A-Z])-(IFP|DSS|LED)-(\d{2})$/.exec(code);
+    if (!m) continue;
     const key = `${m[1]}-${m[2]}`;
     next.set(key, Math.max(next.get(key) ?? 0, Number(m[3])));
   }
@@ -64,7 +66,7 @@ export function proposeCodes(ads: AdForCode[]): { proposals: CodeProposal[]; ski
     const key = `${letter}-${line}`;
     let n = (next.get(key) ?? 0) + 1;
     while (used.has(`${key}-${String(n).padStart(2, "0")}`)) n++;
-    if (n > 99) { skipped.push({ adId: a.id, reason: "noLine" }); continue; }
+    if (n > 99) { skipped.push({ adId: a.id, reason: "full" }); continue; }
     next.set(key, n);
     const code = `${key}-${String(n).padStart(2, "0")}`;
     used.add(code);
@@ -80,22 +82,32 @@ export async function adsForCodes(): Promise<AdForCode[]> {
            COALESCE((SELECT sum(i.spend) FROM ad_insights_daily i WHERE i.ad_id = a.id AND i.date >= jakarta_today() - 30), 0)::text AS spend30
       FROM ads a JOIN ad_sets s ON s.id = a.ad_set_id JOIN ad_campaigns c ON c.id = s.campaign_id
       LEFT JOIN users u ON u.id = c.owner_user_id
+      WHERE a.status IS NULL OR upper(a.status) = 'ACTIVE' OR a.prefill_code IS NOT NULL
      ORDER BY a.meta_ad_id`;
 }
 
 /** Writes the proposals; an ad that got a code meanwhile is left alone. Returns how many were written. */
 export async function applyCodes(proposals: CodeProposal[]): Promise<number> {
   let n = 0;
-  await sql.begin(async (tx) => {
-    for (const p of proposals) {
-      const done = await tx`UPDATE ads SET prefill_code = ${p.code} WHERE id = ${p.adId} AND prefill_code IS NULL RETURNING id`;
-      n += done.length;
-    }
-  });
+  try {
+    await sql.begin(async (tx) => {
+      for (const p of proposals) {
+        const done = await tx`UPDATE ads SET prefill_code = ${p.code} WHERE id = ${p.adId} AND prefill_code IS NULL RETURNING id`;
+        n += done.length;
+      }
+    });
+  } catch (err) {
+    if (pgError(err)?.code === "23505") throw new Error("a code was taken meanwhile; nothing was saved, run the command again");
+    throw err;
+  }
   return n;
 }
 
-const csvCell = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v);
+// a cell that starts like a formula would run when the file is opened in a spreadsheet
+const csvCell = (v: string) => {
+  const safe = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
+  return /[",\r\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
+};
 
 /** CSV for Nabil: which ad, which code, which message. Opens in Excel and Google Sheets. */
 export function toCsv(ads: AdForCode[], proposals: CodeProposal[]): string {
@@ -105,15 +117,5 @@ export function toCsv(ads: AdForCode[], proposals: CodeProposal[]): string {
     const a = byId.get(p.adId)!;
     rows.push([a.campaignName, a.adSetName, a.name, a.metaAdId, p.code, p.message]);
   }
-  return rows.map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
-}
-
-export type CodedLeadsRow = { adId: string; name: string; code: string; leads7: number };
-
-/** Leads in the last 7 days per coded ad; an ad with 0 is not (yet) carrying its code in the message. */
-export async function codedLeadsLast7(): Promise<CodedLeadsRow[]> {
-  return sql<CodedLeadsRow[]>`
-    SELECT a.id AS "adId", a.name, a.prefill_code AS code,
-           (SELECT count(*) FROM leads l WHERE l.ad_id = a.id AND l.received_at >= now() - interval '7 days' AND NOT l.is_sample)::int AS leads7
-      FROM ads a WHERE a.prefill_code IS NOT NULL ORDER BY 4 DESC, a.prefill_code`;
+  return "\uFEFF" + rows.map((r) => r.map(csvCell).join(",")).join("\n") + "\n";
 }
