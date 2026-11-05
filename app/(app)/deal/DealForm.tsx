@@ -414,6 +414,113 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
             </div>
           </Section>
 
+          {/* ---- Produk ---------------------------------------------------------------------- */}
+          <Section
+            title={t("deal.products")}
+            action={
+              <button
+                type="button"
+                onClick={addLine}
+                className="flex h-11 items-center gap-2 rounded-sm border border-line bg-white px-4 font-bold text-ink"
+              >
+                <span aria-hidden="true">+</span> {t("deal.addProduct")}
+              </button>
+            }
+          >
+            {errors.lines && (
+              <p role="alert" className="font-bold text-ink">
+                {errors.lines}
+              </p>
+            )}
+            {rowsShown.length === 0 ? (
+              <Field id="est" label={t("deal.estValue")} hint={t("deal.estValueHint")}>
+                <input
+                  id="est"
+                  inputMode="numeric"
+                  value={money(form.estAmount)}
+                  onChange={(e) => set("estAmount", digits(e.target.value))}
+                  className={`${field} tabular`}
+                />
+              </Field>
+            ) : (
+              <>
+                <div className="hidden grid-cols-[1fr_72px_150px_110px] gap-2 text-sm text-slate md:grid">
+                  <span>{t("deal.products")}</span>
+                  <span>{t("deal.unit")}</span>
+                  <span>{t("deal.pricePerUnit")}</span>
+                  <span className="text-right">{t("deal.subtotal")}</span>
+                </div>
+                <ul className="flex flex-col gap-3">
+                  {rowsShown.map((l) => {
+                    const note = lineNote(l);
+                    return (
+                      <li key={l.key} className="grid grid-cols-[1fr_72px] gap-2 md:grid-cols-[1fr_72px_150px_110px]">
+                        <select
+                          aria-label={t("deal.lineProduct")}
+                          value={l.productId}
+                          onChange={(e) => pickProduct(l.key, e.target.value)}
+                          className={field}
+                        >
+                          <option value="" />
+                          {products.map((p) => (
+                            <option key={p.id} value={p.id}>
+                              {p.sku} · {p.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          aria-label={t("deal.unit")}
+                          inputMode="numeric"
+                          value={l.qty}
+                          onChange={(e) => setLine(l.key, { qty: digits(e.target.value) })}
+                          className={`${field} tabular`}
+                        />
+                        <input
+                          aria-label={t("deal.pricePerUnit")}
+                          inputMode="numeric"
+                          value={money(l.unitPrice)}
+                          onChange={(e) => setLine(l.key, { unitPrice: digits(e.target.value) })}
+                          className={`${field} tabular`}
+                        />
+                        <div className="flex items-center justify-between gap-2 md:justify-end">
+                          <span className="tabular font-bold text-ink">{rupiah(l.qtyN * l.priceN)}</span>
+                          <button
+                            type="button"
+                            aria-label={t("deal.removeProduct")}
+                            onClick={() => removeLine(l.key)}
+                            className="flex h-11 w-11 items-center justify-center rounded-sm text-slate hover:bg-paper md:hidden"
+                          >
+                            ×
+                          </button>
+                        </div>
+                        {note && (
+                          <p className={`col-span-full text-sm ${note.late ? "text-late" : "text-slate"}`}>{note.text}</p>
+                        )}
+                        <button
+                          type="button"
+                          aria-label={t("deal.removeProduct")}
+                          onClick={() => removeLine(l.key)}
+                          className="hidden"
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="flex items-baseline justify-between gap-3 rounded-sm bg-paper px-4 py-3">
+                  <span className="text-slate">
+                    {t("deal.total")} <span className="tabular text-xl font-bold text-ink">{rupiah(previewTotal)}</span>
+                  </span>
+                  <span className="text-slate">{t("common.screenUnits", { n: previewUnits })}</span>
+                </div>
+              </>
+            )}
+            {isProject && (
+              <p className="rounded-sm bg-paper px-4 py-3 text-ink" role="note">
+                {t("deal.project")}
+              </p>
+            )}
+          </Section>
+
         </fieldset>
 
         {!readOnly && (
