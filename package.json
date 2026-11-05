@@ -17,7 +17,8 @@
     "lint:copy": "node scripts/check-copy.mjs",
     "e2e": "playwright test",
     "jobs:build": "node scripts/build-jobs.mjs",
-    "insights:sync": "node --env-file-if-exists=.env.local jobs/insights-sync.js"
+    "insights:sync": "node --env-file-if-exists=.env.local jobs/insights-sync.js",
+    "ads:codes": "npm run jobs:build --silent && node --env-file-if-exists=.env.local jobs/ad-codes.js"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
