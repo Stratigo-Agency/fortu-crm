@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "../ui/Select";
 import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { t } from "@/lib/copy";
 import { parseCodes } from "@/lib/ingest/codes";
@@ -8,8 +9,8 @@ import type { CodeInfo, PhoneStatus } from "@/lib/quickAdd";
 import { QUICK_ADD_SOURCES, type QuickAddSource } from "@/lib/quickAddSources";
 import { createLead, lookupCode, lookupPhone, type QuickAddState } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink";
-const label = "mb-1.5 block text-base text-slate";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15";
+const label = "mb-1.5 block text-sm font-medium text-slate";
 
 type Interest = "IFP" | "DSS" | "LED" | "unknown";
 const INTERESTS: Interest[] = ["IFP", "DSS", "LED", "unknown"];
@@ -25,7 +26,7 @@ function Chip(props: {
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex min-h-11 cursor-pointer items-center rounded-sm border border-line bg-white px-3.5 text-base text-ink has-checked:border-navy has-checked:bg-navy has-checked:font-bold has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-navy">
+    <label className="flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-white px-3.5 text-base text-ink has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold has-checked:text-accent-strong has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent">
       <input
         type="radio"
         name={props.name}
@@ -61,7 +62,7 @@ export function QuickAddForm() {
       {toast && (
         <p
           role="status"
-          className="fixed inset-x-4 bottom-4 z-20 mx-auto max-w-md rounded-md bg-navy px-4 py-3 text-white shadow-card"
+          className="fixed inset-x-4 bottom-4 z-20 mx-auto max-w-md rounded-md bg-ink px-4 py-3 text-white shadow-card"
         >
           {toast}
         </p>
@@ -179,14 +180,14 @@ function Fields({
             <button
               type="button"
               onClick={paste}
-              className="h-12 shrink-0 rounded-sm border border-line bg-white px-5 text-base font-bold text-navy"
+              className="h-12 shrink-0 rounded-full border border-line bg-white px-5 text-base font-medium text-ink"
             >
               {t("quickAdd.paste")}
             </button>
           )}
         </div>
         {state.field === "phone" && (
-          <p id="phone-error" role="alert" className="mt-1.5 text-sm font-bold text-ink">
+          <p id="phone-error" role="alert" className="mt-1.5 text-sm font-semibold text-ink">
             {state.message}
           </p>
         )}
@@ -223,13 +224,13 @@ function Fields({
           rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink"
+          className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15"
         />
       </div>
 
       {codeInfo ? (
         <div className="rounded-md border border-line bg-paper px-4 py-3">
-          <p className="font-bold text-ink">
+          <p className="font-semibold text-ink">
             {codeInfo.kind === "ad" ? t("quickAdd.fromAd", { ad: codeInfo.adName }) : t("quickAdd.fromLink")}
           </p>
           <p className="text-slate">{t("quickAdd.fromAdHint")}</p>
@@ -239,19 +240,13 @@ function Fields({
           <label htmlFor="source" className={label}>
             {t("quickAdd.source")}
           </label>
-          <select
+          <Select
             id="source"
             name="source"
             value={source}
-            onChange={(e) => setSource(e.target.value as QuickAddSource)}
-            className={field}
-          >
-            {QUICK_ADD_SOURCES.map((value) => (
-              <option key={value} value={value}>
-                {t(`sourceChannel.${value}`)}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setSource(v as QuickAddSource)}
+            options={QUICK_ADD_SOURCES.map((value) => ({ value, label: t(`sourceChannel.${value}`) }))}
+          />
         </div>
       )}
 
@@ -295,7 +290,7 @@ function Fields({
           />
         )}
         {state.field === "receivedAt" && (
-          <p id="time-error" role="alert" className="mt-1.5 text-sm font-bold text-ink">
+          <p id="time-error" role="alert" className="mt-1.5 text-sm font-semibold text-ink">
             {state.message}
           </p>
         )}
@@ -304,12 +299,12 @@ function Fields({
       <button
         type="submit"
         disabled={pending}
-        className="mt-2 h-13 w-full rounded-md bg-navy px-4 text-base font-bold text-white disabled:opacity-60"
+        className="mt-2 h-13 w-full rounded-full bg-ink px-4 text-base font-semibold text-white hover:bg-ink/85 disabled:opacity-60"
       >
         {t("quickAdd.submit")}
       </button>
       {state.field === "form" && (
-        <p role="alert" className="text-center font-bold text-ink">
+        <p role="alert" className="text-center font-semibold text-ink">
           {state.message}
         </p>
       )}

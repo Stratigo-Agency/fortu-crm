@@ -12,6 +12,7 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
+import { Select } from "../ui/Select";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { t } from "@/lib/copy";
@@ -131,8 +132,8 @@ export function Board({ columns, cards, compact }: Props) {
       onDragEnd={onDragEnd}
       onDragCancel={() => setActive(null)}
     >
-      <div className="-mx-4 mt-6 overflow-x-auto px-4 pb-2 md:-mx-8 md:px-8">
-        <div className="flex gap-4 xl:grid xl:auto-cols-fr xl:grid-flow-col">
+      <div className="-mx-4 overflow-x-auto px-4 pb-6 md:-mx-6 md:px-6">
+        <div className="flex gap-3 xl:grid xl:auto-cols-fr xl:grid-flow-col">
           {columns.map((col) => (
             <BoardColumn
               key={col.key}
@@ -148,7 +149,7 @@ export function Board({ columns, cards, compact }: Props) {
       {/* no drop animation: the card is already moved (optimistically) when the mouse lets go */}
       <DragOverlay dropAnimation={null}>
         {active && (
-          <div className={`rotate-1 rounded-md bg-white shadow-card ring-1 ring-line ${compact ? "px-3 py-2.5" : "p-4"}`}>
+          <div className={`rotate-1 rounded-md bg-white shadow-pop ${compact ? "px-3 py-2.5" : "px-3.5 py-3"}`}>
             {compact ? <DealCardCompact card={active} /> : <DealCardBody card={active} />}
           </div>
         )}
@@ -166,14 +167,14 @@ export function Board({ columns, cards, compact }: Props) {
         {toast && (
           <div
             key={toast.id}
-            className="pointer-events-auto flex items-center gap-4 rounded-md bg-navy px-4 py-3 text-white shadow-card"
+            className="pointer-events-auto flex items-center gap-4 rounded-full bg-ink px-5 py-2.5 text-white shadow-pop"
           >
             <span className="flex-1">{toast.text}</span>
             {toast.undo && (
               <button
                 type="button"
                 onClick={toast.undo}
-                className="-my-1 h-11 shrink-0 rounded-sm px-3 font-bold text-white underline underline-offset-2"
+                className="-my-1 h-11 shrink-0 rounded-sm px-3 font-semibold text-white underline underline-offset-2"
               >
                 {t("common.undo")}
               </button>
@@ -203,21 +204,21 @@ function BoardColumn({ column, cards, serverShown, compact, onMove }: ColumnProp
     <section
       ref={setNodeRef}
       aria-label={t(`stage.${column.key}`)}
-      className={`flex w-[300px] shrink-0 flex-col rounded-lg p-3 xl:w-auto xl:min-w-0 ${
-        isOver ? "bg-mist ring-2 ring-navy" : "bg-mist/40"
+      className={`flex w-[288px] shrink-0 flex-col rounded-lg p-2 xl:w-auto xl:min-w-0 ${
+        isOver ? "bg-accent-soft ring-2 ring-accent/40" : "bg-paper"
       }`}
     >
-      <header className="px-1 pb-3">
+      <header className="px-2 pb-2.5 pt-1.5">
         <div className="flex items-center gap-2">
-          <span className={`h-3 w-3 shrink-0 ${MARKER[column.key]}`} aria-hidden="true" />
-          <h2 className="flex-1 font-bold text-ink" title={column.definition ?? undefined}>{t(`stage.${column.key}`)}</h2>
-          <span className="text-sm text-slate">{closed ? t("stage.thisMonth") : percent(column.probability)}</span>
+          <span className={`h-2 w-2 shrink-0 rounded-full ${MARKER[column.key]}`} aria-hidden="true" />
+          <h2 className="flex-1 font-semibold text-ink" title={column.definition ?? undefined}>{t(`stage.${column.key}`)}</h2>
+          <span className="text-sm text-faint">{closed ? t("stage.thisMonth") : percent(column.probability)}</span>
         </div>
-        <p className="tabular mt-1 text-sm text-slate">
+        <p className="tabular mt-0.5 text-sm text-faint">
           {t("pipeline.dealsAmount", { n: column.deal_count, amount: rupiahShort(column.amount) })}
         </p>
       </header>
-      <ul className="flex min-h-16 flex-col gap-3">
+      <ul className="stagger flex min-h-16 flex-col gap-2">
         {shown.map((card) => (
           <Card key={card.id} card={card} compact={compact} onMove={onMove} />
         ))}
@@ -244,7 +245,7 @@ function Card({ card, compact, onMove }: { card: DealCard; compact: boolean; onM
     <li
       data-deal-id={card.id}
       data-locked={!card.can_edit || undefined}
-      className={`rounded-md bg-white shadow-card ${compact ? "px-3 py-2.5" : "p-4"} ${isDragging ? "opacity-40" : ""}`}
+      className={`rounded-md bg-white shadow-card transition-[box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:shadow-lift ${compact ? "px-3 py-2.5" : "px-3.5 py-3"} ${isDragging ? "opacity-40" : ""}`}
     >
       {/* the drag handle is the card body; the stage select stays outside it, reachable on its own */}
       <div
@@ -256,25 +257,19 @@ function Card({ card, compact, onMove }: { card: DealCard; compact: boolean; onM
           // a click (not a drag) opens the deal; links inside do it themselves
           if (!(e.target as HTMLElement).closest("a")) router.push(`/deal/${card.id}`);
         }}
-        className={`rounded-sm outline-offset-4 outline-navy ${card.can_edit ? "cursor-grab" : "cursor-pointer"}`}
+        className={`rounded-sm outline-offset-4 outline-accent ${card.can_edit ? "cursor-grab" : "cursor-pointer"}`}
       >
         {compact ? <DealCardCompact card={card} /> : <DealCardBody card={card} />}
       </div>
       {card.can_edit && (
-        <select
-          aria-label={t("pipeline.moveTo")}
-          value={card.stage_key}
-          onChange={(e) => onMove(card, e.target.value as StageKey)}
-          onPointerDown={(e) => e.stopPropagation()}
-          onKeyDown={(e) => e.stopPropagation()}
-          className="stage-select mt-3 h-11 w-full rounded-sm border border-input bg-white px-3 text-base text-ink"
-        >
-          {STAGE_KEYS.map((key) => (
-            <option key={key} value={key}>
-              {t(`stage.${key}`)}
-            </option>
-          ))}
-        </select>
+        <div className="stage-select mt-3" onPointerDown={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          <Select
+            label={t("pipeline.moveTo")}
+            value={card.stage_key}
+            onChange={(v) => onMove(card, v as StageKey)}
+            options={STAGE_KEYS.map((key) => ({ value: key, label: t(`stage.${key}`) }))}
+          />
+        </div>
       )}
     </li>
   );

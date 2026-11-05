@@ -3,21 +3,15 @@ import { t } from "@/lib/copy";
 import { dayMonth, relDate, rupiahShort } from "@/lib/format";
 import type { DealCard, StageKey } from "@/lib/pipelineTypes";
 import { initials } from "@/lib/shellInitials";
+import { personTone, STAGE_DOT } from "@/lib/tones";
 
-/** The square stage marker: the stage ramp from light to dark; Lost is an outline. */
-export const MARKER: Record<StageKey, string> = {
-  chat: "bg-stage-1",
-  quotation: "bg-stage-2",
-  negotiation: "bg-stage-3",
-  po: "bg-stage-4",
-  done: "bg-stage-5",
-  lost: "border border-slate bg-white",
-};
+/** The stage marker: one soft color per stage (lib/tones.ts). */
+export const MARKER: Record<StageKey, string> = STAGE_DOT;
 
 function Tag({ tone, children }: { tone: "navy" | "late" | "plain"; children: React.ReactNode }) {
   const cls =
-    tone === "navy" ? "bg-navy text-white" : tone === "late" ? "bg-late-bg text-late" : "bg-paper text-slate";
-  return <span className={`rounded-sm px-2 py-0.5 text-sm ${cls}`}>{children}</span>;
+    tone === "navy" ? "bg-teal-bg text-teal-ink" : tone === "late" ? "bg-late-bg text-late" : "bg-paper text-slate";
+  return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{children}</span>;
 }
 
 export function Lock() {
@@ -43,15 +37,15 @@ export function DealCardBody({ card }: { card: DealCard }) {
   const late = card.next_step_overdue;
   return (
     <>
-      <p className="font-bold leading-snug text-ink">
+      <p className="font-semibold leading-snug text-ink">
         <Link href={`/deal/${card.id}`} className="hover:underline">
           {card.name}
         </Link>
       </p>
-      {card.company_name && <p className="mt-0.5 text-slate">{card.company_name}</p>}
+      {card.company_name && <p className="mt-0.5 truncate text-sm text-slate">{card.company_name}</p>}
       <div className="mt-2 flex items-baseline justify-between gap-2">
-        <span className="tabular text-lg font-bold text-ink">{rupiahShort(card.amount)}</span>
-        <span className="text-sm text-slate">
+        <span className="tabular font-semibold text-ink">{rupiahShort(card.amount)}</span>
+        <span className="text-sm text-faint">
           {card.has_products ? t("common.units", { n: card.screen_units }) : t("pipeline.estimateOnly")}
         </span>
       </div>
@@ -63,15 +57,16 @@ export function DealCardBody({ card }: { card: DealCard }) {
           {card.has_demo && <Tag tone="plain">{t("pipeline.tagDemo")}</Tag>}
         </div>
       )}
-      <p className={`mt-2 rounded-sm px-2.5 py-2 text-sm ${late ? "bg-late-bg text-late" : "bg-paper text-ink"}`}>
-        <NextStepLine card={card} />
+      <p className={`mt-2 flex items-start gap-1.5 text-sm ${late ? "text-late" : "text-slate"}`}>
+        <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${late ? "bg-late animate-pulse-dot" : "bg-accent"}`} aria-hidden="true" />
+        <span className="min-w-0"><NextStepLine card={card} /></span>
       </p>
-      <div className="mt-3 flex items-center gap-2 border-t border-line pt-2.5 text-sm">
-        <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-mist text-xs font-bold text-navy">
+      <div className="mt-3 flex items-center gap-2 text-sm">
+        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${personTone(card.owner_name)}`}>
           {initials(card.owner_name ?? "")}
         </span>
         <span className="min-w-0 flex-1 truncate text-slate">{card.owner_name}</span>
-        <span className="text-slate">{t("common.days", { n: card.days_in_stage })}</span>
+        <span className="text-faint">{t("common.days", { n: card.days_in_stage })}</span>
         {!card.can_edit && <Lock />}
       </div>
     </>
@@ -83,12 +78,12 @@ export function DealCardCompact({ card }: { card: DealCard }) {
   return (
     <>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="min-w-0 truncate font-bold text-ink">
+        <p className="min-w-0 truncate font-semibold text-ink">
           <Link href={`/deal/${card.id}`} className="hover:underline">
             {card.name}
           </Link>
         </p>
-        <span className="tabular shrink-0 font-bold text-ink">{rupiahShort(card.amount)}</span>
+        <span className="tabular shrink-0 font-semibold text-ink">{rupiahShort(card.amount)}</span>
       </div>
       <div className="mt-0.5 flex items-center gap-2 text-sm text-slate">
         <span className="min-w-0 flex-1 truncate">

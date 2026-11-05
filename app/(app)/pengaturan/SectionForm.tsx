@@ -19,18 +19,18 @@ type Props = {
 export function SectionForm({ id, title, hint, action, children, saveLabel, toolbar }: Props) {
   const [result, formAction, pending] = useActionState(action, null);
   return (
-    <section aria-labelledby={`${id}-h`} className="rounded-lg bg-white p-6 shadow-card">
-      <h2 id={`${id}-h`} className="text-lg font-bold text-ink">{title}</h2>
+    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-32 md:scroll-mt-16 rounded-lg bg-white p-5 shadow-card">
+      <h2 id={`${id}-h`} className="text-base font-semibold text-ink">{title}</h2>
       {hint && <p className="mt-1 text-sm text-slate">{hint}</p>}
       {toolbar && <div className="mt-4">{toolbar}</div>}
       <form action={formAction} className="mt-4">
         {children}
         <div className="mt-5 flex items-center gap-4">
-          <button type="submit" disabled={pending} className="h-11 rounded-sm bg-navy px-6 text-base font-bold text-white disabled:opacity-60">
+          <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 desk:h-9 disabled:opacity-60">
             {saveLabel ?? t("pengaturan.save")}
           </button>
           {result && (
-            <p role={result.ok ? "status" : "alert"} className={result.ok ? "text-slate" : "font-bold text-ink"}>
+            <p role={result.ok ? "status" : "alert"} className={result.ok ? "text-slate" : "font-semibold text-ink"}>
               {result.message}
             </p>
           )}

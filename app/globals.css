@@ -1,44 +1,218 @@
 @import "tailwindcss";
 
-/* Fortu brand tokens (CVC "Fortu Towards 2027"). The default palette and
-   shadows are cleared so only brand values exist: monochrome, one accent. */
+/* Visual system after Sana Labs and Attio: a white canvas with hairlines, Sana's sky-blue wash, Attio's
+   blue accent and soft colored tags (one color per deal stage), near-black pills for the main action.
+   The default palette is cleared so only these values exist. */
 @theme {
   --color-*: initial;
-  --color-ink: #101018;
-  --color-navy: #0d1730; /* top bar, primary buttons, Done deal */
-  --color-slate: #425172; /* secondary text */
-  --color-mist: #daddec; /* borders, avatars */
-  --color-paper: #f6f7fb; /* page */
-  --color-white: #ffffff; /* cards */
-  --color-late: #8a4b08; /* orange only means "late" */
-  --color-late-bg: #fdf1e3;
-  --color-line: #daddec; /* borders */
-  --color-input: #8a92a9; /* input borders, 3:1 on white */
+  --color-ink: #0b0d12; /* text */
+  --color-navy: #111318; /* the main action pill */
+  --color-slate: #5f6573; /* secondary text, 5.9:1 on white */
+  --color-faint: #646a78; /* hints: 5.1:1 on paper, 4.7:1 on mist */
+  --color-mist: #eceef3; /* tracks, avatars */
+  --color-paper: #f6f7f9; /* sidebar, tiles, hover */
+  --color-white: #ffffff;
+  --color-line: #e8eaef; /* hairlines */
+  --color-input: #8a909c; /* input borders, 3:1 on white */
 
-  /* stage ramp, light to dark */
-  --color-stage-1: #daddec;
-  --color-stage-2: #b8bed3;
-  --color-stage-3: #8a93ae;
-  --color-stage-4: #425172;
-  --color-stage-5: #0d1730;
+  /* Attio blue: links, focus, the active screen, selected choices, progress */
+  --color-accent: #2f6bef;
+  --color-accent-strong: #1f55d0;
+  --color-accent-soft: #ebf1fe;
+  /* Sana sky: the soft wash behind Beranda and the sign-in card */
+  --color-sky: #dbe8fb;
+  --color-sky-soft: #f1f6fd;
 
-  --font-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  /* status */
+  --color-late: #c2410c; /* late, overdue: orange-red, 4.9:1 on its soft bg */
+  --color-late-bg: #fff1e8;
+  --color-good: #15803d;
+  --color-good-bg: #e9f8ef;
+  --color-bad: #c42b2b;
+  --color-bad-bg: #fdecec;
 
-  --radius-sm: 8px; /* controls */
-  --radius-md: 10px; /* cards */
-  --radius-lg: 12px; /* cards */
+  /* deal stages: a dot / bar color, a soft chip background and readable chip text */
+  --color-st-chat: #38bdf8;
+  --color-st-chat-bg: #e7f6fe;
+  --color-st-chat-ink: #0369a1;
+  --color-st-quotation: #8b5cf6;
+  --color-st-quotation-bg: #f1ecfe;
+  --color-st-quotation-ink: #6d28d9;
+  --color-st-negotiation: #f59e0b;
+  --color-st-negotiation-bg: #fef5e2;
+  --color-st-negotiation-ink: #a14a06;
+  --color-st-po: #3b82f6;
+  --color-st-po-bg: #e9f0fe;
+  --color-st-po-ink: #1d4ed8;
+  --color-st-done: #22c55e;
+  --color-st-done-bg: #e8f8ee;
+  --color-st-done-ink: #15803d;
+  --color-st-lost: #a3a8b3;
+  --color-st-lost-bg: #f0f1f4;
+  --color-st-lost-ink: #4b5160;
+
+  /* charts and person colors (Attio's tags) */
+  --color-pink: #ec4f8c;
+  --color-pink-bg: #fdebf3;
+  --color-pink-ink: #b42664;
+  --color-violet: #8b5cf6;
+  --color-violet-bg: #f1ecfe;
+  --color-violet-ink: #6d28d9;
+  --color-amber: #f5b014;
+  --color-amber-bg: #fef6dd;
+  --color-amber-ink: #92600a;
+  --color-teal: #14b8a6;
+  --color-teal-bg: #e3f8f5;
+  --color-teal-ink: #0f766e;
+  --color-blue: #3b82f6;
+  --color-blue-bg: #e9f0fe;
+  --color-blue-ink: #1d4ed8;
+  --color-orange: #f97316;
+  --color-orange-bg: #fff0e5;
+  --color-orange-ink: #b4470b;
+
+  /* the old grey ramp, still used by a few bars */
+  --color-stage-1: #e4e6eb;
+  --color-stage-2: #c8ccd5;
+  --color-stage-3: #a3a8b3;
+  --color-stage-4: #535967;
+  --color-stage-5: #111318;
+
+  --font-sans: var(--font-inter), "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --radius-sm: 10px; /* controls */
+  --radius-md: 14px; /* cards */
+  --radius-lg: 18px; /* large cards, panels */
 
   --shadow-*: initial;
-  --shadow-card: 0 1px 3px 0 rgb(16 16 24 / 0.08);
+  --shadow-card: 0 0 0 1px rgb(15 23 42 / 0.06), 0 1px 2px rgb(15 23 42 / 0.04), 0 8px 24px -12px rgb(15 23 42 / 0.08);
+  --shadow-lift: 0 0 0 1px rgb(15 23 42 / 0.07), 0 2px 4px rgb(15 23 42 / 0.05), 0 14px 32px -12px rgb(15 23 42 / 0.16);
+  --shadow-pop: 0 0 0 1px rgb(15 23 42 / 0.07), 0 16px 48px -12px rgb(15 23 42 / 0.22);
+  --shadow-glow: 0 0 0 4px rgb(47 107 239 / 0.14);
+
+  /* motion: short and soft, like Sana's demo */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  /* "backwards", never "both": once played, nothing may keep a stacking context, or a menu opening inside a row
+     would be painted under the next row */
+  --animate-enter: enter 0.45s var(--ease-out-soft) backwards;
+  /* the page itself: opacity only. A transform on the page would make fixed panels inside it (?contact=) sit
+     relative to the page instead of the window while it plays */
+  --animate-page: fade 0.3s ease-out backwards;
+  --animate-fade: fade 0.3s ease-out backwards;
+  --animate-pop: pop 0.18s var(--ease-out-soft) backwards;
+  --animate-panel: panel 0.42s var(--ease-out-soft) backwards;
+  --animate-sheet: sheet 0.32s var(--ease-out-soft) both;
+  --animate-grow-y: grow-y 0.7s var(--ease-out-soft) both;
+  --animate-grow-x: grow-x 0.7s var(--ease-out-soft) both;
+  --animate-shimmer: shimmer 1.4s linear infinite;
+  --animate-pulse-dot: pulse-dot 1.6s ease-in-out infinite;
+
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes pop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.98); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes panel {
+    from { opacity: 0; transform: translateX(24px); }
+    to { opacity: 1; transform: none; }
+  }
+  @keyframes sheet {
+    from { transform: translateX(100%); }
+    to { transform: none; }
+  }
+  @keyframes grow-y {
+    from { transform: scaleY(0); }
+    to { transform: scaleY(1); }
+  }
+  @keyframes grow-x {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+  }
+  @keyframes shimmer {
+    from { background-position: -200% 0; }
+    to { background-position: 200% 0; }
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.35; }
+  }
 }
+
+/* Children of .stagger come in one after another. */
+@utility stagger {
+  & > * {
+    animation: enter 0.45s var(--ease-out-soft) backwards;
+  }
+  & > *:nth-child(2) { animation-delay: 40ms; }
+  & > *:nth-child(3) { animation-delay: 80ms; }
+  & > *:nth-child(4) { animation-delay: 120ms; }
+  & > *:nth-child(5) { animation-delay: 160ms; }
+  & > *:nth-child(6) { animation-delay: 200ms; }
+  & > *:nth-child(7) { animation-delay: 240ms; }
+  & > *:nth-child(8) { animation-delay: 280ms; }
+  & > *:nth-child(n + 9) { animation-delay: 320ms; }
+}
+
+/* A loading placeholder that shimmers (Sana's "Building your dashboard"). */
+@utility skeleton {
+  background: linear-gradient(90deg, var(--color-mist) 25%, var(--color-paper) 50%, var(--color-mist) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+  border-radius: 8px;
+}
+
+/* Attio's dotted canvas behind workflows. */
+@utility dot-grid {
+  background-image: radial-gradient(rgb(15 23 42 / 0.09) 1px, transparent 1px);
+  background-size: 16px 16px;
+}
+
+/* Dense controls only for a desktop with a mouse; tablets and touch laptops keep 44px targets. */
+@custom-variant desk (@media (min-width: 768px) and (pointer: fine));
 
 @utility tabular {
   font-variant-numeric: tabular-nums;
 }
 
 @layer base {
+  /* Phones keep 16px text and 44px targets. A desktop with a mouse is denser, like Sana: every rem shrinks
+     to 14px, so text-base is 14px and h-11 controls are 38px. */
+  html {
+    font-size: 16px;
+  }
+  @media (min-width: 768px) and (pointer: fine) {
+    html {
+      font-size: 14px;
+    }
+  }
   body {
-    @apply bg-paper font-sans text-ink;
+    @apply bg-white font-sans text-ink;
+    letter-spacing: -0.006em;
+  }
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.02em;
+  }
+  ::selection {
+    background: var(--color-accent-soft);
+  }
+  /* Respect "reduce motion": no slides or shimmer. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-delay: 0ms !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }
 
@@ -49,5 +223,32 @@
 @media (max-width: 767px), (pointer: coarse) {
   .stage-select {
     display: block;
+  }
+}
+
+/* Our own checkbox: a soft rounded box that fills Attio-blue with a white tick. */
+@utility check {
+  appearance: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--color-input);
+  border-radius: 6px;
+  background: #fff center / 12px 12px no-repeat;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  &:checked {
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none'%3E%3Cpath d='M2.5 6.2l2.3 2.3 4.7-5' stroke='white' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  }
+  &:focus-visible {
+    outline: none;
+    box-shadow: var(--shadow-glow);
+    border-color: var(--color-accent);
+  }
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 }

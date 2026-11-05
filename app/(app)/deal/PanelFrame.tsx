@@ -1,5 +1,6 @@
 "use client";
 
+import { X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { t } from "@/lib/copy";
@@ -73,15 +74,15 @@ export function PanelFrame({ variant, closeHref, label, children }: Props) {
       <CloseButton onClick={close} />
       {children}
       {asking && (
-        <div role="alertdialog" aria-modal="true" aria-label={t("common.unsaved")} className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-6">
-          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-card">
-            <p className="font-bold text-ink">{t("common.unsaved")}</p>
+        <div role="alertdialog" aria-modal="true" aria-label={t("common.unsaved")} className="fixed inset-0 z-50 flex animate-fade items-center justify-center bg-slate/25 p-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-sm animate-pop rounded-lg bg-white p-6 shadow-pop">
+            <p className="font-semibold text-ink">{t("common.unsaved")}</p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 autoFocus
                 onClick={() => setAsking(false)}
-                className="h-11 rounded-sm bg-navy px-5 text-base font-bold text-white"
+                className="h-11 rounded-full bg-ink px-5 text-base font-semibold text-white hover:bg-ink/85 desk:h-9"
               >
                 {t("common.keepEditing")}
               </button>
@@ -91,7 +92,7 @@ export function PanelFrame({ variant, closeHref, label, children }: Props) {
                   dirty.current = false;
                   closeNow();
                 }}
-                className="h-11 rounded-sm border border-input bg-white px-5 text-base text-ink"
+                className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper desk:h-9"
               >
                 {t("common.discard")}
               </button>
@@ -105,14 +106,14 @@ export function PanelFrame({ variant, closeHref, label, children }: Props) {
   return (
     <FrameContext.Provider value={{ setDirty, close, closeNow }}>
       {variant === "page" ? (
-        <main className="relative mx-auto w-full max-w-3xl bg-white md:my-6 md:rounded-lg md:shadow-card">{body}</main>
+        <main className="relative mx-auto w-full max-w-3xl bg-white md:my-8 md:rounded-lg md:shadow-card">{body}</main>
       ) : (
-        <div className="fixed inset-0 z-40 flex justify-end bg-ink/40" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+        <div className="fixed inset-0 z-40 flex animate-fade justify-end bg-slate/20 backdrop-blur-[2px] md:p-2" onMouseDown={(e) => e.target === e.currentTarget && close()}>
           <aside
             role="dialog"
             aria-modal="true"
             aria-label={label ?? t("deal.kind")}
-            className="relative h-full w-full max-w-[700px] overflow-y-auto bg-white shadow-card"
+            className="relative h-full w-full max-w-[680px] animate-panel overflow-y-auto bg-white shadow-pop md:rounded-lg"
           >
             {body}
           </aside>
@@ -128,11 +129,9 @@ function CloseButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-label={t("common.close")}
-      className="absolute right-5 top-5 z-10 flex h-11 w-11 items-center justify-center rounded-sm bg-paper text-ink"
+      className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-slate hover:bg-paper hover:text-ink desk:h-9 desk:w-9"
     >
-      <svg width="16" height="16" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-        <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-      </svg>
+      <X size={18} strokeWidth={1.8} aria-hidden="true" />
     </button>
   );
 }

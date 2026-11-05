@@ -2,6 +2,7 @@
 
 import { useActionState, useEffect, useRef, useState } from "react";
 import { t } from "@/lib/copy";
+import { Select } from "../ui/Select";
 import { NOT_FIT_REASONS } from "@/lib/leadReasons";
 import {
   type LeadActionState,
@@ -22,7 +23,6 @@ type Props = {
 };
 
 const initial: LeadActionState = { seq: 0 };
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink";
 const item = "flex min-h-11 w-full items-center rounded-sm px-3 text-left text-ink hover:bg-paper";
 
 /** The ⋯ menu of a prospect row: contacted, not a fit (with a reason) and reassign. */
@@ -57,7 +57,7 @@ export function LeadActions({ leadId, name, isNew, canReassign, currentOwnerId, 
       <details ref={menu} className="relative">
         <summary
           aria-label={t("prospek.moreActions", { name })}
-          className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm text-slate hover:bg-paper md:h-10 md:w-10 [&::-webkit-details-marker]:hidden"
+          className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm text-slate hover:bg-paper desk:h-10 desk:w-10 [&::-webkit-details-marker]:hidden"
         >
           <svg width="18" height="4" viewBox="0 0 18 4" fill="currentColor" aria-hidden="true">
             <circle cx="2" cy="2" r="1.6" />
@@ -85,7 +85,7 @@ export function LeadActions({ leadId, name, isNew, canReassign, currentOwnerId, 
         </div>
       </details>
       {contactedState.error && (
-        <p role="alert" className="basis-full text-sm font-bold text-ink">
+        <p role="alert" className="basis-full text-sm font-semibold text-ink">
           {contactedState.error}
         </p>
       )}
@@ -123,13 +123,13 @@ function Dialog({
       ref={dialog}
       aria-label={title}
       onClose={() => setSeen(state)}
-      className="m-auto w-[min(92vw,28rem)] rounded-lg bg-white p-6 text-ink shadow-card backdrop:bg-ink/40"
+      className="m-auto w-[min(92vw,28rem)] overflow-visible rounded-lg bg-white p-6 text-ink shadow-pop backdrop:bg-slate/30 backdrop:backdrop-blur-[2px] open:animate-pop"
     >
-      <h2 className="text-xl font-bold">{title}</h2>
+      <h2 className="text-xl font-semibold">{title}</h2>
       <div className="mt-4 flex flex-col gap-4">
         {children}
         {error && (
-          <p role="alert" className="font-bold">
+          <p role="alert" className="font-semibold">
             {error}
           </p>
         )}
@@ -137,11 +137,11 @@ function Dialog({
           <button
             type="button"
             onClick={() => dialog.current?.close()}
-            className="h-11 rounded-sm border border-input bg-white px-5 text-base text-ink"
+            className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper desk:h-9"
           >
             {t("common.cancel")}
           </button>
-          <button type="submit" className="h-11 rounded-sm bg-navy px-5 text-base font-bold text-white">
+          <button type="submit" className="h-11 rounded-full bg-ink px-5 text-base font-semibold text-white hover:bg-ink/85 desk:h-9">
             {t("common.save")}
           </button>
         </div>
@@ -156,27 +156,20 @@ function NotFitDialog({ dialog, leadId }: { dialog: React.RefObject<HTMLDialogEl
     <form action={action}>
       <Dialog dialog={dialog} title={t("prospek.notFitTitle")} state={state}>
         <input type="hidden" name="leadId" value={leadId} />
-        <select
+        <Select
           name="reason"
-          aria-label={t("prospek.notFitTitle")}
-          defaultValue=""
+          label={t("prospek.notFitTitle")}
+          placeholder={t("common.choose")}
           required
-          className={field}
-        >
-          <option value="" disabled />
-          {NOT_FIT_REASONS.map((reason) => (
-            <option key={reason} value={reason}>
-              {t(`lostReason.${reason}`)}
-            </option>
-          ))}
-        </select>
+          options={NOT_FIT_REASONS.map((reason) => ({ value: reason, label: t(`lostReason.${reason}`) }))}
+        />
         <label className="flex flex-col gap-1.5 text-slate">
           {t("lostReason.note")} {t("common.optional")}
           <textarea
             name="note"
             rows={3}
             maxLength={1000}
-            className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink"
+            className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15"
           />
         </label>
       </Dialog>
@@ -200,20 +193,14 @@ function ReassignDialog({
     <form action={action}>
       <Dialog dialog={dialog} title={t("prospek.reassignTo")} state={state}>
         <input type="hidden" name="leadId" value={leadId} />
-        <select
+        <Select
           name="ownerId"
-          aria-label={t("common.sales")}
+          label={t("common.sales")}
           defaultValue={currentOwnerId ?? ""}
+          placeholder={t("common.choose")}
           required
-          className={field}
-        >
-          <option value="" disabled />
-          {owners.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.full_name}
-            </option>
-          ))}
-        </select>
+          options={owners.map((o) => ({ value: o.id, label: o.full_name }))}
+        />
       </Dialog>
     </form>
   );

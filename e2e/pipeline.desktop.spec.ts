@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 import { REP } from "./global-setup";
+import { pick } from "./select";
 
 const sql = postgres(process.env.DATABASE_URL_E2E as string, { max: 1 });
 test.afterAll(() => sql.end());
@@ -103,10 +104,11 @@ test("another rep's card shows the lock and can't be dragged", async ({ page }) 
 
 test("on a phone a stage select moves the card instead of dragging", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  const select = card(page, deals.ready).getByLabel("Pindah ke tahap");
+  const select = card(page, deals.ready).getByRole("combobox", { name: "Pindah ke tahap" });
   await expect(select).toBeVisible();
-  await expect(card(page, deals.locked).getByLabel("Pindah ke tahap")).toHaveCount(0);
-  await select.selectOption("quotation");
-  await expect(toast(page)).toContainText("Dipindah ke Quotation");
+  await expect(card(page, deals.locked).getByRole("combobox", { name: "Pindah ke tahap" })).toHaveCount(0);
+  await pick(select, "Quotation");
+  // the first move after a cold start compiles the server action, which can take a few seconds
+  await expect(toast(page)).toContainText("Dipindah ke Quotation", { timeout: 20_000 });
   await expect.poll(() => stage(deals.ready)).toBe("quotation");
 });

@@ -29,7 +29,7 @@ async function signInWithGoogle(formData: FormData) {
 }
 
 const inputClass =
-  "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink";
+  "h-12 w-full rounded-sm border border-input bg-white px-3.5 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15";
 
 async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">["searchParams"] }) {
   await connection(); // the form reads the session and the URL: render it per request, never at build
@@ -48,7 +48,7 @@ async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">[
     <div className="flex w-full flex-col gap-4">
       <form action={signInWithPassword} className="flex flex-col gap-4">
         <input type="hidden" name="next" value={nextPath} />
-        <label className="flex flex-col gap-1 text-slate">
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-slate">
           {t("authz.email")}
           <input
             name="email"
@@ -58,7 +58,7 @@ async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">[
             className={inputClass}
           />
         </label>
-        <label className="flex flex-col gap-1 text-slate">
+        <label className="flex flex-col gap-1.5 text-sm font-medium text-slate">
           {t("authz.password")}
           <input
             name="password"
@@ -68,7 +68,7 @@ async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">[
             className={inputClass}
           />
         </label>
-        <button type="submit" className="h-12 w-full rounded-sm bg-navy px-4 text-base text-white">
+        <button type="submit" className="mt-1 h-12 w-full rounded-full bg-ink px-4 text-base font-semibold text-white hover:bg-ink/85">
           {t("authz.signIn")}
         </button>
       </form>
@@ -77,7 +77,7 @@ async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">[
           <input type="hidden" name="next" value={nextPath} />
           <button
             type="submit"
-            className="h-12 w-full rounded-sm border border-input bg-white px-4 text-base text-ink"
+            className="h-12 w-full rounded-full border border-line bg-white px-4 text-base text-ink hover:bg-paper"
           >
             {t("authz.signInWithGoogle")}
           </button>
@@ -94,15 +94,15 @@ async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">[
 
 export default function MasukPage(props: PageProps<"/masuk">) {
   return (
-    <main className="flex flex-1 items-center justify-center px-4">
-      <div className="flex w-full max-w-sm flex-col items-center gap-10">
+    <main className="flex flex-1 items-center justify-center bg-paper px-4">
+      <div className="flex w-full max-w-sm flex-col items-center gap-8 rounded-lg bg-white px-6 py-10 shadow-pop md:px-8">
         <Image
           src="/brand/fortu-logo-navy.png"
           alt="Fortu"
           width={136}
           height={40}
           priority
-          className="h-10 w-auto"
+          className="h-8 w-auto"
         />
         <Suspense>
           <SignInForm searchParams={props.searchParams} />
