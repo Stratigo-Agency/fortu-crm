@@ -101,7 +101,7 @@ export async function dealHistory(dealId: string): Promise<HistoryItem[]> {
       FROM deal_stage_history h
       JOIN pipeline_stages t ON t.id = h.to_stage_id
       LEFT JOIN users u ON u.id = h.changed_by
-     WHERE h.deal_id = ${dealId}`;
+     WHERE h.deal_id = ${dealId} AND h.from_stage_id IS NOT NULL -- the first row is the deal's creation, shown as "Deal dibuat"`;
   const acts = await sql<{ id: string; at: Date; by: string | null; type: string; body: string | null; metadata: { action?: string } }[]>`
     SELECT a.id::text AS id, a.created_at AS at, u.full_name AS by, a.type::text AS type, a.body, a.metadata
       FROM activities a LEFT JOIN users u ON u.id = a.user_id
