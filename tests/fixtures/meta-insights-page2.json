@@ -1,0 +1,11 @@
+{
+  "data": [
+    {
+      "campaign_id": "{{C2}}", "campaign_name": "No_Rudy",
+      "adset_id": "{{S2}}", "adset_name": "Rudy - LED",
+      "ad_id": "{{A2}}", "ad_name": "Videowall Event",
+      "spend": "120500", "impressions": "30000", "reach": "20000", "inline_link_clicks": "0",
+      "date_start": "2026-10-24", "date_stop": "2026-10-24"
+    }
+  ]
+}

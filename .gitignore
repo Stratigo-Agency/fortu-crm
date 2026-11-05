@@ -28,3 +28,6 @@ playwright-report
 test-results
 credentials.local.txt
 e2e/.auth
+
+# compiled scheduled jobs
+jobs/*.js

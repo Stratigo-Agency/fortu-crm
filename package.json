@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "postbuild": "node scripts/copy-standalone-assets.mjs",
+    "postbuild": "node scripts/copy-standalone-assets.mjs && node scripts/build-jobs.mjs",
     "start": "node .next/standalone/server.js",
     "lint": "eslint && node scripts/check-copy.mjs",
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
@@ -15,7 +15,9 @@
     "test": "vitest run",
     "db:set-password": "node --env-file-if-exists=.env.local scripts/set-password.mjs",
     "lint:copy": "node scripts/check-copy.mjs",
-    "e2e": "playwright test"
+    "e2e": "playwright test",
+    "jobs:build": "node scripts/build-jobs.mjs",
+    "insights:sync": "node --env-file-if-exists=.env.local jobs/insights-sync.js"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
