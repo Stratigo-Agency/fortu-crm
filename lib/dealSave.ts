@@ -1,6 +1,7 @@
 import type { SessionUser } from "@/lib/auth";
 import { assertCanEditDeal, ForbiddenError } from "@/lib/authz";
 import { pgError, sql } from "@/lib/db";
+import { convertLead } from "@/lib/dealLead";
 import { DEAL_KINDS, type DealInput } from "@/lib/dealTypes";
 import { InvalidPhoneError } from "@/lib/ingest/errors";
 import type { Tx } from "@/lib/ingest/owner";
@@ -195,6 +196,7 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
         RETURNING id`;
       if (rows.length === 0) throw new ForbiddenError();
 
+      if (isNew && input.fromLeadId) await convertLead(tx, actor.id, input.fromLeadId, dealId);
       if (isNew) {
         await tx`
           INSERT INTO activities (type, deal_id, contact_id, user_id, metadata)

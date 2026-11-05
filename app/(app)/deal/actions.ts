@@ -5,6 +5,7 @@ import { ForbiddenError, requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { type ContactMatch, contactByPhone, parentDeals, searchCompanies } from "@/lib/deal";
 import { DealInputError, parseDealInput, saveDeal } from "@/lib/dealSave";
+import { LeadClosedError } from "@/lib/leads";
 import type { StageRule } from "@/lib/pipelineTypes";
 
 export type SaveActionResult =
@@ -26,6 +27,7 @@ export async function saveDealAction(raw: unknown): Promise<SaveActionResult> {
   } catch (err) {
     if (err instanceof DealInputError) return { ok: false, field: err.field, message: t(err.messageKey) };
     if (err instanceof ForbiddenError) return { ok: false, field: "form", message: t("authz.forbidden") };
+    if (err instanceof LeadClosedError) return { ok: false, field: "form", message: t("prospek.alreadyHandled") };
     console.error("save deal failed", err);
     return { ok: false, field: "form", message: t("deal.saveFailed") };
   }
