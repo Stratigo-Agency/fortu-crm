@@ -521,7 +521,63 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
             )}
           </Section>
 
+          {/* ---- Next step ------------------------------------------------------------------- */}
+          {!closed && (
+            <Section title={t("deal.nextStep")}>
+              <Field id="nextStep" label={t("deal.nextStepWhat")} error={errors.nextStep}>
+                <input
+                  id="nextStep"
+                  value={form.nextStep}
+                  onChange={(e) => set("nextStep", e.target.value)}
+                  aria-invalid={!!errors.nextStep || undefined}
+                  className={`${field} ${errors.nextStep ? bad : ""}`}
+                />
+              </Field>
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field id="nextStepDate" label={t("deal.nextStepDate")} error={errors.nextStepDate}>
+                  <input
+                    id="nextStepDate"
+                    type="date"
+                    value={form.nextStepDate}
+                    onChange={(e) => set("nextStepDate", e.target.value)}
+                    aria-invalid={!!errors.nextStepDate || undefined}
+                    className={`${field} ${errors.nextStepDate ? bad : ""}`}
+                  />
+                </Field>
+                <Field id="demoDate" label={t("deal.demoDate")} hint={t("deal.demoHint")}>
+                  <input
+                    id="demoDate"
+                    type="date"
+                    value={form.demoDate}
+                    onChange={(e) => set("demoDate", e.target.value)}
+                    className={field}
+                  />
+                </Field>
+              </div>
+            </Section>
+          )}
+
+          {/* ---- Catatan and Riwayat --------------------------------------------------------- */}
+          {!readOnly && (
+            <Section title={t("deal.notes")}>
+              <Field id="note" label={t("deal.noteAdd")}>
+                <textarea
+                  id="note"
+                  rows={3}
+                  value={form.note}
+                  onChange={(e) => set("note", e.target.value)}
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink"
+                />
+              </Field>
+            </Section>
+          )}
         </fieldset>
+
+        {!isNew && (
+          <Section title={t("deal.history")}>
+            <History items={deal.history} />
+          </Section>
+        )}
 
         {!readOnly && (
           <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-line bg-white px-6 py-4">
