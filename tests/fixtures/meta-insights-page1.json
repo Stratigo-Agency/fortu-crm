@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "campaign_id": "{{C1}}", "campaign_name": "No_Frisca",
+      "adset_id": "{{S1}}", "adset_name": "Frisca - IFP",
+      "ad_id": "{{A1}}", "ad_name": "Vid Interactive Smartboard - Frisca",
+      "spend": "52340.00", "impressions": "10450", "reach": "8120", "inline_link_clicks": "212",
+      "actions": [
+        { "action_type": "link_click", "value": "230" },
+        { "action_type": "onsite_conversion.messaging_conversation_started_7d", "value": "31" },
+        { "action_type": "post_engagement", "value": "401" }
+      ],
+      "date_start": "2026-10-24", "date_stop": "2026-10-24"
+    },
+    {
+      "campaign_id": "{{C1}}", "campaign_name": "No_Frisca",
+      "adset_id": "{{S1}}", "adset_name": "Frisca - IFP",
+      "ad_id": "{{A1}}", "ad_name": "Vid Interactive Smartboard - Frisca",
+      "spend": "61000", "impressions": "12000", "reach": "9000", "inline_link_clicks": "250",
+      "actions": [{ "action_type": "onsite_conversion.messaging_conversation_started_7d", "value": "40" }],
+      "date_start": "2026-10-25", "date_stop": "2026-10-25"
+    }
+  ],
+  "paging": { "cursors": { "before": "x", "after": "y" }, "next": "https://graph.facebook.com/v24.0/act_1414727130175042/insights?after=y&access_token=SECRET-TOKEN" }
+}

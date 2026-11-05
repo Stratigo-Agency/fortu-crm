@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
@@ -54,7 +55,10 @@ async function Settings({ searchParams }: { searchParams: PageProps<"/pengaturan
 
   return (
     <>
-      <h1 className="text-3xl font-bold text-ink">{t("pengaturan.title")}</h1>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h1 className="text-3xl font-bold text-ink">{t("pengaturan.title")}</h1>
+        {owner && <Link href="/pengaturan/iklan" className="font-bold text-navy underline">{t("iklan.linkFromSettings")}</Link>}
+      </div>
       <div className="mt-6 flex flex-col gap-4">
         <SectionForm
           id="target"
