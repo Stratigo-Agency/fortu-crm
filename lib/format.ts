@@ -15,6 +15,16 @@ function toNumber(n: number | string): number {
   return Number.isFinite(v) ? v : 0;
 }
 
+/** 1.240 (whole number, id-ID thousands) */
+export function count(n: number | string): string {
+  return whole.format(toNumber(n));
+}
+
+/** 10,8 (one decimal, id-ID comma; whole numbers have none) */
+export function decimal(n: number | string): string {
+  return oneDecimal.format(toNumber(n));
+}
+
 /** Rp540.000.000 */
 export function rupiah(n: number | string): string {
   const v = Math.round(toNumber(n));
