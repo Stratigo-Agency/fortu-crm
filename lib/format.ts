@@ -96,3 +96,14 @@ export function relTime(ts: Date | string, now: Date = new Date()): string {
   if (minutes < 24 * 60) return t("common.hoursAgo", { n: Math.floor(minutes / 60) });
   return relDate(at, now);
 }
+
+/** Jun · Agu · Okt, from a YYYY-MM-DD month start (the month name, not shifted by time zones). */
+export function monthShort(day: string): string {
+  const m = new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(`${day.slice(0, 7)}-01T00:00:00Z`));
+  return m.replace(".", "");
+}
+
+/** Jan 2027 */
+export function monthYear(day: string): string {
+  return `${monthShort(day)} ${day.slice(0, 4)}`;
+}

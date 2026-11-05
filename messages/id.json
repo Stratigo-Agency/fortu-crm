@@ -419,7 +419,20 @@
     "xOfY": "{x} dari {y} deal",
     "last90": "90 hari terakhir",
     "last7": "7 hari terakhir",
-    "empty": "Laporan terisi setelah tim mencatat deal."
+    "empty": "Laporan terisi setelah tim mencatat deal.",
+    "subtitle": "{who} · per {date} · nilai sebelum PPN",
+    "kpiUnitsFrom": "Target {n} unit/bulan mulai {m}",
+    "targetLine": "Target {v}",
+    "openDeals": "{n} deal berjalan",
+    "stageMeta": "{p}% · {n} deal",
+    "stageAmounts": "{value} · perkiraan {forecast}",
+    "legendValue": "Nilai",
+    "legendForecast": "Perkiraan",
+    "dealsCount": "{n} deal",
+    "yourNumbers": "Angka kamu sendiri",
+    "noRows": "Belum ada data.",
+    "winRateNone": "Belum ada deal selesai",
+    "colSales": "Sales"
   },
   "pengaturan": {
     "title": "Pengaturan",
