@@ -293,7 +293,21 @@
     "activityTypes": { "whatsapp": "Chat WA", "call": "Telepon", "meeting": "Demo / meeting", "visit": "Kunjungan", "email": "Email", "note": "Catatan" },
     "log": "Catat",
     "noActivity": "Belum ada aktivitas.",
-    "empty": "Belum ada kontak. Kontak dibuat otomatis saat prospek atau deal dicatat."
+    "empty": "Belum ada kontak. Kontak dibuat otomatis saat prospek atau deal dicatat.",
+    "noResults": "Tidak ada kontak yang cocok.",
+    "colSource": "Sumber",
+    "colSales": "Sales",
+    "viewOptions": "Urutkan",
+    "fieldEmail": "Email",
+    "date": "Tanggal",
+    "deals": "Deal",
+    "noDeals": "Belum ada deal.",
+    "timelineLead": "Chat masuk",
+    "viewOnly": "Hanya lihat. Kontak ini milik {name}.",
+    "invalidDate": "Pilih hari ini atau tanggal yang sudah lewat.",
+    "saved": "Kontak disimpan.",
+    "created": "Kontak dibuat.",
+    "logged": "Aktivitas dicatat."
   },
   "perusahaan": {
     "title": "Perusahaan",

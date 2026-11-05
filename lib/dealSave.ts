@@ -105,7 +105,7 @@ export function parseDealInput(raw: unknown): DealInput {
   };
 }
 
-async function findOrCreateCompany(tx: Tx, name: string): Promise<string | null> {
+export async function findOrCreateCompany(tx: Tx, name: string): Promise<string | null> {
   if (!name) return null;
   const [existing] = await tx<{ id: string }[]>`
     SELECT id FROM companies WHERE lower(name) = lower(${name}) ORDER BY created_at LIMIT 1`;
