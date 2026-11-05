@@ -22,6 +22,8 @@ export function toCsv(header: string[], rows: Cell[][]): string {
 
 type Row = Record<string, Cell | Date>;
 const day = (v: Cell | Date) => (v instanceof Date ? v.toISOString().slice(0, 10) : (v as string | null));
+/** +6281234567890 → 6281234567890: digits only, so no leading + that a spreadsheet would read as a formula. */
+const phone = (v: Cell | Date) => (typeof v === "string" ? v.replace(/\D/g, "") : null);
 const int = (v: Cell | Date) => (v === null || v === undefined ? null : Math.round(Number(v)));
 
 export async function dealsCsv(): Promise<string> {
@@ -37,7 +39,7 @@ export async function dealsCsv(): Promise<string> {
      ORDER BY d.created_at DESC, d.id`;
   return toCsv(
     ["id", "deal", "tahap", "sales", "perusahaan", "kontak", "no_whatsapp", "nilai_rp", "perkiraan_rp", "unit_layar", "perkiraan_close", "tanggal_close", "next_step", "tanggal_next_step", "alasan_lost", "dibuat"],
-    rows.map((r) => [r.id as string, r.name as string, r.stage_name as string, r.owner as string, r.company as string, r.contact as string, r.phone as string,
+    rows.map((r) => [r.id as string, r.name as string, r.stage_name as string, r.owner as string, r.company as string, r.contact as string, phone(r.phone),
       int(r.amount), int(r.weighted_amount), int(r.screen_units), day(r.expected_close), day(r.closed_on), r.next_step as string, day(r.next_step_date), r.lost_reason as string, day(r.created)]),
   );
 }
@@ -50,7 +52,7 @@ export async function contactsCsv(): Promise<string> {
       FROM v_contacts_enriched ORDER BY last_chat_at DESC NULLS LAST, id`;
   return toCsv(
     ["id", "nama", "jabatan", "email", "no_whatsapp", "perusahaan", "sumber", "sales", "chat_pertama", "chat_terakhir", "deal_berjalan", "perlu_followup"],
-    rows.map((r) => [r.id as string, r.full_name as string, r.job_title as string, r.email as string, r.phone_e164 as string, r.company_name as string,
+    rows.map((r) => [r.id as string, r.full_name as string, r.job_title as string, r.email as string, phone(r.phone_e164), r.company_name as string,
       r.source as string, r.owner_name as string, day(r.first_chat), day(r.last_chat), int(r.open_deals), r.needs_followup ? "ya" : "tidak"]),
   );
 }

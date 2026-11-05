@@ -241,6 +241,7 @@ describe("CSV export", () => {
     expect(line).toContain(";540000000;");
     expect(line).toContain('"\'Deal; ""khusus"" =1+1"'.replace("'Deal", "Deal")); // quoted, not a formula (starts with D)
     expect(line).not.toMatch(/Rp|\d\.\d{3}\.\d{3}/);
+    expect(line).not.toContain("'+"); // phone numbers are digits, never a leading + or quote
     expect(line).toMatch(/;\d{4}-\d{2}-\d{2}(;|$)/);
     const [{ n }] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM deals`;
     expect(lines).toHaveLength(n);
