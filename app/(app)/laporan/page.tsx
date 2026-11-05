@@ -9,12 +9,13 @@ import { getSalesFilter } from "@/lib/salesFilter";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { Kpis } from "./Kpis";
 import { PeriodSelect } from "./PeriodSelect";
+import { body, PageHeader } from "../PageHeader";
 import { AdsToCrmCard, DemoLostCard, SkuTable, SourcesTable } from "./Panels";
 import { Attention, RepTable } from "./Tables";
 
 export default function Page({ searchParams }: { searchParams: Promise<{ periode?: string | string[] }> }) {
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 md:px-8">
+    <main className="w-full">
       <Suspense>
         <Content searchParams={searchParams} />
       </Suspense>
@@ -33,23 +34,22 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
 
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-3xl font-bold text-ink">{t("laporan.title")}</h1>
-          <p className="text-slate">
-            {t("laporan.subtitle", { who: isRep ? t("laporan.yourNumbers") : (who?.full_name ?? t("nav.allReps")), date: dayMonth(report.kpis.asOf) })}
-          </p>
-        </div>
-        <PeriodSelect
-          value={period}
-          label={t("laporan.periodLabel")}
-          options={[
-            { value: "month", label: t("laporan.periodMonth") },
-            { value: "quarter", label: t("laporan.periodQuarter") },
-            { value: "year", label: t("laporan.periodYear") },
-          ]}
-        />
-      </div>
+      <PageHeader
+        title={t("laporan.title")}
+        meta={t("laporan.subtitle", { who: isRep ? t("laporan.yourNumbers") : (who?.full_name ?? t("nav.allReps")), date: dayMonth(report.kpis.asOf) })}
+        actions={
+          <PeriodSelect
+            value={period}
+            label={t("laporan.periodLabel")}
+            options={[
+              { value: "month", label: t("laporan.periodMonth") },
+              { value: "quarter", label: t("laporan.periodQuarter") },
+              { value: "year", label: t("laporan.periodYear") },
+            ]}
+          />
+        }
+      />
+      <div className={`${body} pb-10`}>
       <Kpis k={report.kpis} />
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <DoneChart months={report.months} target={report.monthTarget} />
@@ -67,6 +67,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <SkuTable rows={report.skus} />
         <SourcesTable rows={report.sources} />
+      </div>
       </div>
     </>
   );

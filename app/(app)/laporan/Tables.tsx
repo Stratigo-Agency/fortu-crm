@@ -14,10 +14,9 @@ function Chip({ n, late }: { n: number; late?: boolean }) {
 /** Kinerja sales. A name sets the sales filter (only when the viewer may pick another person). */
 export function RepTable({ reps, canPick }: { reps: RepRow[]; canPick: boolean }) {
   return (
-    <section className="rounded-lg bg-white p-6 shadow-card" aria-label={t("laporan.byRep")}>
+    <section className="rounded-lg bg-white p-5 shadow-card" aria-label={t("laporan.byRep")}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-bold text-ink">{t("laporan.byRep")}</h2>
-        {canPick && <p className="text-sm text-slate">{t("laporan.byRepHint")}</p>}
+        <h2 className="text-base font-semibold text-ink">{t("laporan.byRep")}</h2>
       </div>
       {reps.length === 0 ? (
         <p className="mt-4 text-slate">{t("laporan.noRows")}</p>
@@ -25,21 +24,21 @@ export function RepTable({ reps, canPick }: { reps: RepRow[]; canPick: boolean }
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[56rem] border-collapse text-base">
             <thead>
-              <tr className="border-b border-line text-sm text-slate">
-                <th className="px-3 py-2 text-left font-bold">{t("laporan.colSales")}</th>
+              <tr className="border-b border-line text-sm text-faint">
+                <th className="px-3 py-2 text-left font-semibold">{t("laporan.colSales")}</th>
                 {(["colOpen", "colPipeline", "colEstimate", "colDone", "colTarget", "colAttainment", "colUnits", "colWinRate", "colLate", "colStale"] as const).map((k) => (
-                  <th key={k} className="px-3 py-2 text-right font-bold">{t(`laporan.${k}`)}</th>
+                  <th key={k} className="px-3 py-2 text-right font-semibold">{t(`laporan.${k}`)}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {reps.map((r) => (
                 <tr key={r.userId} className="border-b border-line last:border-0">
-                  <td className="px-3 py-3 font-bold text-ink">
+                  <td className="px-3 py-3 font-semibold text-ink">
                     {canPick ? (
                       <form action={setSalesFilter}>
                         <input type="hidden" name="sales" value={r.userId} />
-                        <button type="submit" className="min-h-11 text-left font-bold text-ink hover:underline md:min-h-0">{r.name}</button>
+                        <button type="submit" className="min-h-11 text-left font-semibold text-ink hover:underline md:min-h-0">{r.name}</button>
                       </form>
                     ) : (
                       r.name
@@ -80,9 +79,9 @@ function reasonText(a: AttentionRow): string {
 
 export function Attention({ rows, total }: { rows: AttentionRow[]; total: number }) {
   return (
-    <section className="rounded-lg bg-white p-6 shadow-card" aria-label={t("laporan.attention")}>
+    <section className="rounded-lg bg-white p-5 shadow-card" aria-label={t("laporan.attention")}>
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-lg font-bold text-ink">{t("laporan.attention")}</h2>
+        <h2 className="text-base font-semibold text-ink">{t("laporan.attention")}</h2>
         <p className="text-sm text-slate">{t("laporan.dealsCount", { n: total })}</p>
       </div>
       {rows.length === 0 ? (
@@ -94,7 +93,7 @@ export function Attention({ rows, total }: { rows: AttentionRow[]; total: number
               <Link href={`/deal/${a.dealId}`} className="flex min-h-11 items-start gap-3 py-3 hover:bg-paper">
                 <span className={`mt-2 inline-block h-3 w-3 shrink-0 ${a.severity === 0 ? "bg-stage-3" : a.severity === 1 ? "bg-stage-3" : "bg-stage-2"}`} aria-hidden="true" />
                 <span className="min-w-0 flex-1">
-                  <span className="block font-bold text-ink">{a.name}</span>
+                  <span className="block font-semibold text-ink">{a.name}</span>
                   <span className={`block text-sm ${a.reason === "next_step_overdue" ? "text-late" : "text-slate"}`}>{reasonText(a)}</span>
                 </span>
                 <span className="tabular shrink-0 text-right text-slate">
