@@ -2,19 +2,21 @@
 
 Internal sales CRM for Fortu Digital Indonesia (IFP smartboards, digital signage, LED videowalls).
 Users: 4 sales reps, the Sales Manager (sales lead), Pak Jovian (CEO), marketing. Most are not technical.
-Contracts and integration specs: `docs/INTEGRATIONS.md` (extract of the Claude Docs blueprint). Task prompts: `docs/prompts/`. Screens: "Fortu CRM — Phase 3 Screens" canvas (v2); HD copies in `docs/design/*.png` — match them.
+Contracts and integration specs: `docs/INTEGRATIONS.md` (extract of the Claude Docs blueprint). Task prompts: `docs/prompts/`. Screens: `docs/design/*.png` keep the content and order of each screen; the look follows the visual system below (Sana Labs first, Attio for CRM screens, Nov 2026), which replaces the canvas styling.
 Backlog: Linear project "Fortu CRM — MVP & Rollout" (team Fortu, MAR-…). Sales flow follows Pak Jovian's reference CRM.
 
 ## Stack
 - One Next.js app (App Router, TypeScript, current stable) on Railway, `output: 'standalone'`. Server Components read the database; writes go through Server Actions. Public endpoints are Route Handlers.
 - PostgreSQL on Railway. Client: `postgres` (postgres.js) tagged templates via `lib/db.ts`. No ORM.
-- Auth.js v5 with Google. Tailwind CSS with the tokens below. `@dnd-kit/core` for the board. Vitest + Playwright.
+- Auth.js v5 with Google. Tailwind CSS with the tokens below, `lucide-react` icons. `@dnd-kit/core` for the board. Vitest + Playwright.
 - Railway services in one project: `web`, `postgres`, later `cron-insights` and `cron-sweeper` (same repo, different start command).
 - Nothing Vercel-only: no Edge runtime, no `@vercel/*` packages, no ISR on-demand webhooks.
 
 ## Layout
 ```
-app/(app)/pipeline/page.tsx               Pipeline: Board / Ringkas / List (home)
+app/(app)/beranda/page.tsx                Beranda (home): greeting, one search box, figures, Perlu perhatian
+app/(app)/cari/page.tsx                   search across deals, contacts and companies (Cmd+K)
+app/(app)/pipeline/page.tsx               Pipeline: Board / Ringkas / List
 app/(app)/pipeline/@panel/(..)deal/[id]   deal opens as a side panel over the board (intercepting route)
 app/(app)/deal/[id]/page.tsx              same deal as a full page (phones, shared links)
 app/(app)/prospek/page.tsx                Prospek: chats not yet a deal
@@ -62,12 +64,14 @@ public/brand/                             logos
 | admin | yes | yes | yes | yes | yes |
 | marketing | yes | no | no | no | ads screen only |
 
-## Brand (CVC "Fortu Towards 2027")
-- Colors: ink `#101018`, navy `#0D1730` (top bar, primary buttons, Done deal), slate `#425172` (secondary text), mist `#DADDEC` (borders, avatars), paper `#F6F7FB` (page), white (cards). Stage ramp, light to dark: `#DADDEC`, `#B8BED3`, `#8A93AE`, `#425172`, `#0D1730`. Late only: `#8A4B08` on `#FDF1E3`. Input borders `#8A92A9` (3:1 on white).
-- Type: "Helvetica Neue", Helvetica, Arial. Bold for headings and money, regular for body. Tabular figures for amounts.
-- Shape: the brand's square pixel = small square stage markers. Radius 8 (controls), 10–12 (cards). One subtle shadow on cards, nothing else.
-- Monochrome and calm. No gradients in the app UI, no glass, no emoji, no colored left borders, no icon in every heading, no illustrations. One accent (navy); orange only means "late".
-- Logos in `public/brand/`: `fortu-logo-white.png` (top bar), `fortu-logo-navy.png` (sign-in page), `fortu-mark-navy.png` → `app/icon.png`.
+## Visual system (after Sana Labs and Attio)
+- Tokens live in `app/globals.css`. White canvas; sidebar and tiles paper `#F6F6F7`; hairlines `#ECECEF`; text ink `#0A0A0B`, slate `#6B6B73` (secondary), faint `#707078` (hints, 4.5:1 on paper). Near-black `#18181B` is the one accent (primary buttons, Done deal, active stage). Stage ramp, light to dark: `#E4E4E7`, `#C9C9CF`, `#A1A1AA`, `#52525B`, `#18181B`. Late only: `#A24A00` on `#FFF3E8`. Input borders `#8E8E96` (3:1 on white).
+- Type: Inter (`next/font`), Helvetica Neue fallback. Semibold for titles and money, regular for body, tabular figures for amounts. Desktop with a mouse is dense (root 14 px, `desk:` variant for 36 px controls); phones and tablets keep 16 px and 44 px targets.
+- Shell: a quiet left sidebar (icons + labels, Cari with Cmd+K, one black "Tambah prospek" pill, sales filter and user at the bottom); on phones a slim white bar with a menu sheet.
+- Every screen starts with `PageHeader` (small title, faint note, actions right). Figures sit in a `StatStrip` without boxes; tabs are pill segments; tables are full width with hairlines, no card around them.
+- Buttons are pills: black for the one primary action, white with a hairline for the rest. Radius 10 (controls), 14–18 (cards, panels). Cards: white with a hairline ring and a very soft shadow; the deal panel floats.
+- Line icons from `lucide-react`, only in navigation, search and small actions. No gradients, glass, emoji, colored left borders or illustrations. Orange only means "late".
+- Logos in `public/brand/`: `fortu-logo-navy.png` (sidebar, phone bar, sign-in), `fortu-mark-navy.png` → `app/icon.png`.
 - Touch targets ≥ 44 px on phones. Quick-add inputs 48 px, 16 px text (no iOS zoom).
 
 ## Writing UI copy
