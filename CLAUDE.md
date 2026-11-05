@@ -30,7 +30,9 @@ app/go/wa/route.ts                        tracked WhatsApp link → 302 to wa.me
 app/api/auth/[...nextauth]/route.ts
 lib/db.ts  lib/auth.ts  lib/authz.ts  lib/copy.ts  lib/format.ts  lib/stageRules.ts
 lib/ingest/{ingestLead,phone,codes,owner}.ts
-db/migrations/001_init.sql … 010_reports.sql
+lib/sweeper.ts lib/mail.ts lib/notifications.ts   reminders: rules, SMTP digests, the bell
+jobs/{insights-sync,sweeper}.ts                    Railway cron jobs (compiled to jobs/*.js)
+db/migrations/001_init.sql … 012_notification_dedupe.sql
 db/seeds/seed_products.sql
 messages/id.json                          ALL user-facing text
 public/brand/                             logos
@@ -65,12 +67,16 @@ public/brand/                             logos
 | marketing | yes | no | no | no | ads screen only |
 
 ## Visual system (after Sana Labs and Attio)
-- Tokens live in `app/globals.css`. White canvas; sidebar and tiles paper `#F6F6F7`; hairlines `#ECECEF`; text ink `#0A0A0B`, slate `#6B6B73` (secondary), faint `#707078` (hints, 4.5:1 on paper). Near-black `#18181B` is the one accent (primary buttons, Done deal, active stage). Stage ramp, light to dark: `#E4E4E7`, `#C9C9CF`, `#A1A1AA`, `#52525B`, `#18181B`. Late only: `#A24A00` on `#FFF3E8`. Input borders `#8E8E96` (3:1 on white).
+- Tokens live in `app/globals.css`. White canvas; sidebar and tiles paper `#F6F7F9`; hairlines `#E8EAEF`; text ink `#0B0D12`, slate `#5F6573` (secondary), faint `#646A78` (hints, 5:1 on paper). Attio blue accent `#2F6BEF` (strong `#1F55D0` for text on tinted backgrounds) for links, focus, the active screen and selected choices; Sana sky `#DBE8FB` / `#F1F6FD` as the wash behind Beranda. Main action pill near-black `#111318`. Late only: `#C2410C` on `#FFF1E8`; won `#15803D`.
+- One soft color per deal stage (dot / chip background / chip text, `st-*` tokens, `lib/tones.ts`): Chat sky, Quotation violet, Negotiation amber, PO blue, Done green, Lost grey. People get a stable avatar color (`personTone`). Charts use the same family. Input borders `#8A909C` (3:1 on white).
 - Type: Inter (`next/font`), Helvetica Neue fallback. Semibold for titles and money, regular for body, tabular figures for amounts. Desktop with a mouse is dense (root 14 px, `desk:` variant for 36 px controls); phones and tablets keep 16 px and 44 px targets.
-- Shell: a quiet left sidebar (icons + labels, Cari with Cmd+K, one black "Tambah prospek" pill, sales filter and user at the bottom); on phones a slim white bar with a menu sheet.
+- Motion: short and soft (`animate-page`, `animate-enter`, `stagger`, `animate-pop`, `animate-panel`, `skeleton`); off when the system asks to reduce motion. Fill-mode is `backwards`, never `both`, on anything that can hold a popup (a leftover transform would trap or cover it).
+- Shell: a quiet left sidebar (icons + labels, bell, Cari with Cmd+K, one black "Tambah prospek" pill, sales filter and user at the bottom); on phones a slim white bar with a menu sheet.
 - Every screen starts with `PageHeader` (small title, faint note, actions right). Figures sit in a `StatStrip` without boxes; tabs are pill segments; tables are full width with hairlines, no card around them.
+- Our own controls only, never the browser's: `ui/Select` (dropdown, searchable when long, `required` works), `ui/Suggest` (suggestions), `check` (checkbox), `ui/Popup` (floating lists are drawn outside scrolling tables and panels so they are never clipped).
 - Buttons are pills: black for the one primary action, white with a hairline for the rest. Radius 10 (controls), 14–18 (cards, panels). Cards: white with a hairline ring and a very soft shadow; the deal panel floats.
-- Line icons from `lucide-react`, only in navigation, search and small actions. No gradients, glass, emoji, colored left borders or illustrations. Orange only means "late".
+- Line icons from `lucide-react`, only in navigation, search and small actions. No emoji, colored left borders or illustrations. Orange-red only means "late".
+- Nothing may be cut off or overlap at 1440, 1024, 768 and 390 px; long text wraps instead of ending in "…" (names in lists may truncate only if the full text is in a tooltip).
 - Logos in `public/brand/`: `fortu-logo-navy.png` (sidebar, phone bar, sign-in), `fortu-mark-navy.png` → `app/icon.png`.
 - Touch targets ≥ 44 px on phones. Quick-add inputs 48 px, 16 px text (no iOS zoom).
 
