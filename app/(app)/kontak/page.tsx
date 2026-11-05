@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { CONTACT_SORTS, type ContactRow } from "@/lib/contactTypes";
 import { listContacts, parseContactSort } from "@/lib/contacts";
 import { t } from "@/lib/copy";
-import { dayMonth, relDate } from "@/lib/format";
+import { chatDate, dayMonth } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { kontakHref } from "@/lib/kontakHref";
 import { getSalesFilter } from "@/lib/salesFilter";
@@ -139,7 +139,7 @@ function Row({ c, href }: { c: ContactRow; href: string }) {
       <td className="whitespace-nowrap px-3 py-3">{c.owner_name ?? "—"}</td>
       <td className="whitespace-nowrap px-3 py-3">{dayMonth(c.first_chat_at)}</td>
       <td className="whitespace-nowrap px-3 py-3">
-        <span className="inline-block first-letter:uppercase">{relDate(c.last_chat_at)}</span>
+        <span className="inline-block first-letter:uppercase">{chatDate(c.last_chat_at)}</span>
         {c.needs_followup && (
           <span className="ml-2 rounded-sm bg-late-bg px-2 py-0.5 text-sm text-late">
             {t("kontak.overDays", { n: c.followup_days })}

@@ -4,7 +4,7 @@ import { requireUser } from "@/lib/authz";
 import { listCompanies, parseCompanySort } from "@/lib/companies";
 import { COMPANY_SORTS, type CompanyRow } from "@/lib/contactTypes";
 import { t } from "@/lib/copy";
-import { relDate, rupiahShort } from "@/lib/format";
+import { chatDate, rupiahShort } from "@/lib/format";
 import { perusahaanHref } from "@/lib/perusahaanHref";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { UrlSelect } from "../UrlControls";
@@ -108,7 +108,7 @@ function Row({ c, href }: { c: CompanyRow; href: string }) {
       <td className="tabular whitespace-nowrap px-3 py-3 text-right">{Number(c.pipeline) ? rupiahShort(c.pipeline) : "—"}</td>
       <td className="tabular whitespace-nowrap px-3 py-3 text-right">{Number(c.total_done) ? rupiahShort(c.total_done) : "—"}</td>
       <td className="whitespace-nowrap px-5 py-3">
-        <span className="inline-block first-letter:uppercase">{c.last_chat_at ? relDate(c.last_chat_at) : "—"}</span>
+        <span className="inline-block first-letter:uppercase">{c.last_chat_at ? chatDate(c.last_chat_at) : "—"}</span>
       </td>
     </tr>
   );

@@ -79,6 +79,14 @@ export function relDate(d: Date | string, now: Date = new Date()): string {
   return shortDate(day, today);
 }
 
+/** Hari ini · Kemarin · then the day and month (8 Nov), as in the Kontak design. */
+export function chatDate(d: Date | string, now: Date = new Date()): string {
+  const diff = dayNumber(dayOf(d)) - dayNumber(jakartaDay(now));
+  if (diff === 0) return t("common.today");
+  if (diff === -1) return t("common.yesterday");
+  return dayMonth(d);
+}
+
 /** 5 menit lalu · 3 jam lalu · then relDate() */
 export function relTime(ts: Date | string, now: Date = new Date()): string {
   const at = typeof ts === "string" ? new Date(ts) : ts;

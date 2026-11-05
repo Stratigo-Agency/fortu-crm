@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { dayMonth, percent, relDate, relTime, rupiah, rupiahShort } from "@/lib/format";
+import { chatDate, dayMonth, percent, relDate, relTime, rupiah, rupiahShort } from "@/lib/format";
 
 describe("rupiah", () => {
   it.each([
@@ -30,6 +30,15 @@ describe("rupiahShort", () => {
 
 // 24 Nov 2026, 10:00 in Jakarta (03:00 UTC)
 const now = new Date("2026-11-24T03:00:00Z");
+
+describe("chatDate", () => {
+  it.each([
+    ["2026-11-24T01:00:00Z", "hari ini"],
+    ["2026-11-23T08:00:00Z", "kemarin"],
+    ["2026-11-08T08:00:00Z", "8 Nov"],
+    ["2026-10-25T08:00:00Z", "25 Okt"],
+  ])("%s → %s", (d, out) => expect(chatDate(d, now)).toBe(out));
+});
 
 describe("relDate", () => {
   it.each([
