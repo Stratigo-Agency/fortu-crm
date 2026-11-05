@@ -125,6 +125,10 @@ test("marking contacted moves the lead to Sudah dihubungi; not a fit takes it of
     await maria.getByRole("button", { name: "Tidak cocok" }).click();
     await expect(dialog).toBeVisible({ timeout: 1500 });
   }).toPass();
+  // the reason is required: saving without one keeps the dialog open and the lead where it is
+  await dialog.getByRole("button", { name: "Simpan" }).click();
+  await expect(dialog).toBeVisible();
+  await expect(row(page, "Maria")).toBeVisible();
   await pick(dialog.getByRole("combobox", { name: "Kenapa tidak cocok?" }), "Budget ditunda");
   await dialog.getByRole("button", { name: "Simpan" }).click();
   await expect(row(page, "Maria")).toHaveCount(0);

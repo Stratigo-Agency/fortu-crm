@@ -424,7 +424,7 @@
     "byStage": "Pipeline per tahap",
     "byCloseMonth": "Perkiraan per bulan close",
     "closePassed": "Lewat",
-    "closeLater": "Setelahnya",
+    "closeLater": "Nanti",
     "closeEmpty": "Kosong",
     "attention": "Perlu perhatian",
     "attentionNextStep": "Next step terlambat {n} hari: {what}",

@@ -171,7 +171,7 @@ export async function OwnerSections() {
         </div>
       </SectionForm>
 
-      <section id="data" aria-labelledby="data-h" className="scroll-mt-16 rounded-lg bg-white p-5 shadow-card">
+      <section id="data" aria-labelledby="data-h" className="scroll-mt-32 md:scroll-mt-16 rounded-lg bg-white p-5 shadow-card">
         <h2 id="data-h" className="text-base font-semibold text-ink">{t("pengaturan.data")}</h2>
         <p className="mt-1 text-sm text-slate">{t("pengaturan.exportHint")}</p>
         <div className="mt-4 flex flex-wrap gap-3">

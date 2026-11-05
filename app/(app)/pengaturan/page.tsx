@@ -62,7 +62,7 @@ async function Settings({ searchParams }: { searchParams: PageProps<"/pengaturan
       />
       <div className="flex flex-col gap-4 px-4 py-5 md:px-6">
         {owner && (
-          <nav aria-label={t("pengaturan.title")} className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-b border-line bg-white/90 px-4 py-2 backdrop-blur md:-mx-6 md:px-6">
+          <nav aria-label={t("pengaturan.title")} className="sticky top-14 z-20 md:top-0 -mx-4 flex gap-1 overflow-x-auto border-b border-line bg-white/90 px-4 py-2 backdrop-blur md:-mx-6 md:px-6">
             {(["target", "aturan", "peluang", "definisi", "tim", "katalog", "data"] as const).map((id) => (
               <a key={id} href={`#${id}`} className="flex h-11 shrink-0 items-center rounded-full px-3.5 text-base text-slate transition hover:bg-accent-soft hover:text-accent-strong desk:h-9">
                 {t(`pengaturan.nav.${id}`)}

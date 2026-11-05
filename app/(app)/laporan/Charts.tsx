@@ -104,7 +104,7 @@ export function CloseChart({ buckets }: { buckets: CloseBucket[] }) {
       </ol>
       <ol className="mt-2 flex gap-1.5">
         {buckets.map((b) => (
-          <li key={b.key} className="min-w-0 flex-1 truncate text-center text-sm text-slate" title={label(b)}>
+          <li key={b.key} className="min-w-0 flex-1 break-words text-center text-sm leading-tight text-slate">
             {label(b)}
           </li>
         ))}

@@ -2,6 +2,7 @@
 
 import { Check, ChevronDown, Search } from "lucide-react";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { Popup } from "./Popup";
 
 export type SelectOption = { value: string; label: string; hint?: string; disabled?: boolean };
 
@@ -44,7 +45,6 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
   const [query, setQuery] = useState("");
-  const [up, setUp] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLUListElement>(null);
@@ -67,26 +67,20 @@ export function Select({
     if (o.value !== current) onChange?.(o.value);
   }
 
+  function close() {
+    setOpen(false);
+    setQuery("");
+  }
+
   function openList() {
     if (disabled) return;
-    const box = button.current?.getBoundingClientRect();
-    setUp(!!box && window.innerHeight - box.bottom < 300 && box.top > 300);
     setActive(Math.max(0, shown.findIndex((o) => o.value === current)));
     setOpen(true);
   }
 
-  // close on a click outside
+  // the filter box takes the focus when a long list opens
   useEffect(() => {
-    if (!open) return;
-    const onDown = (e: MouseEvent) => {
-      if (!root.current?.contains(e.target as Node)) {
-        setOpen(false);
-        setQuery("");
-      }
-    };
-    document.addEventListener("mousedown", onDown);
-    if (withSearch) filterBox.current?.focus();
-    return () => document.removeEventListener("mousedown", onDown);
+    if (open && withSearch) filterBox.current?.focus();
   }, [open, withSearch]);
 
   // keep the active option in view
@@ -152,7 +146,23 @@ export function Select({
 
   return (
     <div ref={root} className={`relative min-w-0 ${variant === "field" ? "w-full" : ""} ${className}`} onKeyDown={onKey}>
-      {name !== undefined && <input type="hidden" name={name} value={current} />}
+      {name !== undefined &&
+        (required ? (
+          // a real (invisible) field, so the browser blocks an empty submit and says so next to the control
+          <input
+            name={name}
+            value={current}
+            required
+            disabled={disabled}
+            tabIndex={-1}
+            aria-hidden="true"
+            onChange={() => {}}
+            onFocus={() => button.current?.focus()}
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-px w-full opacity-0"
+          />
+        ) : (
+          <input type="hidden" name={name} value={current} disabled={disabled} />
+        ))}
       <button
         ref={button}
         id={id}
@@ -170,18 +180,13 @@ export function Select({
         onClick={() => (open ? setOpen(false) : openList())}
         className={`flex items-center gap-2 text-left text-base text-ink transition focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15 disabled:cursor-not-allowed disabled:bg-paper disabled:text-slate ${trigger}`}
       >
-        <span className={`min-w-0 flex-1 truncate ${selected ? "" : "text-faint"}`}>{selected?.label ?? placeholder ?? ""}</span>
+        <span className={`min-w-0 flex-1 truncate ${selected ? "" : "text-slate"}`}>{selected?.label ?? placeholder ?? ""}</span>
         <ChevronDown size={16} strokeWidth={1.8} aria-hidden="true" className={`shrink-0 text-faint transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
-      {open && (
-        <div
-          className={`absolute left-0 z-50 min-w-full max-w-[min(26rem,calc(100vw-2rem))] animate-pop rounded-md bg-white p-1 shadow-pop ${
-            up ? "bottom-full mb-1.5 origin-bottom" : "top-full mt-1.5 origin-top"
-          }`}
-        >
+      <Popup anchor={button} within={root} open={open} onClose={close}>
           {withSearch && (
             <div className="relative mb-1">
-              <Search size={14} strokeWidth={1.8} aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-faint" />
+              <Search size={14} strokeWidth={1.8} aria-hidden="true" className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate" />
               <input
                 ref={filterBox}
                 value={query}
@@ -191,11 +196,12 @@ export function Select({
                 }}
                 aria-label={searchLabel ?? label}
                 aria-controls={listId}
+                aria-activedescendant={shown[active] ? `${listId}-${active}` : undefined}
                 className="h-11 w-full rounded-sm border-0 bg-paper pl-8 pr-2 text-base text-ink outline-none desk:h-9"
               />
             </div>
           )}
-          <ul ref={list} id={listId} role="listbox" aria-label={label} className="max-h-72 overflow-y-auto overscroll-contain">
+          <ul ref={list} id={listId} role="listbox" aria-label={label} className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
             {shown.map((o, i) => {
               const isSel = o.value === current;
               return (
@@ -223,8 +229,7 @@ export function Select({
               );
             })}
           </ul>
-        </div>
-      )}
+      </Popup>
     </div>
   );
 }

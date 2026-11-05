@@ -2,7 +2,7 @@
 
 import { Check, Circle, CircleCheck } from "lucide-react";
 import { t } from "@/lib/copy";
-import { percent, rupiahShort } from "@/lib/format";
+import { rupiahShort } from "@/lib/format";
 import { STAGE_KEYS, type StageKey, type StageRule } from "@/lib/pipelineTypes";
 import { missingRules, type StageRuleInput } from "@/lib/stageRules";
 import { STAGE_CHIP, STAGE_DOT } from "@/lib/tones";
@@ -140,4 +140,3 @@ export function DealHeader({ kind, name, stageKey, amount, weightedAmount, daysI
   );
 }
 
-export { percent };

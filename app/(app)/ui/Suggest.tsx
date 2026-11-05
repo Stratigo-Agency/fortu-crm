@@ -1,6 +1,7 @@
 "use client";
 
-import { useId, useMemo, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
+import { Popup } from "./Popup";
 
 type Props = Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value" | "list"> & {
   value: string;
@@ -14,6 +15,8 @@ export function Suggest({ value, onChange, suggestions, className = "", onKeyDow
   const listId = useId();
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const root = useRef<HTMLDivElement>(null);
+  const field = useRef<HTMLInputElement>(null);
   const shown = useMemo(() => {
     const q = value.trim().toLowerCase();
     const list = q ? suggestions.filter((s) => s.toLowerCase().includes(q) && s.toLowerCase() !== q) : suggestions;
@@ -28,9 +31,10 @@ export function Suggest({ value, onChange, suggestions, className = "", onKeyDow
   }
 
   return (
-    <div className="relative">
+    <div ref={root} className="relative">
       <input
         {...rest}
+        ref={field}
         role="combobox"
         aria-autocomplete="list"
         aria-expanded={visible}
@@ -70,15 +74,15 @@ export function Suggest({ value, onChange, suggestions, className = "", onKeyDow
           onKeyDown?.(e);
         }}
       />
-      {visible && (
-        <ul id={listId} role="listbox" className="absolute left-0 right-0 top-full z-50 mt-1.5 max-h-64 animate-pop overflow-y-auto rounded-md bg-white p-1 shadow-pop">
+      <Popup anchor={field} within={root} open={visible} onClose={() => setOpen(false)}>
+        <ul id={listId} role="listbox" className="min-h-0 flex-1 overflow-y-auto">
           {shown.map((s, i) => (
             <li
               key={s}
               id={`${listId}-${i}`}
               role="option"
               aria-selected={i === active}
-              onMouseDown={(e) => {
+              onPointerDown={(e) => {
                 e.preventDefault();
                 pick(s);
               }}
@@ -89,7 +93,7 @@ export function Suggest({ value, onChange, suggestions, className = "", onKeyDow
             </li>
           ))}
         </ul>
-      )}
+      </Popup>
     </div>
   );
 }

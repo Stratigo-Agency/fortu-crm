@@ -52,7 +52,7 @@ function HomeSkeleton() {
 
 const TONES = {
   good: { box: "bg-good-bg", icon: "text-good", Icon: CircleCheck },
-  accent: { box: "bg-accent-soft", icon: "text-accent", Icon: TrendingUp },
+  accent: { box: "bg-accent-soft", icon: "text-accent-strong", Icon: TrendingUp },
   late: { box: "bg-late-bg", icon: "text-late", Icon: AlarmClock },
 } as const;
 
@@ -136,8 +136,8 @@ async function Content() {
                 <Link href={`/deal/${a.dealId}`} className="-mx-3 flex min-h-11 items-center gap-3 rounded-sm px-3 py-2.5 hover:bg-paper">
                   <span className={`h-2 w-2 shrink-0 rounded-full ${a.reason === "next_step_overdue" ? "bg-late" : a.reason === "discount" ? "bg-violet" : "bg-amber"}`} aria-hidden="true" />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate font-medium text-ink">{a.name}</span>
-                    <span className={`block truncate text-sm ${a.reason === "next_step_overdue" ? "text-late" : "text-slate"}`}>{reasonText(a)}</span>
+                    <span className="block font-medium text-ink">{a.name}</span>
+                    <span className={`block text-sm ${a.reason === "next_step_overdue" ? "text-late" : "text-slate"}`}>{reasonText(a)}</span>
                   </span>
                   <span className="tabular shrink-0 text-right text-sm text-slate">
                     <span className="block font-medium text-ink">{rupiahShort(a.amount)}</span>

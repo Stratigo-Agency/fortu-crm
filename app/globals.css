@@ -8,7 +8,7 @@
   --color-ink: #0b0d12; /* text */
   --color-navy: #111318; /* the main action pill */
   --color-slate: #5f6573; /* secondary text, 5.9:1 on white */
-  --color-faint: #6c7280; /* hints, 4.6:1 on paper */
+  --color-faint: #646a78; /* hints: 5.1:1 on paper, 4.7:1 on mist */
   --color-mist: #eceef3; /* tracks, avatars */
   --color-paper: #f6f7f9; /* sidebar, tiles, hover */
   --color-white: #ffffff;
@@ -95,8 +95,9 @@
   /* "backwards", never "both": once played, nothing may keep a stacking context, or a menu opening inside a row
      would be painted under the next row */
   --animate-enter: enter 0.45s var(--ease-out-soft) backwards;
-  /* the page itself: "backwards" so no transform stays once it has played, or fixed panels would be trapped */
-  --animate-page: enter 0.4s var(--ease-out-soft) backwards;
+  /* the page itself: opacity only. A transform on the page would make fixed panels inside it (?contact=) sit
+     relative to the page instead of the window while it plays */
+  --animate-page: fade 0.3s ease-out backwards;
   --animate-fade: fade 0.3s ease-out backwards;
   --animate-pop: pop 0.18s var(--ease-out-soft) backwards;
   --animate-panel: panel 0.42s var(--ease-out-soft) backwards;
