@@ -30,10 +30,14 @@ export function assertTargetSetter(actor: Pick<Actor, "role">): void {
 
 // ---- reading what a form sent ------------------------------------------------------------------------
 
-/** Whole number from text like "1.500.000.000" or "Rp 40": digits only. null for blank. */
+/** Whole number from text like "1.500.000.000" or "Rp 40". null for blank; anything else that is not a whole number is refused. */
 export function wholeNumber(raw: unknown, { min = 0, max = 9_999_999_999_999 }: { min?: number; max?: number } = {}): number | null {
-  const s = typeof raw === "string" ? raw.replace(/[^\d]/g, "") : "";
-  if (s === "") return null;
+  // "Rp" and spaces are allowed, and dots as thousands marks (1.500.000). A comma, a minus or any other
+  // character is refused: "7,5" must not quietly become 75.
+  const cleaned = typeof raw === "string" ? raw.replace(/^\s*Rp\.?/i, "").replace(/\s/g, "") : "";
+  if (cleaned === "") return null;
+  if (!/^\d+$/.test(cleaned) && !/^\d{1,3}(\.\d{3})+$/.test(cleaned)) throw new SettingsError("number");
+  const s = cleaned.replace(/\./g, "");
   const n = Number(s);
   if (!Number.isSafeInteger(n) || n < min || n > max) throw new SettingsError("number");
   return n;
@@ -53,6 +57,8 @@ const MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 /** "2026-11" → "2026-11-01"; anything else is refused. */
 export function monthStart(raw: unknown): string {
   if (typeof raw !== "string" || !MONTH.test(raw)) throw new SettingsError("month");
+  const year = Number(raw.slice(0, 4));
+  if (year < 2020 || year > 2100) throw new SettingsError("month");
   return `${raw}-01`;
 }
 
@@ -77,7 +83,8 @@ export async function saveTargets(actor: Actor, month: string, form: FormData): 
   assertTargetSetter(actor);
   const period = monthStart(month.slice(0, 7));
   const reps = await sql<{ id: string }[]>`SELECT id FROM users WHERE is_active AND role IN ('sales_rep', 'sales_lead')`;
-  const owners: (string | null)[] = [null, ...reps.map((r) => r.id)];
+  // only the people that were on the form: someone added after it was opened has no fields, and must not be wiped
+  const owners: (string | null)[] = [null, ...reps.map((r) => r.id).filter((id) => form.has(`amount:${id}`) || form.has(`units:${id}`))];
   const rows = owners.map((id) => {
     const key = id ?? "company";
     return { id, amount: wholeNumber(form.get(`amount:${key}`)), units: wholeNumber(form.get(`units:${key}`), { min: 1, max: 1_000_000 }) };
@@ -231,7 +238,8 @@ export async function addMember(actor: Actor, form: FormData): Promise<string> {
 export async function saveTeam(actor: Actor, form: FormData): Promise<void> {
   assertSettingsOwner(actor);
   const people = await sql<{ id: string; role: Role; is_active: boolean }[]>`SELECT id, role, is_active FROM users`;
-  const edits = people.map((p) => {
+  // only the rows that were on the form: a person added after it was opened has no fields and is left alone
+  const edits = people.filter((p) => form.has(`role:${p.id}`)).map((p) => {
     const role = text(form.get(`role:${p.id}`), 20) as Role;
     if (!TEAM_ROLES.includes(role)) throw new ForbiddenError();
     const active = form.get(`active:${p.id}`) === "on";
@@ -254,6 +262,7 @@ export async function saveTeam(actor: Actor, form: FormData): Promise<void> {
       for (const e of edits) {
         await tx`UPDATE users SET role = ${e.role}::user_role, is_active = ${e.active}, accepting_leads = ${e.accepting},
                                   product_lines = ${e.lines}::product_line[] WHERE id = ${e.id}`;
+        if (!e.phone && e.label) await tx`UPDATE wa_lines SET label = ${e.label} WHERE user_id = ${e.id}`;
         if (e.phone) {
           const [line] = await tx<{ id: string }[]>`SELECT id FROM wa_lines WHERE user_id = ${e.id} ORDER BY is_active DESC, id LIMIT 1`;
           if (line) await tx`UPDATE wa_lines SET phone_e164 = ${e.phone}, label = COALESCE(NULLIF(${e.label}, ''), label) WHERE id = ${line.id}`;
@@ -277,12 +286,12 @@ export async function getCatalog(): Promise<CatalogRow[]> {
       FROM products WHERE is_active ORDER BY product_line, sku`;
 }
 
-/** MSRP and the discount limit per product. A blank limit means "use the company limit". Fields: price:<id>, disc:<id>. */
+/** MSRP and the discount limit per product. A blank limit means "use the company limit"; a blank price keeps the current one. Fields: price:<id>, disc:<id>. */
 export async function saveCatalog(actor: Actor, form: FormData): Promise<void> {
   assertSettingsOwner(actor);
   const products = await sql<{ id: string }[]>`SELECT id FROM products WHERE is_active`;
   const edits = products.map((p) => ({ id: p.id, price: wholeNumber(form.get(`price:${p.id}`)), disc: percentNumber(form.get(`disc:${p.id}`)) }));
   await sql.begin(async (tx) => {
-    for (const e of edits) await tx`UPDATE products SET list_price = ${e.price}, max_discount_pct = ${e.disc} WHERE id = ${e.id}`;
+    for (const e of edits) await tx`UPDATE products SET list_price = COALESCE(${e.price}, list_price), max_discount_pct = ${e.disc} WHERE id = ${e.id}`;
   });
 }

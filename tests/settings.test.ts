@@ -44,6 +44,10 @@ describe("reading numbers", () => {
     expect(() => wholeNumber("0", { min: 1 })).toThrow(SettingsError);
     expect(() => wholeNumber("9".repeat(20))).toThrow(SettingsError);
   });
+  it("never turns a decimal or a negative into a different number", () => {
+    for (const bad of ["7,5", "7.5", "12,5", "-5", "1,5", "1.50", "abc", "1e3", "10%"]) expect(() => wholeNumber(bad), bad).toThrow(SettingsError);
+    expect(wholeNumber("Rp1.250")).toBe(1250);
+  });
   it("percentages take a comma, stay within 0–100", () => {
     expect(percentNumber("12,5")).toBe(12.5);
     expect(percentNumber("")).toBeNull();
@@ -241,7 +245,8 @@ describe("CSV export", () => {
     expect(line).toContain(";540000000;");
     expect(line).toContain('"\'Deal; ""khusus"" =1+1"'.replace("'Deal", "Deal")); // quoted, not a formula (starts with D)
     expect(line).not.toMatch(/Rp|\d\.\d{3}\.\d{3}/);
-    expect(line).not.toContain("'+"); // phone numbers are digits, never a leading + or quote
+    expect(line).toMatch(/;62 \d{3}-/); // phone numbers read "62 812-…": text, so Excel keeps them as written
+    expect(line).not.toContain("'+");
     expect(line).toMatch(/;\d{4}-\d{2}-\d{2}(;|$)/);
     const [{ n }] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM deals`;
     expect(lines).toHaveLength(n);
@@ -250,5 +255,43 @@ describe("CSV export", () => {
     expect(contacts.startsWith("﻿")).toBe(true);
     const [{ c }] = await sql<{ c: number }[]>`SELECT count(*)::int AS c FROM v_contacts_enriched`;
     expect(contacts.replace("﻿", "").trim().split("\r\n")).toHaveLength(c + 1);
+  });
+});
+
+describe("a form that is older than the data", () => {
+  it("a person added after the page opened is left alone by the team save and the target save", async () => {
+    const admin = await createUser({ role: "admin" });
+    const early = await createUser({ fullName: "Sudah Ada" });
+    const people = await getTeam();
+    const f = form(Object.fromEntries(people.filter((p) => p.id !== early.id).flatMap((p) => [
+      [`role:${p.id}`, p.role], ...(p.isActive ? [[`active:${p.id}`, "on"]] : []), [`lines:${p.id}`, p.productLines], [`wa:${p.id}`, p.waPhone],
+    ])));
+    // `early` is not on the form, like someone added while the page was open
+    await saveTeam(admin, f);
+    expect((await getTeam()).find((p) => p.id === early.id)).toMatchObject({ role: "sales_rep", isActive: true });
+
+    const month = "2031-05";
+    await sql`INSERT INTO sales_targets (user_id, period_month, target_amount) VALUES (${early.id}, ${month + "-01"}, 123000000)`;
+    await saveTargets(admin, month, form({ "amount:company": "1" }));
+    expect((await sql`SELECT target_amount::int AS a FROM sales_targets WHERE user_id = ${early.id} AND period_month = ${month + "-01"}`)[0].a).toBe(123_000_000);
+    await sql`DELETE FROM sales_targets WHERE period_month = ${month + "-01"}`;
+  });
+
+  it("a month outside 2020–2100 is refused", async () => {
+    const lead = await createUser({ role: "sales_lead" });
+    await fails(saveTargets(lead, "0000-01", form({})), "month");
+    await fails(saveTargets(lead, "9999-12", form({})), "month");
+  });
+
+  it("a blank price keeps the MSRP, and a sales lead can't save the catalog or the team", async () => {
+    const owner = await createUser({ role: "ceo" });
+    const p = await createProduct({ listPrice: 31_000_000 });
+    await saveCatalog(owner, form({ [`price:${p.id}`]: "", [`disc:${p.id}`]: "" }));
+    expect((await sql`SELECT list_price::int AS price FROM products WHERE id = ${p.id}`)[0].price).toBe(31_000_000);
+    const lead = await createUser({ role: "sales_lead" });
+    await expect(saveCatalog(lead, form({}))).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(saveTeam(lead, form({}))).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(saveDefinitions(lead, form({}))).rejects.toBeInstanceOf(ForbiddenError);
+    await expect(saveProbabilities(lead, form({}))).rejects.toBeInstanceOf(ForbiddenError);
   });
 });

@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { formatPhone } from "@/lib/ingest/phone";
 
 // CSV for Excel and Numbers: UTF-8 with a BOM, ";" between columns (Indonesian Excel's default),
 // Rupiah and counts as plain integers (no "Rp", no dots) so they stay numbers, dates as YYYY-MM-DD.
@@ -22,8 +23,8 @@ export function toCsv(header: string[], rows: Cell[][]): string {
 
 type Row = Record<string, Cell | Date>;
 const day = (v: Cell | Date) => (v instanceof Date ? v.toISOString().slice(0, 10) : (v as string | null));
-/** +6281234567890 → 6281234567890: digits only, so no leading + that a spreadsheet would read as a formula. */
-const phone = (v: Cell | Date) => (typeof v === "string" ? v.replace(/\D/g, "") : null);
+/** +6281234567890 → 62 812-3456-7890: text that starts with a digit, so Excel keeps it as written (no 6,28E+12, no formula). */
+const phone = (v: Cell | Date) => (typeof v === "string" ? formatPhone(v).replace(/^\+/, "") : null);
 const int = (v: Cell | Date) => (v === null || v === undefined ? null : Math.round(Number(v)));
 
 export async function dealsCsv(): Promise<string> {

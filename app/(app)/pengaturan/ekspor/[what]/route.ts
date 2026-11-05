@@ -14,7 +14,7 @@ export async function GET(_request: Request, ctx: { params: Promise<{ what: stri
   if (!user || (user.role !== "admin" && user.role !== "ceo")) return new NextResponse("Forbidden", { status: 403 });
 
   const { what } = await ctx.params;
-  if (!(what in FILES)) return new NextResponse("Not found", { status: 404 });
+  if (!Object.hasOwn(FILES, what)) return new NextResponse("Not found", { status: 404 });
   const body = await FILES[what as keyof typeof FILES]();
   const stamp = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
   return new NextResponse(body, {

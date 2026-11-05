@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { ForbiddenError, requireUser } from "@/lib/authz";
+import type { Role } from "@/lib/auth";
 import { t } from "@/lib/copy";
+import { sql } from "@/lib/db";
 import {
   addMember, saveCatalog, saveDefinitions, saveProbabilities, saveRules, saveTargets, saveTeam, SettingsError,
 } from "@/lib/settings";
@@ -12,8 +14,12 @@ export type SaveResult = { ok: true; message: string } | { ok: false; message: s
 type Save = (user: Awaited<ReturnType<typeof requireUser>>, form: FormData) => Promise<string | void>;
 
 async function run(form: FormData, save: Save): Promise<SaveResult> {
-  const user = await requireUser();
+  const session = await requireUser();
   try {
+    // The role comes from the database, not the sign-in cookie, so a demoted or switched-off account stops at once.
+    const [row] = await sql<{ role: Role }[]>`SELECT role FROM users WHERE id = ${session.id} AND is_active`;
+    if (!row) throw new ForbiddenError();
+    const user = { ...session, role: row.role };
     const message = await save(user, form);
     revalidatePath("/", "layout");
     return { ok: true, message: message || t("pengaturan.saved") };
