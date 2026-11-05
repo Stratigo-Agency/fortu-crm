@@ -5,7 +5,7 @@ import { t } from "@/lib/copy";
 import { dayMonth } from "@/lib/format";
 import { getReport } from "@/lib/reports";
 import { getSalesFilter } from "@/lib/salesFilter";
-import { DoneChart, StageChart } from "./Charts";
+import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { Kpis } from "./Kpis";
 import { Attention, RepTable } from "./Tables";
 
@@ -36,9 +36,10 @@ async function Content() {
         </p>
       </div>
       <Kpis k={report.kpis} />
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+      <div className="mt-4 grid gap-4 lg:grid-cols-3">
         <DoneChart months={report.months} target={report.monthTarget} />
         <StageChart stages={report.stages} openDeals={report.kpis.openDeals} />
+        <CloseChart buckets={report.closeForecast} />
       </div>
       <div className="mt-4">
         <RepTable reps={report.reps} canPick={!isRep} />
