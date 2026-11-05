@@ -23,7 +23,9 @@ async function TopBar() {
     { href: "/kontak", label: t("nav.kontak") },
     { href: "/perusahaan", label: t("nav.perusahaan") },
     { href: "/laporan", label: t("nav.laporan") },
-    ...(canOpenSettings(user) ? [{ href: "/pengaturan", label: t("nav.pengaturan") }] : []),
+    ...(canOpenSettings(user) ? [{ href: "/pengaturan", label: t("nav.pengaturan"), also: ["/pengaturan/iklan"] }] : []),
+    // marketing sees the ads screen only (CLAUDE.md Roles)
+    ...(user.role === "marketing" ? [{ href: "/pengaturan/iklan", label: t("nav.iklan") }] : []),
   ];
 
   return (

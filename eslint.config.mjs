@@ -13,6 +13,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // compiled scheduled jobs (built from jobs/*.ts)
+    "jobs/*.js",
   ]),
 ]);
 

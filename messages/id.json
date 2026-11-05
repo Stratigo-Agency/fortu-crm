@@ -8,7 +8,8 @@
     "pengaturan": "Pengaturan",
     "allReps": "Semua sales",
     "salesFilter": "Tampilkan sales",
-    "signOut": "Keluar"
+    "signOut": "Keluar",
+    "iklan": "Iklan"
   },
   "common": {
     "appName": "CRM",
@@ -518,5 +519,35 @@
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",
     "offline": "Koneksi terputus. Perubahan belum tersimpan."
+  },
+  "iklan": {
+    "title": "Iklan",
+    "lastSync": "Terakhir diambil dari Meta: {when}",
+    "neverSynced": "Belum pernah diambil dari Meta.",
+    "lastFailure": "Pengambilan terakhir gagal ({when}): {message}",
+    "campaigns": "Kampanye",
+    "campaignsHint": "Pilih sales pemilik kampanye. Dipakai di laporan iklan.",
+    "adSets": "Set iklan",
+    "adSetsHint": "Pilih lini produk tiap set iklan.",
+    "ads": "Iklan dan kode",
+    "adsHint": "Kode ditulis di pesan WhatsApp iklan, contoh F-IFP-01 (huruf sales, lini produk, nomor).",
+    "colCampaign": "Kampanye",
+    "colAdSet": "Set iklan",
+    "colAd": "Iklan",
+    "colOwner": "Sales",
+    "colLine": "Lini produk",
+    "colCode": "Kode iklan",
+    "colSpend": "Biaya 30 hari",
+    "noOwner": "Belum dipilih",
+    "noLine": "Belum dipilih",
+    "empty": "Belum ada data iklan. Data muncul setelah pengambilan pertama dari Meta.",
+    "linkFromSettings": "Atur kampanye dan kode iklan",
+    "err": {
+      "code": "Kode harus seperti F-IFP-01: satu huruf, IFP/DSS/LED, dua angka.",
+      "codeTaken": "Kode {code} sudah dipakai iklan lain.",
+      "form": "Pilihan tidak dikenali. Muat ulang halaman.",
+      "stale": "Data iklan sudah diubah orang lain. Muat ulang halaman, lalu coba lagi."
+    },
+    "codePlaceholder": "F-IFP-01"
   }
 }
