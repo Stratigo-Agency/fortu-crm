@@ -18,7 +18,8 @@
     "e2e": "playwright test",
     "jobs:build": "node scripts/build-jobs.mjs",
     "insights:sync": "node --env-file-if-exists=.env.local jobs/insights-sync.js",
-    "sweeper:run": "node --env-file-if-exists=.env.local jobs/sweeper.js"
+    "sweeper:run": "node --env-file-if-exists=.env.local jobs/sweeper.js",
+    "ads:codes": "npm run jobs:build --silent && node --env-file-if-exists=.env.local jobs/ad-codes.js"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
