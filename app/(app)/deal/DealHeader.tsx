@@ -25,7 +25,7 @@ export function DealHeader({ kind, name, stageKey, amount, weightedAmount, daysI
     <div className="px-6 pb-4 pt-5">
       <p className="text-sm text-slate">{kind}</p>
       <h1 className="pr-14 text-2xl font-bold text-ink">{name || t("deal.new")}</h1>
-      <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label={t("pipeline.colStage")}>
+      <div className="mt-4 flex flex-wrap gap-1.5" role="group" aria-label={t("pipeline.colStage")}>
         {STAGE_KEYS.map((key, i) => {
           const active = key === stageKey;
           const passed = i < current && key !== "lost" && stageKey !== "lost";
@@ -36,7 +36,7 @@ export function DealHeader({ kind, name, stageKey, amount, weightedAmount, daysI
               disabled={disabled || !onStage}
               aria-pressed={active}
               onClick={() => onStage?.(key)}
-              className={`flex h-11 items-center gap-2 rounded-sm border px-3 text-base ${
+              className={`flex h-11 items-center gap-1.5 rounded-sm border px-2.5 text-base ${
                 active
                   ? "border-navy bg-navy font-bold text-white"
                   : passed
