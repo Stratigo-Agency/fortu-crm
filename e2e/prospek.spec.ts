@@ -67,13 +67,19 @@ test("the tab, the search and the sales filter survive a reload", async ({ page 
   await expect(row(page, "Maria")).toBeVisible();
   await expect(row(page, "Andi")).toHaveCount(0);
 
-  // the global sales filter (cookie) also stays
+  // the global sales filter (cookie) also stays; on a phone it sits in the menu sheet
   const cookie = async () => (await page.context().cookies()).find((c) => c.name === "crm_sales")?.value;
-  await page.getByLabel("Tampilkan sales").selectOption(otherId); // by id: other specs add reps too
+  const salesFilter = async () => {
+    await expect(page.getByRole("heading", { name: "Prospek" })).toBeVisible(); // the page (and its bar) is there
+    const filter = page.getByLabel("Lihat data").locator("visible=true"); // the desktop sidebar has one too, hidden
+    if ((await filter.count()) === 0) await page.getByRole("button", { name: "Menu" }).click();
+    return filter;
+  };
+  await (await salesFilter()).selectOption(otherId); // by id: other specs add reps too
   await expect.poll(cookie).toBe(otherId); // the choice is saved before we reload
   await page.reload();
-  await expect(page.getByLabel("Tampilkan sales")).toHaveValue(otherId);
-  await page.getByLabel("Tampilkan sales").selectOption("all"); // leave it as found
+  await expect(await salesFilter()).toHaveValue(otherId);
+  await (await salesFilter()).selectOption("all"); // leave it as found
   await expect.poll(cookie).toBe("all");
 });
 

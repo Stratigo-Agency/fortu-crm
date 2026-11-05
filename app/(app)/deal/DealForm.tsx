@@ -516,7 +516,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                             type="button"
                             aria-label={t("deal.removeProduct")}
                             onClick={() => removeLine(l.key)}
-                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-slate hover:bg-paper"
+                            className="flex h-[44px] w-[44px] shrink-0 items-center justify-center rounded-full text-slate hover:bg-paper hover:text-ink"
                           >
                             <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
                               <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
