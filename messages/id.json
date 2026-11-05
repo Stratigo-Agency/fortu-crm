@@ -52,6 +52,7 @@
     "open": "Buka pengingat",
     "unread": "{n} belum dibaca",
     "empty": "Belum ada pengingat.",
+    "error": "Belum bisa dimuat. Coba lagi sebentar.",
     "markAll": "Tandai semua dibaca",
     "kind": {
       "high_value_lead": "Deal besar: {deal}",
