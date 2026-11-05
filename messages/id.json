@@ -15,7 +15,8 @@
     "add": "Tambah prospek",
     "menu": "Menu",
     "main": "Navigasi",
-    "shortcut": "⌘K"
+    "shortcutMac": "⌘K",
+    "shortcutOther": "Ctrl K"
   },
   "beranda": {
     "greeting": {

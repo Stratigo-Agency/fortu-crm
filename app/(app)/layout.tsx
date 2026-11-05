@@ -29,7 +29,7 @@ async function Shell() {
     <Sidebar
       items={items}
       bottomItems={bottomItems}
-      labels={{ search: t("nav.search"), add: t("nav.add"), menu: t("nav.menu"), close: t("common.close"), main: t("nav.main"), shortcut: t("nav.shortcut") }}
+      labels={{ search: t("nav.search"), add: t("nav.add"), menu: t("nav.menu"), close: t("common.close"), main: t("nav.main"), shortcutMac: t("nav.shortcutMac"), shortcutOther: t("nav.shortcutOther") }}
       footer={
         <div className="flex flex-col gap-2">
           <SalesFilter

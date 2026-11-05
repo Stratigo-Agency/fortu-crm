@@ -70,7 +70,7 @@ async function Content() {
           <li key={href}>
             <Link
               href={href}
-              className="flex h-11 items-center gap-2 rounded-full border border-line bg-white px-4 text-base text-ink hover:bg-paper md:h-9"
+              className="flex h-11 items-center gap-2 rounded-full border border-line bg-white px-4 text-base text-ink hover:bg-paper desk:h-9"
             >
               <Icon size={15} strokeWidth={1.8} aria-hidden="true" className="text-slate" />
               {label}
@@ -88,6 +88,7 @@ async function Content() {
         <Stat label={t("beranda.estimate")} value={rupiahShort(home.weightedOpen)} sub={t("beranda.openDeals", { n: home.openDeals })} />
         <Stat label={t("beranda.late")} value={String(home.overdue)} sub={t("beranda.lateHint")} />
       </div>
+      <p className="mt-2 text-sm text-faint">{t("common.beforeTax")}</p>
 
       <section className="mt-10" aria-label={t("beranda.attention")}>
         <div className="flex items-baseline justify-between">

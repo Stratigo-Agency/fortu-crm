@@ -12,7 +12,7 @@ export default function TambahPage() {
       <header className="flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
         <Image src="/brand/fortu-logo-navy.png" alt="Fortu" width={76} height={23} priority />
         <Link
-          href="/beranda"
+          href="/prospek"
           aria-label={t("common.close")}
           className="flex h-11 w-11 items-center justify-center rounded-full text-ink"
         >

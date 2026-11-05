@@ -6,7 +6,7 @@ import {
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 export type NavIcon = "home" | "pipeline" | "prospek" | "kontak" | "perusahaan" | "laporan" | "pengaturan" | "iklan";
 export type NavItem = { href: string; label: string; icon: NavIcon; badge?: number; also?: string[] };
@@ -15,6 +15,8 @@ const ICONS = {
   home: Home, pipeline: KanbanSquare, prospek: Inbox, kontak: Users, perusahaan: Building2,
   laporan: BarChart3, pengaturan: Settings, iklan: Megaphone,
 } as const;
+
+const noSubscribe = () => () => {};
 
 function isActive(pathname: string, item: NavItem) {
   return [item.href, ...(item.also ?? [])].some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -33,7 +35,7 @@ function NavLinks({ items, onPick }: { items: NavItem[]; onPick?: () => void }) 
               href={item.href}
               onClick={onPick}
               aria-current={active ? "page" : undefined}
-              className={`flex h-11 items-center gap-3 rounded-sm px-3 text-base md:h-9 ${
+              className={`flex h-11 items-center gap-3 rounded-sm px-3 text-base desk:h-9 ${
                 active ? "bg-white font-semibold text-ink shadow-card" : "text-slate hover:bg-black/[0.04] hover:text-ink"
               }`}
             >
@@ -55,7 +57,7 @@ function NavLinks({ items, onPick }: { items: NavItem[]; onPick?: () => void }) 
 type Props = {
   items: NavItem[];
   bottomItems: NavItem[];
-  labels: { search: string; add: string; menu: string; close: string; main: string; shortcut: string };
+  labels: { search: string; add: string; menu: string; close: string; main: string; shortcutMac: string; shortcutOther: string };
   footer: React.ReactNode; // sales filter and the user menu, rendered on the server
 };
 
@@ -64,33 +66,59 @@ export function Sidebar({ items, bottomItems, labels, footer }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
-  // ⌘K / Ctrl+K opens search from anywhere
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const isMac = useSyncExternalStore(noSubscribe, () => /Mac|iPhone|iPad/.test(navigator.platform), () => true);
+
+  // ⌘K / Ctrl+K opens search, but never over a form or a dialog: that would throw away unsaved edits
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
-        e.preventDefault();
-        router.push("/cari");
-      }
+      if (!((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k")) return;
+      const el = document.activeElement as HTMLElement | null;
+      const typing = !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
+      if (document.querySelector('[aria-modal="true"]') || (typing && el?.getAttribute("type") !== "search")) return;
+      e.preventDefault();
+      const box = document.querySelector<HTMLInputElement>('form[role="search"][action="/cari"] input[name="q"]');
+      if (box) box.focus(); // already on Beranda or Cari: keep what is typed
+      else router.push("/cari");
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [router]);
+
+  // the phone menu: Esc closes it, focus goes in and comes back, the page behind doesn't scroll
+  useEffect(() => {
+    if (!open) return;
+    const button = menuButton.current;
+    closeButton.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = overflow;
+      button?.focus();
+    };
+  }, [open]);
 
   const top = (
     <div className="flex flex-col gap-1.5">
       <Link
         href="/cari"
         onClick={() => setOpen(false)}
-        className="flex h-11 items-center gap-3 rounded-sm px-3 text-base text-slate hover:bg-black/[0.04] hover:text-ink md:h-9"
+        className="flex h-11 items-center gap-3 rounded-sm px-3 text-base text-slate hover:bg-black/[0.04] hover:text-ink desk:h-9"
       >
         <Search size={17} strokeWidth={1.8} aria-hidden="true" className="text-faint" />
         <span className="flex-1">{labels.search}</span>
-        <kbd className="hidden rounded-md border border-line bg-white px-1.5 font-sans text-xs text-faint md:inline">{labels.shortcut}</kbd>
+        <kbd className="hidden rounded-md border border-line bg-white px-1.5 font-sans text-xs text-faint md:inline">{isMac ? labels.shortcutMac : labels.shortcutOther}</kbd>
       </Link>
       <Link
         href="/tambah"
         onClick={() => setOpen(false)}
-        className="flex h-11 items-center justify-center gap-2 rounded-full bg-ink px-4 text-base font-semibold text-white hover:bg-ink/85 md:h-9"
+        className="flex h-11 items-center justify-center gap-2 rounded-full bg-ink px-4 text-base font-semibold text-white hover:bg-ink/85 desk:h-9"
       >
         <Plus size={16} strokeWidth={2.2} aria-hidden="true" />
         {labels.add}
@@ -123,6 +151,7 @@ export function Sidebar({ items, bottomItems, labels, footer }: Props) {
             <Search size={20} strokeWidth={1.8} aria-hidden="true" />
           </Link>
           <button
+            ref={menuButton}
             type="button"
             aria-label={labels.menu}
             aria-expanded={open}
@@ -139,6 +168,7 @@ export function Sidebar({ items, bottomItems, labels, footer }: Props) {
           <div className="absolute inset-y-0 right-0 flex w-[min(20rem,88vw)] flex-col gap-5 bg-paper px-3 py-3 shadow-pop">
             <div className="flex items-center justify-end">
               <button
+                ref={closeButton}
                 type="button"
                 aria-label={labels.close}
                 onClick={() => setOpen(false)}
