@@ -1,6 +1,7 @@
 import { t } from "@/lib/copy";
 import { dayMonth, rupiahShort } from "@/lib/format";
 import type { DealCard } from "@/lib/pipelineTypes";
+import { STAGE_CHIP } from "@/lib/tones";
 import { Lock, MARKER, NextStepLine } from "./DealCardView";
 
 /** List view: one row per deal. Numbers are the SQL values of each deal (no totals here). */
@@ -20,7 +21,7 @@ export function DealList({ cards }: { cards: DealCard[] }) {
             <th className="px-4 py-2.5 md:px-6 font-medium">{t("deal.nextStep")}</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody className="stagger">
           {cards.map((c) => (
             <tr key={c.id} className="border-b border-line align-top hover:bg-paper">
               <td className="px-4 py-2.5 md:px-6">
@@ -31,8 +32,8 @@ export function DealList({ cards }: { cards: DealCard[] }) {
                 {c.company_name && <p className="text-sm text-slate">{c.company_name}</p>}
               </td>
               <td className="px-3 py-2.5">
-                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-paper px-2 py-0.5 text-sm">
-                  <span className={`h-2 w-2 rounded-[3px] ${MARKER[c.stage_key]}`} aria-hidden="true" />
+                <span className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-sm font-medium ${STAGE_CHIP[c.stage_key]}`}>
+                  <span className={`h-1.5 w-1.5 rounded-full ${MARKER[c.stage_key]}`} aria-hidden="true" />
                   {t(`stage.${c.stage_key}`)}
                 </span>
               </td>

@@ -11,7 +11,7 @@ export function LostToggle({ checked, label, hrefOn, hrefOff }: { checked: boole
         type="checkbox"
         checked={checked}
         onChange={(e) => router.push(e.target.checked ? hrefOn : hrefOff)}
-        className="h-4 w-4 accent-ink"
+        className="check"
       />
       {label}
     </label>

@@ -58,6 +58,7 @@
     "deleteConfirm": "Klik lagi untuk hapus",
     "undo": "Batalkan",
     "search": "Cari",
+    "choose": "Pilih",
     "all": "Semua",
     "sales": "Sales",
     "source": "Sumber",
@@ -96,6 +97,18 @@
     "daysInStage": "{n} hari di tahap ini",
     "moved": "Dipindah ke {stage}",
     "fillFirst": "Lengkapi dulu sebelum pindah ke {stage}"
+  },
+  "flow": {
+    "toNext": "Untuk pindah ke {stage}:",
+    "ready": "Siap pindah ke {stage}",
+    "done": "sudah",
+    "missing": "belum",
+    "need": {
+      "next_step": "Next step dan tanggalnya",
+      "products": "Produk dengan harga",
+      "close_date": "Perkiraan tanggal close",
+      "lost_reason": "Alasan lost"
+    }
   },
   "stageRule": {
     "next_step": "Isi next step dan tanggalnya.",
@@ -489,6 +502,15 @@
     "colSku": "SKU"
   },
   "pengaturan": {
+    "nav": {
+      "target": "Target",
+      "aturan": "Aturan",
+      "peluang": "Peluang",
+      "definisi": "Definisi tahap",
+      "tim": "Tim",
+      "katalog": "Katalog",
+      "data": "Data"
+    },
     "title": "Pengaturan",
     "onlyOwner": "Hanya admin dan Pak Jovian yang bisa mengubah pengaturan.",
     "saveAll": "Simpan pengaturan",

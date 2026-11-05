@@ -43,8 +43,30 @@ export function segment(active: boolean): string {
 
 /** The small grey search field of a list screen. */
 export const searchField =
-  "h-11 w-full rounded-sm border border-input bg-white pl-9 pr-3 text-base text-ink placeholder:text-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40 desk:h-9";
+  "h-11 w-full rounded-sm border border-input bg-white pl-9 pr-3 text-base text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15 desk:h-9";
 export const searchIcon = "pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint";
 
 /** Page body padding under the header. */
 export const body = "px-4 md:px-6";
+
+/** Shimmering placeholder while a screen loads: a header bar, a figures row and a few rows. */
+export function PageSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <div className="flex min-h-14 items-center border-b border-line px-4 md:px-6">
+        <div className="skeleton h-5 w-32" />
+      </div>
+      <div className="flex gap-8 border-b border-line px-4 py-4 md:px-6">
+        <div className="skeleton h-10 w-24" />
+        <div className="skeleton h-10 w-28" />
+        <div className="skeleton h-10 w-24" />
+      </div>
+      <div className="flex flex-col gap-3 px-4 py-5 md:px-6">
+        <div className="skeleton h-9 w-full max-w-md" />
+        <div className="skeleton h-12 w-full" />
+        <div className="skeleton h-12 w-full" />
+        <div className="skeleton h-12 w-full" />
+      </div>
+    </div>
+  );
+}

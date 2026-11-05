@@ -1,6 +1,6 @@
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { body, PageHeader, primaryButton, searchField, searchIcon } from "../PageHeader";
+import { body, PageHeader, PageSkeleton, primaryButton, searchField, searchIcon } from "../PageHeader";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { listCompanies, parseCompanySort } from "@/lib/companies";
@@ -18,7 +18,7 @@ const PAGE = 100;
 export default function Page(props: PageProps<"/perusahaan">) {
   return (
     <main className="w-full">
-      <Suspense>
+      <Suspense fallback={<PageSkeleton />}>
         <Content searchParams={props.searchParams} />
       </Suspense>
     </main>
@@ -89,7 +89,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/perusahaan"
                 <th className="px-4 py-2.5 md:px-6 font-medium">{t("perusahaan.colLast")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger">
               {rows.map((c) => (
                 <Row key={c.id} c={c} href={perusahaanHref({ q, sort, company: c.id })} />
               ))}
@@ -99,7 +99,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/perusahaan"
       </div>
       {hasMore && (
         <p className="mt-4 text-center">
-          <Link href={perusahaanHref({ q, sort, all: true })} className="font-medium text-ink underline">
+          <Link href={perusahaanHref({ q, sort, all: true })} className="font-medium text-accent hover:text-accent-strong">
             {t("common.showRest", { n: total - rows.length })}
           </Link>
         </p>

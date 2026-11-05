@@ -3,20 +3,14 @@ import { t } from "@/lib/copy";
 import { dayMonth, relDate, rupiahShort } from "@/lib/format";
 import type { DealCard, StageKey } from "@/lib/pipelineTypes";
 import { initials } from "@/lib/shellInitials";
+import { personTone, STAGE_DOT } from "@/lib/tones";
 
-/** The square stage marker: the stage ramp from light to dark; Lost is an outline. */
-export const MARKER: Record<StageKey, string> = {
-  chat: "bg-stage-1",
-  quotation: "bg-stage-2",
-  negotiation: "bg-stage-3",
-  po: "bg-stage-4",
-  done: "bg-stage-5",
-  lost: "border border-stage-3 bg-white",
-};
+/** The stage marker: one soft color per stage (lib/tones.ts). */
+export const MARKER: Record<StageKey, string> = STAGE_DOT;
 
 function Tag({ tone, children }: { tone: "navy" | "late" | "plain"; children: React.ReactNode }) {
   const cls =
-    tone === "navy" ? "bg-ink text-white" : tone === "late" ? "bg-late-bg text-late" : "bg-paper text-slate";
+    tone === "navy" ? "bg-teal-bg text-teal-ink" : tone === "late" ? "bg-late-bg text-late" : "bg-paper text-slate";
   return <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${cls}`}>{children}</span>;
 }
 
@@ -64,11 +58,11 @@ export function DealCardBody({ card }: { card: DealCard }) {
         </div>
       )}
       <p className={`mt-2 flex items-start gap-1.5 text-sm ${late ? "text-late" : "text-slate"}`}>
-        <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${late ? "bg-late" : "bg-stage-3"}`} aria-hidden="true" />
+        <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${late ? "bg-late animate-pulse-dot" : "bg-accent"}`} aria-hidden="true" />
         <span className="min-w-0"><NextStepLine card={card} /></span>
       </p>
       <div className="mt-3 flex items-center gap-2 text-sm">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-mist text-[10px] font-semibold text-ink">
+        <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${personTone(card.owner_name)}`}>
           {initials(card.owner_name ?? "")}
         </span>
         <span className="min-w-0 flex-1 truncate text-slate">{card.owner_name}</span>

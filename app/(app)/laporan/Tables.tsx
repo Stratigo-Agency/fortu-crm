@@ -8,7 +8,7 @@ const num = "tabular px-3 py-3 text-right";
 
 function Chip({ n, late }: { n: number; late?: boolean }) {
   if (n === 0) return <span>0</span>;
-  return <span className={`inline-block min-w-6 rounded-sm px-2 py-0.5 text-center ${late ? "bg-late-bg text-late" : "bg-paper text-ink"}`}>{n}</span>;
+  return <span className={`inline-block min-w-6 rounded-full px-2 py-0.5 text-center ${late ? "bg-late-bg text-late" : "bg-paper text-ink"}`}>{n}</span>;
 }
 
 /** Kinerja sales. A name sets the sales filter (only when the viewer may pick another person). */
@@ -91,7 +91,7 @@ export function Attention({ rows, total }: { rows: AttentionRow[]; total: number
           {rows.map((a) => (
             <li key={a.dealId}>
               <Link href={`/deal/${a.dealId}`} className="flex min-h-11 items-start gap-3 py-3 hover:bg-paper">
-                <span className={`mt-2 inline-block h-3 w-3 shrink-0 ${a.severity === 0 ? "bg-stage-3" : a.severity === 1 ? "bg-stage-3" : "bg-stage-2"}`} aria-hidden="true" />
+                <span className={`mt-2 inline-block h-2 w-2 shrink-0 rounded-full ${a.reason === "next_step_overdue" ? "bg-late" : a.reason === "discount" ? "bg-violet" : "bg-amber"}`} aria-hidden="true" />
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-ink">{a.name}</span>
                   <span className={`block text-sm ${a.reason === "next_step_overdue" ? "text-late" : "text-slate"}`}>{reasonText(a)}</span>

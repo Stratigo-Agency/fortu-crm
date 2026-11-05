@@ -1,6 +1,6 @@
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { body, PageHeader, primaryButton, searchField, searchIcon } from "../PageHeader";
+import { body, PageHeader, PageSkeleton, primaryButton, searchField, searchIcon } from "../PageHeader";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { CONTACT_SORTS, type ContactRow } from "@/lib/contactTypes";
@@ -26,7 +26,7 @@ const PAGE = 100;
 export default function Page(props: PageProps<"/kontak">) {
   return (
     <main className="w-full">
-      <Suspense>
+      <Suspense fallback={<PageSkeleton />}>
         <Content searchParams={props.searchParams} />
       </Suspense>
     </main>
@@ -104,7 +104,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/kontak">["s
                 <th className="px-4 py-2.5 md:px-6 text-right font-medium">{t("kontak.colOpen")}</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="stagger">
               {rows.map((c) => (
                 <Row key={c.id} c={c} href={kontakHref({ q, sort, followup: followupOnly, contact: c.id })} />
               ))}
@@ -114,7 +114,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/kontak">["s
       </div>
       {hasMore && (
         <p className="mt-4 text-center">
-          <Link href={kontakHref({ q, sort, followup: followupOnly, all: true })} className="font-medium text-ink underline">
+          <Link href={kontakHref({ q, sort, followup: followupOnly, all: true })} className="font-medium text-accent hover:text-accent-strong">
             {t("common.showRest", { n: total - rows.length })}
           </Link>
         </p>

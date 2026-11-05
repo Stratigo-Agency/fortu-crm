@@ -39,10 +39,10 @@ function NavLinks({ items, onPick }: { items: NavItem[]; onPick?: () => void }) 
                 active ? "bg-white font-semibold text-ink shadow-card" : "text-slate hover:bg-black/[0.04] hover:text-ink"
               }`}
             >
-              <Icon size={17} strokeWidth={1.8} aria-hidden="true" className={active ? "text-ink" : "text-faint"} />
+              <Icon size={17} strokeWidth={1.8} aria-hidden="true" className={active ? "text-accent" : "text-faint"} />
               <span className="flex-1">{item.label}</span>
               {item.badge ? (
-                <span className="tabular flex h-5 min-w-5 items-center justify-center rounded-full bg-ink px-1.5 text-xs font-semibold text-white">
+                <span className="tabular flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1.5 text-xs font-semibold text-white">
                   {item.badge}
                 </span>
               ) : null}
@@ -164,8 +164,8 @@ export function Sidebar({ items, bottomItems, labels, footer }: Props) {
       </header>
       {open && (
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label={labels.menu}>
-          <button type="button" aria-label={labels.close} onClick={() => setOpen(false)} className="absolute inset-0 bg-black/30" />
-          <div className="absolute inset-y-0 right-0 flex w-[min(20rem,88vw)] flex-col gap-5 bg-paper px-3 py-3 shadow-pop">
+          <button type="button" aria-label={labels.close} onClick={() => setOpen(false)} className="absolute inset-0 animate-fade bg-slate/30 backdrop-blur-[2px]" />
+          <div className="absolute inset-y-0 right-0 flex w-[min(20rem,88vw)] animate-sheet flex-col gap-5 bg-paper px-3 py-3 shadow-pop">
             <div className="flex items-center justify-end">
               <button
                 ref={closeButton}

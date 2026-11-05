@@ -12,12 +12,12 @@ import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
 import { Board } from "./Board";
 import { DealList } from "./DealList";
 import { LostToggle } from "./LostToggle";
-import { PageHeader, primaryButton } from "../PageHeader";
+import { PageHeader, PageSkeleton, primaryButton } from "../PageHeader";
 
 export default function Page(props: PageProps<"/pipeline">) {
   return (
     <main className="w-full">
-      <Suspense>
+      <Suspense fallback={<PageSkeleton />}>
         <Content searchParams={props.searchParams} />
       </Suspense>
     </main>
@@ -79,7 +79,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/pipeline">[
                 defaultValue={q}
                 placeholder={t("pipeline.searchPlaceholder")}
                 aria-label={t("pipeline.searchPlaceholder")}
-                className="h-11 w-full rounded-sm border border-input bg-white pl-9 pr-3 text-base text-ink placeholder:text-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40 desk:h-9"
+                className="h-11 w-full rounded-sm border border-input bg-white pl-9 pr-3 text-base text-ink placeholder:text-faint focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15 desk:h-9"
               />
             </div>
           </form>

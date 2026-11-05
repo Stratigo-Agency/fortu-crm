@@ -29,7 +29,7 @@ async function signInWithGoogle(formData: FormData) {
 }
 
 const inputClass =
-  "h-12 w-full rounded-sm border border-input bg-white px-3.5 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
+  "h-12 w-full rounded-sm border border-input bg-white px-3.5 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15";
 
 async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">["searchParams"] }) {
   await connection(); // the form reads the session and the URL: render it per request, never at build

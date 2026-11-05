@@ -9,14 +9,14 @@ import { getSalesFilter } from "@/lib/salesFilter";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { Kpis } from "./Kpis";
 import { PeriodSelect } from "./PeriodSelect";
-import { body, PageHeader } from "../PageHeader";
+import { body, PageHeader, PageSkeleton } from "../PageHeader";
 import { AdsToCrmCard, DemoLostCard, SkuTable, SourcesTable } from "./Panels";
 import { Attention, RepTable } from "./Tables";
 
 export default function Page({ searchParams }: { searchParams: Promise<{ periode?: string | string[] }> }) {
   return (
     <main className="w-full">
-      <Suspense>
+      <Suspense fallback={<PageSkeleton />}>
         <Content searchParams={searchParams} />
       </Suspense>
     </main>
@@ -51,20 +51,20 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
       />
       <div className={`${body} pb-10`}>
       <Kpis k={report.kpis} />
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <DoneChart months={report.months} target={report.monthTarget} />
         <StageChart stages={report.stages} openDeals={report.kpis.openDeals} />
-        <CloseChart buckets={report.closeForecast} />
+        <div className="md:col-span-2 xl:col-span-1"><CloseChart buckets={report.closeForecast} /></div>
       </div>
       <div className="mt-4">
         <RepTable reps={report.reps} canPick={!isRep} />
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Attention rows={report.attention.rows} total={report.attention.total} />
         <AdsToCrmCard ads={report.adsToCrm} />
-        <DemoLostCard demo={report.demo} reasons={report.lostReasons} />
+        <div className="md:col-span-2 xl:col-span-1"><DemoLostCard demo={report.demo} reasons={report.lostReasons} /></div>
       </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-3">
+      <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <SkuTable rows={report.skus} />
         <SourcesTable rows={report.sources} />
       </div>

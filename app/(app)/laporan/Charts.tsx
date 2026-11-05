@@ -1,5 +1,7 @@
 import { t } from "@/lib/copy";
 import { monthShort, percent, rupiahShort } from "@/lib/format";
+import type { StageKey } from "@/lib/pipelineTypes";
+import { STAGE_DOT } from "@/lib/tones";
 import type { CloseBucket, MonthBar, StageBar } from "@/lib/reports";
 
 /** Done deal per bulan: six months, this one lighter, with the monthly target as a dashed line. Plain HTML. */
@@ -27,7 +29,7 @@ export function DoneChart({ months, target }: { months: MonthBar[]; target: stri
               <li key={m.month} className="flex h-full flex-1 flex-col items-center justify-end">
                 <span className="tabular mb-1 text-sm font-semibold text-ink">{rupiahShort(v)}</span>
                 <div
-                  className={`w-full max-w-14 rounded-t-sm ${i === last ? "bg-stage-2" : "bg-stage-4"}`}
+                  className={`w-full max-w-14 origin-bottom animate-grow-y rounded-t-md ${i === last ? "bg-accent/35" : "bg-accent"}`}
                   style={{ height: `${(v / max) * 82}%`, minHeight: v > 0 ? 4 : 0 }}
                 />
               </li>
@@ -35,7 +37,7 @@ export function DoneChart({ months, target }: { months: MonthBar[]; target: stri
           })}
         </ol>
       </div>
-      <ol className="mt-2 flex gap-3">
+      <ol className="mt-2 flex gap-1.5">
         {months.map((m) => (
           <li key={m.month} className="flex-1 text-center text-slate">
             {monthShort(m.month)}
@@ -56,8 +58,8 @@ export function StageChart({ stages, openDeals }: { stages: StageBar[]; openDeal
         <p className="text-sm text-slate">{t("laporan.openDeals", { n: openDeals })}</p>
       </div>
       <p className="mt-3 flex gap-4 text-sm text-slate">
-        <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 bg-stage-2" aria-hidden="true" />{t("laporan.legendValue")}</span>
-        <span className="flex items-center gap-1.5"><span className="inline-block h-3 w-3 bg-ink" aria-hidden="true" />{t("laporan.legendForecast")}</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-st-po/30" aria-hidden="true" />{t("laporan.legendValue")}</span>
+        <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-2.5 rounded-full bg-st-po" aria-hidden="true" />{t("laporan.legendForecast")}</span>
       </p>
       <ul className="mt-4 flex flex-col gap-4">
         {stages.map((s) => (
@@ -68,8 +70,8 @@ export function StageChart({ stages, openDeals }: { stages: StageBar[]; openDeal
             </div>
             <div>
               <div className="relative h-3 rounded-full bg-paper" aria-hidden="true">
-                <div className="absolute inset-y-0 left-0 rounded-full bg-stage-2" style={{ width: `${(Number(s.amount) / max) * 100}%` }} />
-                <div className="absolute inset-y-0 left-0 rounded-full bg-ink" style={{ width: `${(Number(s.weighted) / max) * 100}%` }} />
+                <div className={`absolute inset-y-0 left-0 origin-left animate-grow-x rounded-full opacity-30 ${STAGE_DOT[s.key as StageKey] ?? "bg-stage-2"}`} style={{ width: `${(Number(s.amount) / max) * 100}%` }} />
+                <div className={`absolute inset-y-0 left-0 origin-left animate-grow-x rounded-full ${STAGE_DOT[s.key as StageKey] ?? "bg-ink"}`} style={{ width: `${(Number(s.weighted) / max) * 100}%` }} />
               </div>
               <p className="tabular mt-1.5 text-sm text-slate">{t("laporan.stageAmounts", { value: rupiahShort(s.amount), forecast: rupiahShort(s.weighted) })}</p>
             </div>
@@ -94,15 +96,15 @@ export function CloseChart({ buckets }: { buckets: CloseBucket[] }) {
           <li key={b.key} className="flex h-full flex-1 flex-col items-center justify-end" title={t("laporan.dealsCount", { n: b.deals })}>
             {values[i] > 0 && <span className="tabular mb-1 whitespace-nowrap text-center text-sm font-semibold text-ink">{rupiahShort(values[i])}</span>}
             <div
-              className={`w-full max-w-14 rounded-t-sm ${b.key === "past" ? "bg-late" : b.key === "none" || b.key === "later" ? "bg-stage-2" : "bg-stage-4"}`}
+              className={`w-full max-w-14 origin-bottom animate-grow-y rounded-t-md ${b.key === "past" ? "bg-late" : b.key === "none" || b.key === "later" ? "bg-violet/40" : "bg-violet"}`}
               style={{ height: `${(values[i] / max) * 82}%`, minHeight: values[i] > 0 ? 4 : 0 }}
             />
           </li>
         ))}
       </ol>
-      <ol className="mt-2 flex gap-3">
+      <ol className="mt-2 flex gap-1.5">
         {buckets.map((b) => (
-          <li key={b.key} className="flex-1 text-center text-sm text-slate">
+          <li key={b.key} className="min-w-0 flex-1 truncate text-center text-sm text-slate" title={label(b)}>
             {label(b)}
           </li>
         ))}

@@ -21,7 +21,7 @@ export function Kpis({ k }: { k: ReportKpis }) {
         {k.targetAmount ? (
           <>
             <div className="mt-3 h-1.5 rounded-full bg-mist" role="img" aria-label={t("laporan.kpiDoneTarget", { pct: `${pct ?? 0}%`, target: rupiahShort(k.targetAmount) })}>
-              <div className="h-1.5 rounded-full bg-ink" style={{ width: `${Math.min(100, pct ?? 0)}%` }} />
+              <div className="h-1.5 origin-left animate-grow-x rounded-full bg-accent" style={{ width: `${Math.min(100, pct ?? 0)}%` }} />
             </div>
             <p className="mt-2 text-sm text-slate">{t("laporan.kpiDoneTarget", { pct: `${pct ?? 0}%`, target: rupiahShort(k.targetAmount) })}</p>
           </>

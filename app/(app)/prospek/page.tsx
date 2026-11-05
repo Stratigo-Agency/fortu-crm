@@ -1,6 +1,6 @@
 import { Plus, Search } from "lucide-react";
 import Link from "next/link";
-import { body, PageHeader, primaryButton, searchField, searchIcon, secondaryButton, segment, segmentGroup, Stat, StatStrip } from "../PageHeader";
+import { body, PageHeader, PageSkeleton, primaryButton, searchField, searchIcon, secondaryButton, segment, segmentGroup, Stat, StatStrip } from "../PageHeader";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
@@ -16,7 +16,7 @@ const COLS = "md:grid-cols-[1.2fr_2.2fr_1.5fr_0.6fr_0.9fr_0.7fr_1.4fr]";
 export default function Page(props: PageProps<"/prospek">) {
   return (
     <main className="w-full">
-      <Suspense>
+      <Suspense fallback={<PageSkeleton />}>
         <Content searchParams={props.searchParams} />
       </Suspense>
     </main>
@@ -97,7 +97,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
               <span>{t("prospek.colSales")}</span>
               <span>{t("prospek.colAction")}</span>
             </div>
-            <ul>
+            <ul className="stagger">
               {rows.map((row) => (
                 <Row key={row.id} row={row} canReassign={canReassign} owners={owners} />
               ))}
