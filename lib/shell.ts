@@ -13,9 +13,9 @@ export async function newLeadCount(user: Pick<SessionUser, "id" | "role">): Prom
   return n;
 }
 
-/** Settings are for admin and ceo (T11 adds targets for sales_lead). */
+/** The Pengaturan page: everything for admin and ceo, only Target for a sales lead (lib/settings.ts). */
 export function canOpenSettings(user: Pick<SessionUser, "role">): boolean {
-  return user.role === "admin" || user.role === "ceo";
+  return user.role === "admin" || user.role === "ceo" || user.role === "sales_lead";
 }
 
 export { initials } from "@/lib/shellInitials";
