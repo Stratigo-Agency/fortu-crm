@@ -7,7 +7,7 @@ One Railway project, one repo, several services. Every service builds with `npm 
 | `web` | `npm start` | always on (railway.json also runs `npm run db:migrate` before each deploy) |
 | `postgres` | Railway Postgres plugin | always on |
 | `cron-insights` | `node jobs/insights-sync.js` | `0 19 * * *` (19:00 UTC = 02:00 Jakarta) |
-| `cron-sweeper` | later (T16) | later |
+| `cron-sweeper` | `node jobs/sweeper.js` | `0 1-13 * * *` (01:00–13:00 UTC = 08:00–20:00 Jakarta, every hour) |
 
 ## cron-insights (Meta ad insights, T13)
 Pulls the last 3 days of ad insights from the Meta Marketing API every night and upserts them (Meta restates recent figures).
@@ -33,6 +33,40 @@ npm run insights:sync -- --from 2026-10-24 --to 2026-10-30
 ```
 
 Ranges are cut into 14-day requests. Re-running a range is safe: rows are upserted on (ad, date).
+
+## cron-sweeper (reminders, T16)
+Every hour from 08:00 to 20:00 Jakarta it looks for deals that need someone and writes the reminders that show in the bell. Big deals and stuck deals are also emailed.
+
+1. In the Railway project, add a service from the same repo. Name it `cron-sweeper`.
+2. Settings → Config-as-code → **Config file path**: `railway.cron-sweeper.json` (start command, cron schedule `0 1-13 * * *`, no migration step).
+3. Variables (reference the `web` service's `DATABASE_URL`, do not copy it):
+   - `DATABASE_URL`
+   - `AUTH_URL` – the public address of the app, used for the links in emails and reminders
+   - `SMTP_HOST` – `smtp.hostinger.com`
+   - `SMTP_PORT` – `465` (SSL; this is the default)
+   - `SMTP_USER` – the mailbox that sends (for example `crm@fortu.co.id`)
+   - `SMTP_PASS` – that mailbox's password
+   - `SMTP_FROM` – optional, defaults to `SMTP_USER`
+4. Check: Deployments → a run ends with `sweeper ok high_value_lead=… stale_deal=… won=… next_step_overdue=… discount_approval=… emails=… items=… failed=0`. A failed run exits with 1 and shows as failed. Without the `SMTP_*` variables it prints `email skipped` and the bell still works.
+
+What it sends, and to whom:
+
+| Reminder | When | To | Email |
+| --- | --- | --- | --- |
+| Deal besar | a deal created or re-priced to Rp100 jt+ in the last 2 days | CEO, sales leads | yes |
+| Belum bergerak | a Rp100 jt+ deal sits past its stage's stale days | owner on the first day, CEO from the second day (once) | yes |
+| Done deal | a deal is paid today | CEO, sales leads, owner | no |
+| Next step terlambat | the next step date has passed | owner, once a day | no |
+| Diskon perlu disetujui | a discount is above the limit | CEO, once | no |
+
+Each person gets at most one reminder per kind, deal and day, so running the job again (or manually) is safe. One email per person per run lists all their deals. If the mail server is down, the next run sends it.
+
+A manual run (from a computer with the variables in `.env.local`):
+
+```bash
+npm run build
+npm run sweeper:run
+```
 
 ## Variables on `web`
 See `.env.example`. Meta variables are only needed on `cron-insights` until the WhatsApp Cloud API webhook (T19).
