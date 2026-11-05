@@ -16,7 +16,7 @@ test.beforeAll(async () => {
   const [c] = await sql<{ id: string }[]>`INSERT INTO contacts (phone_e164, full_name) VALUES (${`+62859${String(Date.now()).slice(-8)}`}, ${`Pak ${tag}`}) RETURNING id`;
   const [d] = await sql<{ id: string }[]>`
     INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date)
-    SELECT ${`Deal ${tag}`}, ${c.id}, ${id}, id, 'Telepon', current_date + 2 FROM pipeline_stages WHERE key = 'chat' RETURNING id`;
+    SELECT ${`Deal ${tag}`}, ${c.id}, ${id}, id, 'Telepon', jakarta_today() + 2 FROM pipeline_stages WHERE key = 'chat' RETURNING id`;
   dealId = d.id;
 });
 

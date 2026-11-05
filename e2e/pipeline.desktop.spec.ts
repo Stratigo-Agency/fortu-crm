@@ -18,14 +18,14 @@ async function deal(name: string, ownerId: string, { products = true } = {}) {
     VALUES (${`+62813${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`}, ${`Kontak ${name}`}) RETURNING id`;
   const [d] = await sql<{ id: string }[]>`
     INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date, est_amount)
-    SELECT ${`${name} ${tag}`}, ${c.id}, ${ownerId}, id, 'Telepon', current_date + 1, 50000000
+    SELECT ${`${name} ${tag}`}, ${c.id}, ${ownerId}, id, 'Telepon', jakarta_today() + 1, 50000000
       FROM pipeline_stages WHERE key = 'chat' RETURNING id`;
   if (products) {
     const [p] = await sql<{ id: string }[]>`
       INSERT INTO products (sku, name, product_line, list_price)
       VALUES (${`E2E${randomUUID().slice(0, 6)}`}, 'IFP uji', 'IFP', 30000000) RETURNING id`;
     await sql`INSERT INTO deal_line_items (deal_id, product_id, qty, unit_price) VALUES (${d.id}, ${p.id}, 2, 25000000)`;
-    await sql`UPDATE deals SET expected_close_date = current_date + 30 WHERE id = ${d.id}`;
+    await sql`UPDATE deals SET expected_close_date = jakarta_today() + 30 WHERE id = ${d.id}`;
   }
   return d.id;
 }

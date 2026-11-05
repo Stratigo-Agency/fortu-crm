@@ -160,7 +160,7 @@ describe("companies", () => {
     await sql`UPDATE deals SET company_id = ${companyId}, est_amount = 40000000 WHERE id = ${open.id}`;
     await sql`SELECT set_config('app.user_id', ${rep.id}, false)`;
     await sql`INSERT INTO deal_line_items (deal_id, product_id, qty, unit_price) VALUES (${won.id}, ${p.id}, 2, 30000000)`;
-    await sql`UPDATE deals SET company_id = ${companyId}, expected_close_date = current_date,
+    await sql`UPDATE deals SET company_id = ${companyId}, expected_close_date = jakarta_today(),
               stage_id = (SELECT id FROM pipeline_stages WHERE key = 'done') WHERE id = ${won.id}`;
 
     const { rows } = await listCompanies({ ownerId: null, q: name, sort: "name", limit: 10 });
