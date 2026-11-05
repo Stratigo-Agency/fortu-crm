@@ -307,7 +307,10 @@
     "invalidDate": "Pilih hari ini atau tanggal yang sudah lewat.",
     "saved": "Kontak disimpan.",
     "created": "Kontak dibuat.",
-    "logged": "Aktivitas dicatat."
+    "logged": "Aktivitas dicatat.",
+    "newTitle": "Kontak baru",
+    "activityPlaceholder": "Apa yang dibicarakan",
+    "timelineEmpty": "Belum ada riwayat."
   },
   "perusahaan": {
     "title": "Perusahaan",

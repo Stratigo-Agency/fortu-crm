@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { dealSettings, emptyDeal, getDeal, parentDeals, productOptions } from "@/lib/deal";
-import { leadPrefill } from "@/lib/dealLead";
+import { contactPrefill, leadPrefill } from "@/lib/dealLead";
 import { ForbiddenError } from "@/lib/authz";
 import { LeadClosedError } from "@/lib/leads";
 import { STAGE_KEYS, STAGE_RULES } from "@/lib/pipelineTypes";
@@ -35,6 +35,13 @@ export async function DealView({ id, variant, query = {} }: Props) {
       if (!(err instanceof ForbiddenError || err instanceof LeadClosedError)) throw err;
       notFound(); // not yours, gone, or already a deal
     }
+  } else if (isNew && one(query.contact)) {
+    try {
+      deal = await contactPrefill(user, one(query.contact) as string, t("deal.nextStepDefault"));
+    } catch (err) {
+      if (!(err instanceof ForbiddenError)) throw err;
+      notFound();
+    }
   } else {
     deal = isNew ? emptyDeal(user.id, user.full_name, t("deal.nextStepDefault")) : await getDeal(id, user.id);
   }
@@ -55,7 +62,7 @@ export async function DealView({ id, variant, query = {} }: Props) {
     <PanelFrame variant={variant}>
       <DealForm
         // a different deal (or a fresh save) starts the form over
-        key={deal.id ?? `new-${fromLeadId ?? ""}`}
+        key={deal.id ?? `new-${fromLeadId ?? one(query.contact) ?? ""}`}
         deal={deal}
         products={products}
         owners={owners}

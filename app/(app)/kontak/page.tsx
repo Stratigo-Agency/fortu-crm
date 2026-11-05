@@ -10,6 +10,7 @@ import { kontakHref } from "@/lib/kontakHref";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { LostToggle } from "../pipeline/LostToggle";
 import { UrlSelect } from "../UrlControls";
+import { ContactPanel } from "./ContactPanel";
 
 const SORT_LABEL = {
   last_new: "kontak.sortLastNew",
@@ -116,6 +117,9 @@ async function Content({ searchParams }: { searchParams: PageProps<"/kontak">["s
         )}
       </div>
       {hasMore && <p className="mt-4 text-center text-sm text-slate">{t("pipeline.more", { n: total - rows.length })}</p>}
+      {typeof params.contact === "string" && (
+        <ContactPanel id={params.contact} closeHref={kontakHref({ q, sort, followup: followupOnly })} />
+      )}
     </>
   );
 }
