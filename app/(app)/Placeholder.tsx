@@ -1,11 +1,12 @@
 import { t } from "@/lib/copy";
+import { PageHeader } from "./PageHeader";
 
-/** Temporary page body until the screen is built (T05–T11). */
+/** Temporary page body until the screen is built. */
 export function Placeholder({ title }: { title: string }) {
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 md:px-8">
-      <h1 className="text-3xl font-bold text-ink">{title}</h1>
-      <p className="mt-6 rounded-lg bg-white p-6 text-slate shadow-card">{t("common.placeholder")}</p>
+    <main className="w-full">
+      <PageHeader title={title} />
+      <p className="px-4 py-10 text-slate md:px-6">{t("common.placeholder")}</p>
     </main>
   );
 }

@@ -8,8 +8,8 @@ import { SectionForm } from "./SectionForm";
 
 const digits = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
 const fmt = (v: string | number | null) => (v === null || v === "" ? "" : digits.format(Number(v)));
-const th = "px-3 py-2 text-left text-sm font-bold text-slate";
-const checkbox = "h-5 w-5 accent-navy";
+const th = "px-3 py-2 text-left text-sm font-semibold text-slate";
+const checkbox = "h-5 w-5 accent-ink";
 
 function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -46,7 +46,7 @@ export async function OwnerSections() {
             <input id="hv" name="highValueAmount" inputMode="numeric" defaultValue={fmt(rules.highValueAmount)} className={`${inputCls} tabular`} />
           </Field>
         </div>
-        <h3 className="mb-2 mt-6 font-bold text-ink">{t("pengaturan.staleDays")}</h3>
+        <h3 className="mb-2 mt-6 font-semibold text-ink">{t("pengaturan.staleDays")}</h3>
         <div className="grid gap-4 md:grid-cols-4">
           {open.map((s) => (
             <Field key={s.id} id={`st-${s.id}`} label={s.name}>
@@ -70,7 +70,7 @@ export async function OwnerSections() {
         <div className="flex flex-col gap-4">
           {stages.map((s) => (
             <Field key={s.id} id={`df-${s.id}`} label={s.name}>
-              <textarea id={`df-${s.id}`} name={`def:${s.id}`} rows={2} maxLength={400} defaultValue={s.definition} className="w-full rounded-sm border border-input bg-white px-3 py-2 text-base text-ink" />
+              <textarea id={`df-${s.id}`} name={`def:${s.id}`} rows={2} maxLength={400} defaultValue={s.definition} className="w-full rounded-sm border border-input bg-white px-3 py-2 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10" />
             </Field>
           ))}
         </div>
@@ -94,7 +94,7 @@ export async function OwnerSections() {
               {team.map((m) => (
                 <tr key={m.id} className="border-b border-line align-top last:border-0">
                   <td className="px-3 py-2">
-                    <p className="font-bold text-ink">{m.fullName}</p>
+                    <p className="font-semibold text-ink">{m.fullName}</p>
                     <p className="text-sm text-slate">{m.email}</p>
                   </td>
                   <td className="px-3 py-2">
@@ -167,12 +167,12 @@ export async function OwnerSections() {
         </div>
       </SectionForm>
 
-      <section aria-labelledby="data-h" className="rounded-lg bg-white p-6 shadow-card">
-        <h2 id="data-h" className="text-lg font-bold text-ink">{t("pengaturan.data")}</h2>
+      <section aria-labelledby="data-h" className="rounded-lg bg-white p-5 shadow-card">
+        <h2 id="data-h" className="text-base font-semibold text-ink">{t("pengaturan.data")}</h2>
         <p className="mt-1 text-sm text-slate">{t("pengaturan.exportHint")}</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <a href="/pengaturan/ekspor/deals" download className="flex h-11 items-center rounded-sm border border-input bg-white px-5 font-bold text-ink">{t("pengaturan.exportDeals")}</a>
-          <a href="/pengaturan/ekspor/kontak" download className="flex h-11 items-center rounded-sm border border-input bg-white px-5 font-bold text-ink">{t("pengaturan.exportContacts")}</a>
+          <a href="/pengaturan/ekspor/deals" download className="flex h-11 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9">{t("pengaturan.exportDeals")}</a>
+          <a href="/pengaturan/ekspor/kontak" download className="flex h-11 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9">{t("pengaturan.exportContacts")}</a>
         </div>
       </section>
     </>

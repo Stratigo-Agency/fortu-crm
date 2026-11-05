@@ -5,12 +5,13 @@ import { t } from "@/lib/copy";
 import { relTime, rupiahShort } from "@/lib/format";
 import { salesOptions } from "@/lib/salesFilter";
 import { inputCls } from "../formStyles";
+import { PageHeader } from "../../PageHeader";
 import { SectionForm } from "../SectionForm";
 import { saveAdCodesAction, saveAdSetLinesAction, saveCampaignOwnersAction } from "./actions";
 
 export default function Page() {
   return (
-    <main className="mx-auto w-full max-w-screen-2xl px-4 py-8 md:px-8">
+    <main className="w-full">
       <Suspense>
         <Ads />
       </Suspense>
@@ -18,7 +19,7 @@ export default function Page() {
   );
 }
 
-const th = "px-3 py-2 text-left text-sm font-bold text-slate";
+const th = "px-3 py-2 text-left text-sm font-medium text-faint";
 const LINES = ["IFP", "DSS", "LED"] as const;
 
 async function Ads() {
@@ -26,8 +27,8 @@ async function Ads() {
   if (!canManageAds(user)) {
     return (
       <>
-        <h1 className="text-3xl font-bold text-ink">{t("iklan.title")}</h1>
-        <p role="alert" className="mt-6 rounded-lg bg-white p-6 text-slate shadow-card">{t("authz.settingsOnly")}</p>
+        <PageHeader title={t("iklan.title")} />
+        <p role="alert" className="px-4 py-10 text-slate md:px-6">{t("authz.settingsOnly")}</p>
       </>
     );
   }
@@ -36,21 +37,20 @@ async function Ads() {
 
   return (
     <>
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <h1 className="text-3xl font-bold text-ink">{t("iklan.title")}</h1>
-        <p className="text-slate">
-          {cfg.lastSync ? t("iklan.lastSync", { when: relTime(cfg.lastSync.at) }) : t("iklan.neverSynced")}
-        </p>
-      </div>
+      <PageHeader
+        title={t("iklan.title")}
+        meta={cfg.lastSync ? t("iklan.lastSync", { when: relTime(cfg.lastSync.at) }) : t("iklan.neverSynced")}
+      />
+      <div className="max-w-5xl px-4 py-5 md:px-6">
       {cfg.lastFailure && (
-        <p role="alert" className="mt-3 rounded-lg bg-late-bg p-4 text-late">
+        <p role="alert" className="mb-4 rounded-md bg-late-bg px-4 py-3 text-late">
           {t("iklan.lastFailure", { when: relTime(cfg.lastFailure.at), message: cfg.lastFailure.message })}
         </p>
       )}
       {empty ? (
-        <p className="mt-6 rounded-lg bg-white p-6 text-slate shadow-card">{t("iklan.empty")}</p>
+        <p className="py-10 text-slate">{t("iklan.empty")}</p>
       ) : (
-        <div className="mt-6 flex flex-col gap-4">
+        <div className="flex flex-col gap-4">
           <SectionForm id="kampanye" title={t("iklan.campaigns")} hint={t("iklan.campaignsHint")} action={saveCampaignOwnersAction}>
             <div className="overflow-x-auto">
               <table className="w-full min-w-[40rem] text-base">
@@ -60,7 +60,7 @@ async function Ads() {
                 <tbody>
                   {cfg.campaigns.map((c) => (
                     <tr key={c.id} className="border-b border-line last:border-0">
-                      <td className="px-3 py-2 font-bold text-ink">{c.name}</td>
+                      <td className="px-3 py-2 font-medium text-ink">{c.name}</td>
                       <td className="px-3 py-2">
                         <input type="hidden" name={`orig:owner:${c.id}`} value={c.ownerId ?? ""} />
                         <select name={`owner:${c.id}`} defaultValue={c.ownerId ?? ""} aria-label={`${t("iklan.colOwner")} ${c.name}`} className={inputCls}>
@@ -85,7 +85,7 @@ async function Ads() {
                 <tbody>
                   {cfg.adSets.map((s) => (
                     <tr key={s.id} className="border-b border-line last:border-0">
-                      <td className="px-3 py-2 font-bold text-ink">{s.name}</td>
+                      <td className="px-3 py-2 font-medium text-ink">{s.name}</td>
                       <td className="px-3 py-2 text-slate">{s.campaignName}</td>
                       <td className="px-3 py-2">
                         <input type="hidden" name={`orig:line:${s.id}`} value={s.productLine ?? ""} />
@@ -111,7 +111,7 @@ async function Ads() {
                 <tbody>
                   {cfg.ads.map((a) => (
                     <tr key={a.id} className="border-b border-line last:border-0">
-                      <td className="px-3 py-2 font-bold text-ink">{a.name}</td>
+                      <td className="px-3 py-2 font-medium text-ink">{a.name}</td>
                       <td className="px-3 py-2 text-slate">{a.adSetName}</td>
                       <td className="px-3 py-2">
                         <input type="hidden" name={`orig:code:${a.id}`} value={a.code} />
@@ -126,6 +126,7 @@ async function Ads() {
           </SectionForm>
         </div>
       )}
+      </div>
     </>
   );
 }

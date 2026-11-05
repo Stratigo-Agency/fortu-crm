@@ -1,27 +1,26 @@
+import { X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { t } from "@/lib/copy";
 import { QuickAddForm } from "./QuickAddForm";
 
 // Tambah cepat: a rep logs a WhatsApp chat from the phone. On phones the page is full screen
-// with its own navy header; the app top bar is hidden there (see HideOnPhone in the layout).
+// with its own slim header; the app bar is hidden there (see HideOnPhone in the layout).
 export default function TambahPage() {
   return (
     <>
-      <header className="flex h-18 items-center justify-between bg-navy px-4 md:hidden">
-        <Image src="/brand/fortu-logo-white.png" alt="Fortu" width={104} height={31} priority />
+      <header className="flex h-14 items-center justify-between border-b border-line bg-white px-4 md:hidden">
+        <Image src="/brand/fortu-logo-navy.png" alt="Fortu" width={76} height={23} priority />
         <Link
-          href="/prospek"
+          href="/beranda"
           aria-label={t("common.close")}
-          className="flex h-11 w-11 items-center justify-center rounded-sm bg-white/10 text-white"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-ink"
         >
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-            <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
-          </svg>
+          <X size={22} strokeWidth={1.8} aria-hidden="true" />
         </Link>
       </header>
-      <main className="mx-auto w-full max-w-md px-4 pb-10 pt-6 md:px-0 md:pt-8">
-        <h1 className="text-3xl font-bold text-navy">{t("quickAdd.title")}</h1>
+      <main className="mx-auto w-full max-w-md px-4 pb-10 pt-6 md:px-0 md:pt-14">
+        <h1 className="text-2xl font-semibold text-ink">{t("quickAdd.title")}</h1>
         <QuickAddForm />
       </main>
     </>
