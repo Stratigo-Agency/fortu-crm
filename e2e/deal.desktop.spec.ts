@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 import { REP } from "./global-setup";
+import { pick } from "./select";
 
 const sql = postgres(process.env.DATABASE_URL_E2E as string, { max: 1 });
 test.afterAll(() => sql.end());
@@ -69,7 +70,7 @@ test.describe.serial("Deal panel", () => {
     await expect(page.getByRole("button", { name: "Chat masuk" })).toHaveAttribute("aria-pressed", "true");
 
     await page.getByRole("button", { name: "Produk", exact: true }).click();
-    await page.locator("select[aria-label='Produk']").selectOption({ label: 'DIGI08 · Signage Standing 55"' });
+    await pick(page.getByRole("combobox", { name: "Produk" }), /DIGI08 · Signage Standing 55"/);
     await page.getByLabel("Unit", { exact: true }).fill("4");
     await expect(page.getByLabel("Harga/unit")).toHaveValue("42.000.000");
     await expect(page.getByText("Sesuai MSRP")).toBeVisible();
@@ -150,13 +151,13 @@ test.describe.serial("Deal panel", () => {
   test("a product line can be removed on a desktop too", async ({ page }) => {
     await page.goto("/deal/new");
     await page.getByRole("button", { name: "Produk", exact: true }).click();
-    await page.locator("select[aria-label='Produk']").selectOption({ label: 'DIGI08 · Signage Standing 55"' });
+    await pick(page.getByRole("combobox", { name: "Produk" }), /DIGI08 · Signage Standing 55"/);
     await expect(page.getByLabel("Harga/unit")).toHaveValue("42.000.000");
     const remove = page.getByRole("button", { name: "Hapus produk" });
     await expect(remove).toBeVisible();
     expect((await remove.boundingBox())?.height).toBeGreaterThanOrEqual(44);
     await remove.click();
-    await expect(page.locator("select[aria-label='Produk']")).toHaveCount(0);
+    await expect(page.getByRole("combobox", { name: "Produk" })).toHaveCount(0);
     await expect(page.getByLabel("Perkiraan nilai")).toBeVisible(); // back to the estimate
   });
 

@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { t } from "@/lib/copy";
+import { Select } from "../ui/Select";
+import { Suggest } from "../ui/Suggest";
 import type { DealDetail, DealKind, DealSettings, HistoryItem, ProductOption } from "@/lib/dealTypes";
 import { DEAL_KINDS } from "@/lib/dealTypes";
 import { dayMonth, relTime, rupiah } from "@/lib/format";
@@ -59,7 +61,7 @@ type Props = {
   parentOptions: { id: string; name: string }[];
 };
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 const bad = "border-2 border-navy";
 
@@ -291,6 +293,13 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
         isNew={isNew}
         onStage={chooseStage}
         disabled={readOnly}
+        rules={{
+          nextStep: form.nextStep,
+          nextStepDate: form.nextStepDate,
+          expectedCloseDate: form.expectedCloseDate,
+          lostReason: form.lostReason,
+          pricedLines,
+        }}
       />
 
       {readOnly && (
@@ -322,35 +331,25 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
             </Field>
             <div className="grid gap-4 md:grid-cols-2">
               <Field id="company" label={t("deal.company")} hint={companyIsNew ? t("deal.companyNew") : undefined}>
-                <input
+                <Suggest
                   id="company"
-                  list="company-list"
-                  autoComplete="off"
                   value={form.companyName}
-                  onChange={(e) => set("companyName", e.target.value)}
+                  onChange={(v) => set("companyName", v)}
+                  suggestions={companyHits?.names ?? []}
                   className={field}
                 />
-                <datalist id="company-list">
-                  {companyHits?.names.map((n) => (
-                    <option key={n} value={n} />
-                  ))}
-                </datalist>
               </Field>
               <Field id="owner" label={t("deal.owner")}>
-                <select
+                <Select
                   id="owner"
                   value={form.ownerId}
                   disabled={!canReassign}
-                  onChange={(e) => set("ownerId", e.target.value)}
-                  className={field}
-                >
-                  {!owners.some((o) => o.id === form.ownerId) && <option value={form.ownerId}>{deal.ownerName}</option>}
-                  {owners.map((o) => (
-                    <option key={o.id} value={o.id}>
-                      {o.full_name}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => set("ownerId", v)}
+                  options={[
+                    ...(owners.some((o) => o.id === form.ownerId) ? [] : [{ value: form.ownerId, label: deal.ownerName ?? "—" }]),
+                    ...owners.map((o) => ({ value: o.id, label: o.full_name })),
+                  ]}
+                />
               </Field>
               <Field id="contact" label={t("deal.contact")}>
                 <input
@@ -408,35 +407,23 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                 />
               </Field>
               <Field id="kind" label={t("deal.type")}>
-                <select
+                <Select
                   id="kind"
                   value={form.kind}
-                  onChange={(e) => set("kind", e.target.value as DealKind)}
-                  className={field}
-                >
-                  {DEAL_KINDS.map((k) => (
-                    <option key={k} value={k}>
-                      {t(`deal.type${k[0].toUpperCase()}${k.slice(1)}` as "deal.typeNew")}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => set("kind", v as DealKind)}
+                  options={DEAL_KINDS.map((k) => ({ value: k, label: t(`deal.type${k[0].toUpperCase()}${k.slice(1)}` as "deal.typeNew") }))}
+                />
               </Field>
               {form.kind !== "new" && (
                 <Field id="parent" label={t("deal.parent")} error={errors.parentDealId}>
-                  <select
+                  <Select
                     id="parent"
                     value={form.parentDealId}
-                    onChange={(e) => set("parentDealId", e.target.value)}
-                    aria-invalid={!!errors.parentDealId || undefined}
-                    className={`${field} ${errors.parentDealId ? bad : ""}`}
-                  >
-                    <option value="" />
-                    {parents.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {p.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(v) => set("parentDealId", v)}
+                    invalid={!!errors.parentDealId}
+                    placeholder={t("common.choose")}
+                    options={parents.map((p) => ({ value: p.id, label: p.name }))}
+                  />
                 </Field>
               )}
             </div>
@@ -483,19 +470,14 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                     const note = lineNote(l);
                     return (
                       <li key={l.key} className="grid grid-cols-[1fr_72px] gap-2 md:grid-cols-[1fr_72px_150px_160px]">
-                        <select
-                          aria-label={t("deal.lineProduct")}
+                        <Select
+                          label={t("deal.lineProduct")}
+                          searchLabel={t("common.search")}
                           value={l.productId}
-                          onChange={(e) => pickProduct(l.key, e.target.value)}
-                          className={field}
-                        >
-                          <option value="" />
-                          {products.map((p) => (
-                            <option key={p.id} value={p.id}>
-                              {p.sku} · {p.name}
-                            </option>
-                          ))}
-                        </select>
+                          onChange={(v) => pickProduct(l.key, v)}
+                          placeholder={t("common.choose")}
+                          options={products.map((p) => ({ value: p.id, label: `${p.sku} · ${p.name}` }))}
+                        />
                         <input
                           aria-label={t("deal.unit")}
                           inputMode="numeric"
@@ -592,34 +574,23 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
           {form.stageKey === "lost" && (
             <Section title={t("lostReason.title")}>
               <Field id="lostReason" label={t("lostReason.title")} error={errors.lostReason}>
-                <select
+                <Select
                   id="lostReason"
                   value={form.lostReason}
-                  onChange={(e) => set("lostReason", e.target.value)}
-                  aria-invalid={!!errors.lostReason || undefined}
-                  className={`${field} ${errors.lostReason ? bad : ""}`}
-                >
-                  <option value="" />
-                  {LOST_REASONS.map((r) => (
-                    <option key={r} value={r}>
-                      {t(`lostReason.${r}`)}
-                    </option>
-                  ))}
-                </select>
+                  onChange={(v) => set("lostReason", v)}
+                  invalid={!!errors.lostReason}
+                  placeholder={t("common.choose")}
+                  options={LOST_REASONS.map((r) => ({ value: r, label: t(`lostReason.${r}`) }))}
+                />
               </Field>
               <Field id="competitor" label={t("lostReason.competitor")} hint={t("deal.competitorHint")}>
-                <input
+                <Suggest
                   id="competitor"
-                  list="competitor-list"
                   value={form.competitor}
-                  onChange={(e) => set("competitor", e.target.value)}
+                  onChange={(v) => set("competitor", v)}
+                  suggestions={COMPETITORS}
                   className={field}
                 />
-                <datalist id="competitor-list">
-                  {COMPETITORS.map((c) => (
-                    <option key={c} value={c} />
-                  ))}
-                </datalist>
               </Field>
               <Field id="lostNote" label={t("lostReason.note")}>
                 <textarea
@@ -627,7 +598,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   rows={3}
                   value={form.lostNote}
                   onChange={(e) => set("lostNote", e.target.value)}
-                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40"
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15"
                 />
               </Field>
             </Section>
@@ -642,7 +613,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   rows={3}
                   value={form.note}
                   onChange={(e) => set("note", e.target.value)}
-                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40"
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15"
                 />
               </Field>
             </Section>

@@ -74,8 +74,8 @@ export function PanelFrame({ variant, closeHref, label, children }: Props) {
       <CloseButton onClick={close} />
       {children}
       {asking && (
-        <div role="alertdialog" aria-modal="true" aria-label={t("common.unsaved")} className="fixed inset-0 z-50 flex items-center justify-center bg-black/25 p-6">
-          <div className="w-full max-w-sm rounded-lg bg-white p-6 shadow-pop">
+        <div role="alertdialog" aria-modal="true" aria-label={t("common.unsaved")} className="fixed inset-0 z-50 flex animate-fade items-center justify-center bg-slate/25 p-6 backdrop-blur-[2px]">
+          <div className="w-full max-w-sm animate-pop rounded-lg bg-white p-6 shadow-pop">
             <p className="font-semibold text-ink">{t("common.unsaved")}</p>
             <div className="mt-5 flex flex-wrap justify-end gap-2">
               <button
@@ -108,12 +108,12 @@ export function PanelFrame({ variant, closeHref, label, children }: Props) {
       {variant === "page" ? (
         <main className="relative mx-auto w-full max-w-3xl bg-white md:my-8 md:rounded-lg md:shadow-card">{body}</main>
       ) : (
-        <div className="fixed inset-0 z-40 flex justify-end bg-black/20 md:p-2" onMouseDown={(e) => e.target === e.currentTarget && close()}>
+        <div className="fixed inset-0 z-40 flex animate-fade justify-end bg-slate/20 backdrop-blur-[2px] md:p-2" onMouseDown={(e) => e.target === e.currentTarget && close()}>
           <aside
             role="dialog"
             aria-modal="true"
             aria-label={label ?? t("deal.kind")}
-            className="relative h-full w-full max-w-[680px] overflow-y-auto bg-white shadow-pop md:rounded-lg"
+            className="relative h-full w-full max-w-[680px] animate-panel overflow-y-auto bg-white shadow-pop md:rounded-lg"
           >
             {body}
           </aside>
