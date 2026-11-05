@@ -9,6 +9,7 @@ import { dayMonth, relTime, rupiah } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { NOT_FIT_REASONS } from "@/lib/leadReasons";
 import { STAGE_KEYS, type StageKey, type StageRule } from "@/lib/pipelineTypes";
+import { missingRules, RULE_FIELDS } from "@/lib/stageRules";
 import { lookupCompanies, lookupContact, lookupParents, saveDealAction } from "./actions";
 import { DealHeader } from "./DealHeader";
 import { useDealFrame } from "./PanelFrame";
@@ -97,6 +98,8 @@ function initialForm(d: DealDetail, wanted: StageKey | null, today: string): For
   };
 }
 
+const ruleMessage = (rule: StageRule) => t(`stageRule.${rule}`);
+
 export function DealForm({ deal, products, owners, settings, canReassign, fromLeadId, wantedStage, missingRule, parentOptions }: Props) {
   const router = useRouter();
   const frame = useDealFrame();
@@ -105,7 +108,13 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
   const today = useMemo(() => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date()), []);
 
   const [form, setForm] = useState<Form>(() => initialForm(deal, wantedStage, today));
-  const [errors, setErrors] = useState<Errors>({});
+  const [errors, setErrors] = useState<Errors>(() => {
+    // a drag that a stage rule stopped: mark what is missing
+    if (!missingRule) return {};
+    const out: Errors = {};
+    for (const f of RULE_FIELDS[missingRule]) out[f] = ruleMessage(missingRule);
+    return out;
+  });
   const [pending, setPending] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   // what the form looked like when it was last saved or loaded
@@ -220,6 +229,15 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
     if (!form.phone.trim()) found.phone = t("quickAdd.invalidPhone");
     if (form.kind !== "new" && !form.parentDealId) found.parentDealId = t("deal.parentRequired");
     if (form.lines.some((l) => !l.productId || !(Number(l.qty) > 0) || l.unitPrice === "")) found.lines = t("deal.linesInvalid");
+    const rules = missingRules({
+      stageKey: form.stageKey,
+      nextStep: form.nextStep,
+      nextStepDate: form.nextStepDate,
+      expectedCloseDate: form.expectedCloseDate,
+      lostReason: form.lostReason,
+      pricedLines,
+    });
+    for (const rule of rules) for (const f of RULE_FIELDS[rule]) found[f] = ruleMessage(rule);
     if (Object.keys(found).length) {
       setErrors(found);
       return;
@@ -244,7 +262,9 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
       if (isNew) router.replace(`/deal/${result.id}`);
       else router.refresh();
     } else if ("rule" in result) {
-      setErrors({ form: t("deal.saveFailed") });
+      const out: Errors = {};
+      for (const f of RULE_FIELDS[result.rule]) out[f] = ruleMessage(result.rule);
+      setErrors(out);
     } else {
       setErrors({ [result.field === "parent" ? "parentDealId" : result.field]: result.message });
     }
@@ -554,6 +574,58 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   />
                 </Field>
               </div>
+            </Section>
+          )}
+
+          {/* ---- Done deal / Lost ------------------------------------------------------------ */}
+          {form.stageKey === "done" && (
+            <Section title={t("stage.done")}>
+              <Field id="paid" label={t("deal.paidDate")}>
+                <input id="paid" type="date" value={form.paidDate} onChange={(e) => set("paidDate", e.target.value)} className={field} />
+              </Field>
+            </Section>
+          )}
+          {form.stageKey === "lost" && (
+            <Section title={t("lostReason.title")}>
+              <Field id="lostReason" label={t("lostReason.title")} error={errors.lostReason}>
+                <select
+                  id="lostReason"
+                  value={form.lostReason}
+                  onChange={(e) => set("lostReason", e.target.value)}
+                  aria-invalid={!!errors.lostReason || undefined}
+                  className={`${field} ${errors.lostReason ? bad : ""}`}
+                >
+                  <option value="" />
+                  {LOST_REASONS.map((r) => (
+                    <option key={r} value={r}>
+                      {t(`lostReason.${r}`)}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+              <Field id="competitor" label={t("lostReason.competitor")} hint={t("deal.competitorHint")}>
+                <input
+                  id="competitor"
+                  list="competitor-list"
+                  value={form.competitor}
+                  onChange={(e) => set("competitor", e.target.value)}
+                  className={field}
+                />
+                <datalist id="competitor-list">
+                  {COMPETITORS.map((c) => (
+                    <option key={c} value={c} />
+                  ))}
+                </datalist>
+              </Field>
+              <Field id="lostNote" label={t("lostReason.note")}>
+                <textarea
+                  id="lostNote"
+                  rows={3}
+                  value={form.lostNote}
+                  onChange={(e) => set("lostNote", e.target.value)}
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink"
+                />
+              </Field>
             </Section>
           )}
 
