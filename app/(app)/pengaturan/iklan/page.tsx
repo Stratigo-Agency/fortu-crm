@@ -111,9 +111,9 @@ async function Ads() {
 
           <SectionForm id="iklan" title={t("iklan.ads")} hint={t("iklan.adsHint")} action={saveAdCodesAction}>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[44rem] text-base">
+              <table className="w-full min-w-[48rem] text-base">
                 <thead>
-                  <tr className="border-b border-line"><th className={th}>{t("iklan.colAd")}</th><th className={th}>{t("iklan.colAdSet")}</th><th className={th}>{t("iklan.colCode")}</th><th className={`${th} text-right`}>{t("iklan.colSpend")}</th></tr>
+                  <tr className="border-b border-line"><th className={th}>{t("iklan.colAd")}</th><th className={th}>{t("iklan.colAdSet")}</th><th className={th}>{t("iklan.colCode")}</th><th className={`${th} text-right`}>{t("iklan.colLeads7")}</th><th className={`${th} text-right`}>{t("iklan.colSpend")}</th></tr>
                 </thead>
                 <tbody>
                   {cfg.ads.map((a) => (
@@ -124,6 +124,7 @@ async function Ads() {
                         <input type="hidden" name={`orig:code:${a.id}`} value={a.code} />
                         <input name={`code:${a.id}`} defaultValue={a.code} placeholder={t("iklan.codePlaceholder")} maxLength={12} autoCapitalize="characters" aria-label={`${t("iklan.colCode")} ${a.name}`} className={`${inputCls} min-w-36 font-mono uppercase`} />
                       </td>
+                      <td className={`tabular px-3 py-2 text-right ${a.code && a.leads7 === 0 ? "text-faint" : ""}`}>{a.code ? a.leads7 : "–"}</td>
                       <td className="tabular px-3 py-2 text-right">{rupiahShort(a.spend30)}</td>
                     </tr>
                   ))}

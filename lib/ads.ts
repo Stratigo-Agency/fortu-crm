@@ -23,7 +23,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export type CampaignRow = { id: string; metaId: string; name: string; ownerId: string | null; spend30: string };
 export type AdSetRow = { id: string; name: string; campaignName: string; productLine: string | null; spend30: string };
-export type AdRow = { id: string; name: string; adSetName: string; code: string; spend30: string };
+export type AdRow = { id: string; name: string; adSetName: string; code: string; spend30: string; leads7: number };
 export type AdsConfig = {
   campaigns: CampaignRow[]; adSets: AdSetRow[]; ads: AdRow[];
   lastSync: { at: string; from: string; to: string; rows: number } | null;
@@ -43,7 +43,8 @@ export async function getAdsConfig(): Promise<AdsConfig> {
         FROM ad_sets s JOIN ad_campaigns c ON c.id = s.campaign_id ORDER BY 5 DESC, s.name`,
     sql<AdRow[]>`
       SELECT a.id, a.name, s.name AS "adSetName", COALESCE(a.prefill_code, '') AS code,
-             COALESCE((SELECT sum(i.spend) FROM ad_insights_daily i WHERE i.ad_id = a.id AND i.date >= jakarta_today() - 30), 0) AS spend30
+             COALESCE((SELECT sum(i.spend) FROM ad_insights_daily i WHERE i.ad_id = a.id AND i.date >= jakarta_today() - 30), 0) AS spend30,
+             (SELECT count(*) FROM leads l WHERE l.ad_id = a.id AND l.received_at >= now() - interval '7 days' AND NOT l.is_sample)::int AS leads7
         FROM ads a JOIN ad_sets s ON s.id = a.ad_set_id ORDER BY 5 DESC, a.name LIMIT 300`,
     sql<{ key: string; value: Record<string, unknown> }[]>`SELECT key, value FROM app_settings WHERE key IN ('insights_last_sync', 'insights_last_failure')`,
   ]);

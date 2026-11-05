@@ -605,7 +605,7 @@
     "adSets": "Set iklan",
     "adSetsHint": "Pilih lini produk tiap set iklan.",
     "ads": "Iklan dan kode",
-    "adsHint": "Contoh kode: F-IFP-01.",
+    "adsHint": "Contoh kode: F-IFP-01. Chat 7 hari menghitung chat yang membawa kode.",
     "colCampaign": "Kampanye",
     "colAdSet": "Set iklan",
     "colAd": "Iklan",
@@ -623,6 +623,7 @@
       "form": "Pilihan tidak dikenali. Muat ulang halaman.",
       "stale": "Data iklan sudah diubah orang lain. Muat ulang halaman, lalu coba lagi."
     },
-    "codePlaceholder": "F-IFP-01"
+    "codePlaceholder": "F-IFP-01",
+    "colLeads7": "Chat 7 hari"
   }
 }
