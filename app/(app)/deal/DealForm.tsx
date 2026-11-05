@@ -88,7 +88,8 @@ function initialForm(d: DealDetail, wanted: StageKey | null, today: string): For
     nextStep: d.nextStep,
     nextStepDate: d.nextStepDate,
     demoDate: d.demoDate,
-    paidDate: d.paidDate || (stageKey === "done" ? today : ""),
+    // the payment date is only Done deal's; any other stage starts without one
+    paidDate: stageKey === "done" ? (d.stageKey === "done" ? d.paidDate : today) : "",
     lostReason: d.lostReason,
     competitor: d.competitor,
     lostNote: d.lostNote,
@@ -155,6 +156,10 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
     setPhoneHit(hit ? { phone: form.phone, name: hit.name, rep: hit.rep } : null);
     if (hit?.name && !form.contactName.trim()) set("contactName", hit.name);
   }
+  // A contact that already exists keeps its name here (it is changed in Kontak); a deal made from a
+  // prospect keeps the prospect's contact and number.
+  const contactKnown = !!phoneHit?.name || (!isNew && form.phone === deal.phone && !!deal.contactName);
+  const contactLocked = !!fromLeadId || contactKnown;
   const phoneNote =
     phoneHit && phoneHit.phone === form.phone && phoneHit.rep && (isNew || phoneHit.rep !== deal.ownerName)
       ? t("deal.phoneTaken", { name: phoneHit.name ?? formatPhone(form.phone), rep: phoneHit.rep })
@@ -215,7 +220,8 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
     setForm((f) => ({
       ...f,
       stageKey: key,
-      paidDate: key === "done" && !f.paidDate ? today : f.paidDate,
+      // Lost → Done must not carry the lost date: Done deal starts at today unless it already was Done
+      paidDate: key === "done" ? (deal.stageKey === "done" ? deal.paidDate : today) : "",
     }));
     setStatus(null);
     setErrors({});
@@ -351,6 +357,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   id="contact"
                   autoComplete="off"
                   value={form.contactName}
+                  disabled={contactLocked}
                   onChange={(e) => set("contactName", e.target.value)}
                   className={field}
                 />
@@ -363,6 +370,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                     inputMode="tel"
                     autoComplete="off"
                     value={form.phone}
+                    disabled={!!fromLeadId}
                     onChange={(e) => set("phone", e.target.value)}
                     onBlur={checkPhone}
                     aria-invalid={!!errors.phone || undefined}
@@ -464,17 +472,17 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
               </Field>
             ) : (
               <>
-                <div className="hidden grid-cols-[1fr_72px_150px_110px] gap-2 text-sm text-slate md:grid">
+                <div className="hidden grid-cols-[1fr_72px_150px_160px] gap-2 text-sm text-slate md:grid">
                   <span>{t("deal.products")}</span>
                   <span>{t("deal.unit")}</span>
                   <span>{t("deal.pricePerUnit")}</span>
-                  <span className="text-right">{t("deal.subtotal")}</span>
+                  <span className="pr-12 text-right">{t("deal.subtotal")}</span>
                 </div>
                 <ul className="flex flex-col gap-3">
                   {rowsShown.map((l) => {
                     const note = lineNote(l);
                     return (
-                      <li key={l.key} className="grid grid-cols-[1fr_72px] gap-2 md:grid-cols-[1fr_72px_150px_110px]">
+                      <li key={l.key} className="grid grid-cols-[1fr_72px] gap-2 md:grid-cols-[1fr_72px_150px_160px]">
                         <select
                           aria-label={t("deal.lineProduct")}
                           value={l.productId}
@@ -508,20 +516,16 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                             type="button"
                             aria-label={t("deal.removeProduct")}
                             onClick={() => removeLine(l.key)}
-                            className="flex h-11 w-11 items-center justify-center rounded-sm text-slate hover:bg-paper md:hidden"
+                            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-sm text-slate hover:bg-paper"
                           >
-                            ×
+                            <svg width="14" height="14" viewBox="0 0 18 18" fill="none" aria-hidden="true">
+                              <path d="M3 3l12 12M15 3L3 15" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
+                            </svg>
                           </button>
                         </div>
                         {note && (
                           <p className={`col-span-full text-sm ${note.late ? "text-late" : "text-slate"}`}>{note.text}</p>
                         )}
-                        <button
-                          type="button"
-                          aria-label={t("deal.removeProduct")}
-                          onClick={() => removeLine(l.key)}
-                          className="hidden"
-                        />
                       </li>
                     );
                   })}

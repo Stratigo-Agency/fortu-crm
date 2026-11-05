@@ -131,6 +131,65 @@ describe("saveDeal · who may save", () => {
   });
 });
 
+describe("saveDeal · owners and managers", () => {
+  it("a CEO or admin can create a deal for themselves, and a sales lead can save a deal a CEO owns", async () => {
+    const ceo = await createUser({ role: "ceo" });
+    const admin = await createUser({ role: "admin" });
+    const lead = await createUser({ role: "sales_lead" });
+    const id = ok(await saveDeal(ceo, input({ ownerId: ceo.id })));
+    expect((await deal(id)).owner_user_id).toBe(ceo.id);
+    ok(await saveDeal(admin, input({ ownerId: admin.id })));
+    // the form sends the unchanged owner (a CEO): that must not need to be a rep or sales lead
+    ok(await saveDeal(lead, input({ id, ownerId: ceo.id, name: "Disimpan sales lead" })));
+    expect((await deal(id)).owner_user_id).toBe(ceo.id);
+  });
+
+  it("a manager still can't hand a deal to a CEO, marketing or an inactive user", async () => {
+    const lead = await createUser({ role: "sales_lead" });
+    const id = ok(await saveDeal(lead, input()));
+    for (const bad of [await createUser({ role: "ceo" }), await createUser({ role: "marketing" }), await createUser({ isActive: false })]) {
+      await expect(saveDeal(lead, input({ id, ownerId: bad.id }))).rejects.toMatchObject({ field: "owner" });
+    }
+  });
+});
+
+describe("saveDeal · closing dates", () => {
+  it("Done deal → Lost keeps no payment date; Lost → Done starts at today", async () => {
+    const rep = await createUser();
+    const p = await createProduct();
+    const base = { lines: [{ productId: p.id, qty: 1, unitPrice: 1_000_000 }], expectedCloseDate: inDays(10) };
+    const id = ok(await saveDeal(rep, input({ ...base, stageKey: "quotation" })));
+    ok(await saveDeal(rep, input({ ...base, id, stageKey: "done", paidDate: inDays(-5) })));
+    expect(new Date((await deal(id)).closed_on).toISOString().slice(0, 10)).toBe(inDays(-5));
+    // the form no longer sends the old payment date to Lost, and the server ignores it anyway
+    ok(await saveDeal(rep, input({ ...base, id, stageKey: "lost", lostReason: "harga", paidDate: inDays(-5) })));
+    expect(new Date((await deal(id)).closed_on).toISOString().slice(0, 10)).toBe(today());
+    ok(await saveDeal(rep, input({ ...base, id, stageKey: "done", paidDate: "" })));
+    expect(new Date((await deal(id)).closed_on).toISOString().slice(0, 10)).toBe(today());
+  });
+});
+
+describe("saveDeal · contact of a prospect and input limits", () => {
+  it("a deal made from a prospect keeps the prospect's contact, whatever number the form has", async () => {
+    const rep = await createUser();
+    const lead = await createLead(rep.id, { name: "Pak Asli" });
+    const id = ok(await saveDeal(rep, input({ fromLeadId: lead.id, phone: randomPhone(), contactName: "Nama Lain" })));
+    const [d] = await sql`SELECT d.contact_id AS deal_contact, l.contact_id AS lead_contact FROM deals d JOIN leads l ON l.id = d.lead_id WHERE d.id = ${id}`;
+    expect(d.deal_contact).toBe(d.lead_contact);
+  });
+
+  it("totals that don't fit the database and dates that don't exist are refused with the field", () => {
+    const base = { ...input() };
+    const p = randomUUID();
+    expect(() => parseDealInput({ ...base, lines: [{ productId: p, qty: 100_000, unitPrice: 9_999_999_999_999 }] })).toThrow(DealInputError);
+    expect(() =>
+      parseDealInput({ ...base, lines: Array.from({ length: 11 }, () => ({ productId: p, qty: 100_000, unitPrice: 9_999_999_999_999 })) }),
+    ).toThrow(DealInputError);
+    expect(() => parseDealInput({ ...base, expectedCloseDate: "2026-02-31" })).toThrow(DealInputError);
+    expect(() => parseDealInput({ ...base, expectedCloseDate: "2026-02-28" })).not.toThrow();
+  });
+});
+
 describe("saveDeal · company, contact and input checks", () => {
   it("finds the company by name in any letter case instead of making a second one", async () => {
     const rep = await createUser();

@@ -147,6 +147,19 @@ test.describe.serial("Deal panel", () => {
     expect(d.name).toBe(`${leadName} · Signage`);
   });
 
+  test("a product line can be removed on a desktop too", async ({ page }) => {
+    await page.goto("/deal/new");
+    await page.getByRole("button", { name: "Produk", exact: true }).click();
+    await page.locator("select[aria-label='Produk']").selectOption({ label: 'DIGI08 · Signage Standing 55"' });
+    await expect(page.getByLabel("Harga/unit")).toHaveValue("42.000.000");
+    const remove = page.getByRole("button", { name: "Hapus produk" });
+    await expect(remove).toBeVisible();
+    expect((await remove.boundingBox())?.height).toBeGreaterThanOrEqual(44);
+    await remove.click();
+    await expect(page.locator("select[aria-label='Produk']")).toHaveCount(0);
+    await expect(page.getByLabel("Perkiraan nilai")).toBeVisible(); // back to the estimate
+  });
+
   test("another rep's deal opens with the same panel, read-only", async ({ page }) => {
     await page.goto(`/deal/${otherDealId}`);
     await expect(page.getByRole("heading", { name: new RegExp(`Deal Milik Lain ${tag}`) })).toBeVisible();

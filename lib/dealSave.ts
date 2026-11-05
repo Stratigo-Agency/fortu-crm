@@ -22,6 +22,7 @@ const LOST_REASONS = ["harga", "kompetitor", "budget", "timing", "no_response", 
 const MANAGERS = ["sales_lead", "ceo", "admin"];
 const CAN_CREATE = ["sales_rep", "sales_lead", "ceo", "admin"];
 const MAX_AMOUNT = 9_999_999_999_999;
+const MAX_TOTAL = 999_999_999_999_999; // numeric(15,0)
 
 /** What was wrong with the input, as a field and a copy key (never raw text). */
 export class DealInputError extends Error {
@@ -40,7 +41,9 @@ const str = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice
 const date = (v: unknown) => {
   const s = str(v, 10);
   if (!s) return null;
-  if (!DATE.test(s) || Number.isNaN(Date.parse(s))) throw new DealInputError("date", "errors.generic");
+  // "2026-02-31" must not pass: the date has to survive a round trip
+  const real = DATE.test(s) && !Number.isNaN(Date.parse(s)) && new Date(`${s}T00:00:00Z`).toISOString().slice(0, 10) === s;
+  if (!real) throw new DealInputError("date", "errors.generic");
   return s;
 };
 const whole = (v: unknown, max: number) => {
@@ -65,6 +68,18 @@ export function parseDealInput(raw: unknown): DealInput {
   const ownerId = str(r.ownerId, 40);
   if (ownerId && !UUID.test(ownerId)) throw new DealInputError("owner", "errors.generic");
 
+  let total = 0;
+  const cleanLines = lines.map((l) => {
+    const x = (typeof l === "object" && l !== null ? l : {}) as Record<string, unknown>;
+    const productId = str(x.productId, 40);
+    const qty = whole(x.qty, 100_000);
+    const unitPrice = whole(x.unitPrice, MAX_AMOUNT);
+    if (!UUID.test(productId) || !qty || qty < 1 || unitPrice === null) throw new DealInputError("lines", "deal.linesInvalid");
+    total += qty * unitPrice;
+    if (total > MAX_TOTAL) throw new DealInputError("lines", "deal.linesInvalid"); // the sum must fit the database
+    return { productId, qty, unitPrice };
+  });
+
   return {
     id,
     name: str(r.name, 200),
@@ -84,14 +99,7 @@ export function parseDealInput(raw: unknown): DealInput {
     competitor: str(r.competitor, 120),
     lostNote: str(r.lostNote, 1000),
     estAmount: whole(r.estAmount, MAX_AMOUNT) ?? 0,
-    lines: lines.map((l) => {
-      const x = (typeof l === "object" && l !== null ? l : {}) as Record<string, unknown>;
-      const productId = str(x.productId, 40);
-      const qty = whole(x.qty, 100_000);
-      const unitPrice = whole(x.unitPrice, MAX_AMOUNT);
-      if (!UUID.test(productId) || !qty || qty < 1 || unitPrice === null) throw new DealInputError("lines", "deal.linesInvalid");
-      return { productId, qty, unitPrice };
-    }),
+    lines: cleanLines,
     note: str(r.note, 2000),
     fromLeadId: fromLead,
   };
@@ -135,8 +143,21 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
     return await sql.begin(async (tx): Promise<SaveDealResult> => {
       await tx`SELECT set_config('app.user_id', ${actor.id}, true)`; // = SET LOCAL app.user_id
 
+      // The deal's current owner (an edit), read first so saving never fails on an owner who is unchanged.
+      const before = isNew
+        ? null
+        : (
+            await tx<{ owner_user_id: string }[]>`
+              SELECT d.owner_user_id FROM deals d WHERE d.id = ${input.id} FOR UPDATE OF d`
+          )[0];
+      if (!isNew && !before) throw new ForbiddenError();
+      const currentOwner = before?.owner_user_id ?? actor.id;
+
       const companyId = await findOrCreateCompany(tx, input.companyName);
-      const contactId = await findOrCreateContact(tx, input.phone, input.contactName, companyId);
+      // A deal made from a prospect keeps the prospect's contact, whatever number is in the form.
+      const contactId = input.fromLeadId
+        ? await contactOfLead(tx, input.fromLeadId)
+        : await findOrCreateContact(tx, input.phone, input.contactName, companyId);
       if (input.parentDealId) {
         const [p] = await tx`SELECT 1 FROM deals WHERE id = ${input.parentDealId} AND id IS DISTINCT FROM ${input.id}`;
         if (!p) throw new DealInputError("parent", "deal.parentRequired");
@@ -144,13 +165,15 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
 
       // The owner: only sales leads, the CEO and admins hand a deal to someone else.
       const manager = MANAGERS.includes(actor.role);
-      const wantedOwner = manager && input.ownerId ? input.ownerId : null;
+      const wantedOwner = manager && input.ownerId && input.ownerId !== currentOwner ? input.ownerId : null;
       if (wantedOwner) {
         const [o] = await tx`SELECT 1 FROM users WHERE id = ${wantedOwner} AND is_active AND role IN ('sales_rep', 'sales_lead')`;
         if (!o) throw new DealInputError("owner", "errors.generic");
       }
 
       const closed = input.stageKey === "done" || input.stageKey === "lost";
+      // the payment date belongs to Done deal only; a Lost deal's close date is always today
+      const paidDate = input.stageKey === "done" ? input.paidDate : "";
       const lostReason = input.stageKey === "lost" ? input.lostReason || null : null;
       const competitor = input.stageKey === "lost" ? input.competitor || null : null;
       const lostNote = input.stageKey === "lost" ? input.lostNote || null : null;
@@ -168,9 +191,6 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
         dealId = d.id;
       } else {
         dealId = input.id as string;
-        const [before] = await tx<{ key: string }[]>`
-          SELECT s.key FROM deals d JOIN pipeline_stages s ON s.id = d.stage_id WHERE d.id = ${dealId} FOR UPDATE OF d`;
-        if (!before) throw new ForbiddenError();
       }
 
       await replaceLines(tx, dealId, input);
@@ -189,8 +209,8 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
           -- a stage change picks today as the close date unless one was typed; staying put keeps the old one
           closed_on = CASE
             WHEN ${closed} AND stage_id IS DISTINCT FROM (SELECT id FROM pipeline_stages WHERE key = ${input.stageKey})
-              THEN ${input.paidDate || null}::date
-            WHEN ${closed} THEN COALESCE(${input.paidDate || null}::date, closed_on)
+              THEN ${paidDate || null}::date
+            WHEN ${closed} THEN COALESCE(${paidDate || null}::date, closed_on)
             ELSE NULL END
         WHERE id = ${dealId} AND can_edit_deal(${actor.id}, id)
         RETURNING id`;
@@ -217,6 +237,13 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
     }
     throw err;
   }
+}
+
+/** The contact of a prospect (the prospect's own number, never the form's). */
+async function contactOfLead(tx: Tx, leadId: string): Promise<string> {
+  const [l] = await tx<{ contact_id: string }[]>`SELECT contact_id FROM leads WHERE id = ${leadId}`;
+  if (!l) throw new ForbiddenError();
+  return l.contact_id;
 }
 
 /** Replaces all product lines of a deal with the input's (the database recomputes deals.amount). */
