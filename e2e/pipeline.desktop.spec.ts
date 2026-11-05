@@ -86,7 +86,7 @@ test("dragging a card with products and a close date to Quotation moves it, reco
 test("a card without products goes back, says what to add, and opens the panel URL", async ({ page }) => {
   await drag(page, deals.bare, "Quotation");
   await expect(toast(page)).toContainText("Tambahkan minimal 1 produk dengan unit dan harga.");
-  await expect(page).toHaveURL(new RegExp(`deal=${deals.bare}.*stage=quotation.*missing=products`));
+  await expect(page).toHaveURL(new RegExp(`/deal/${deals.bare}\\?stage=quotation&missing=products`));
   await expect(column(page, "Chat masuk").locator(`[data-deal-id="${deals.bare}"]`)).toBeVisible();
   expect(await stage(deals.bare)).toBe("chat");
 });
