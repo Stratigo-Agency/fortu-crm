@@ -83,7 +83,7 @@ function boardWhere(f: BoardFilter) {
 /** The columns in pipeline_stages order (Lost only when shown), with count and amount from SQL. */
 export async function boardColumns(f: BoardFilter): Promise<Column[]> {
   return sql<Column[]>`
-    SELECT s.key, s.name, s.probability::text AS probability, s.is_won, s.is_lost,
+    SELECT s.key, s.name, s.probability::text AS probability, s.is_won, s.is_lost, s.definition,
            COALESCE(t.deal_count, 0)::int AS deal_count,
            COALESCE(t.amount, 0)::text AS amount,
            COALESCE(o.older_count, 0)::int AS older_count

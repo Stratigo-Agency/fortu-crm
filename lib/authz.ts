@@ -56,3 +56,17 @@ export function canEditDealSql(userId: string) {
 export function canEditLeadSql(userId: string) {
   return sql`can_edit_lead(${userId}, id)`;
 }
+
+/** Owner, sales_lead, ceo or admin may edit a contact (SQL can_edit_contact). */
+export async function assertCanEditContact(user: Pick<SessionUser, "id">, contactId: string) {
+  if (!UUID.test(contactId)) throw new ForbiddenError();
+  const [{ ok }] = await sql<{ ok: boolean }[]>`SELECT can_edit_contact(${user.id}, ${contactId}) AS ok`;
+  if (!ok) throw new ForbiddenError();
+}
+
+/** Owner, sales_lead, ceo or admin may edit a company (SQL can_edit_company). */
+export async function assertCanEditCompany(user: Pick<SessionUser, "id">, companyId: string) {
+  if (!UUID.test(companyId)) throw new ForbiddenError();
+  const [{ ok }] = await sql<{ ok: boolean }[]>`SELECT can_edit_company(${user.id}, ${companyId}) AS ok`;
+  if (!ok) throw new ForbiddenError();
+}

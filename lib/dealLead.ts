@@ -75,3 +75,18 @@ export async function convertLead(
     INSERT INTO activities (type, lead_id, deal_id, contact_id, user_id, metadata)
     VALUES ('system', ${leadId}, ${dealId}, ${rows[0].contact_id}, ${actorId}, ${tx.json({ action: "converted" })})`;
 }
+
+/** + Deal from a contact: a blank deal with the contact's name, number and company filled in. */
+export async function contactPrefill(
+  actor: Actor,
+  contactId: string,
+  nextStep: string,
+): Promise<DealDetail> {
+  if (!UUID.test(contactId)) throw new ForbiddenError();
+  const [c] = await sql<{ full_name: string | null; phone_e164: string; company_name: string | null; can_edit: boolean }[]>`
+    SELECT c.full_name, c.phone_e164, co.name AS company_name, can_edit_contact(${actor.id}, c.id) AS can_edit
+      FROM contacts c LEFT JOIN companies co ON co.id = c.company_id WHERE c.id = ${contactId}`;
+  if (!c || !c.can_edit) throw new ForbiddenError();
+  const base = emptyDeal(actor.id, actor.full_name ?? null, nextStep);
+  return { ...base, name: c.company_name ?? c.full_name ?? "", companyName: c.company_name ?? "", contactName: c.full_name ?? "", phone: c.phone_e164 };
+}

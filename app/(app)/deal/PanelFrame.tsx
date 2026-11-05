@@ -4,7 +4,15 @@ import { useRouter } from "next/navigation";
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { t } from "@/lib/copy";
 
-type Props = { variant: "panel" | "page"; children: React.ReactNode };
+type Props = {
+  /** panel = intercepted route over the board, page = its own page, query = a ?contact= / ?company= panel */
+  variant: "panel" | "page" | "query";
+  /** where a "query" panel goes when it closes (the list without the panel parameter) */
+  closeHref?: string;
+  /** the dialog's accessible name */
+  label?: string;
+  children: React.ReactNode;
+};
 
 type Frame = {
   /** The form tells the frame whether it has unsaved changes. */
@@ -24,15 +32,16 @@ export function useDealFrame(): Frame {
 }
 
 /** The 700 px side panel over the board (overlay, Esc closes) or the page around a full-page deal. */
-export function PanelFrame({ variant, children }: Props) {
+export function PanelFrame({ variant, closeHref, label, children }: Props) {
   const router = useRouter();
   const dirty = useRef(false);
   const [asking, setAsking] = useState(false);
 
   const closeNow = useCallback(() => {
     if (variant === "panel") router.back();
+    else if (variant === "query") router.push(closeHref ?? "/");
     else router.push("/pipeline");
-  }, [router, variant]);
+  }, [router, variant, closeHref]);
 
   const close = useCallback(() => {
     if (dirty.current) setAsking(true);
@@ -45,7 +54,7 @@ export function PanelFrame({ variant, children }: Props) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && variant === "panel" && !asking) close();
+      if (e.key === "Escape" && variant !== "page" && !asking) close();
     };
     // closing the tab or reloading with unsaved changes
     const onUnload = (e: BeforeUnloadEvent) => {
@@ -102,7 +111,7 @@ export function PanelFrame({ variant, children }: Props) {
           <aside
             role="dialog"
             aria-modal="true"
-            aria-label={t("deal.kind")}
+            aria-label={label ?? t("deal.kind")}
             className="relative h-full w-full max-w-[700px] overflow-y-auto bg-white shadow-card"
           >
             {body}

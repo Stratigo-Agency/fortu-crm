@@ -105,12 +105,12 @@ export async function createAd(prefillCode: string, name = "Iklan IFP Sekolah") 
 }
 
 /** A rep's WhatsApp Business line. */
-export async function createWaLine(userId: string | null, isActive = true) {
+export async function createWaLine(userId: string | null, isActive = true, label = "WA uji") {
   const phone = `+62813${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
   const [line] = await sql<{ id: string }[]>`
     INSERT INTO wa_lines (user_id, phone_e164, label, is_active)
-    VALUES (${userId}, ${phone}, 'WA uji', ${isActive}) RETURNING id`;
-  return line;
+    VALUES (${userId}, ${phone}, ${label}, ${isActive}) RETURNING id`;
+  return { ...line, phone };
 }
 
 /** A tracked /go/wa click with a ref code. */

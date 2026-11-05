@@ -105,12 +105,13 @@ export function parseDealInput(raw: unknown): DealInput {
   };
 }
 
-async function findOrCreateCompany(tx: Tx, name: string): Promise<string | null> {
+export async function findOrCreateCompany(tx: Tx, name: string, ownerId: string): Promise<string | null> {
   if (!name) return null;
   const [existing] = await tx<{ id: string }[]>`
     SELECT id FROM companies WHERE lower(name) = lower(${name}) ORDER BY created_at LIMIT 1`;
   if (existing) return existing.id;
-  const [created] = await tx<{ id: string }[]>`INSERT INTO companies (name) VALUES (${name}) RETURNING id`;
+  const [created] = await tx<{ id: string }[]>`INSERT INTO companies (name, owner_user_id) VALUES (${name}, ${ownerId})
+    ON CONFLICT (lower(name)) DO UPDATE SET name = companies.name RETURNING id`;
   return created.id;
 }
 
@@ -153,7 +154,7 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
       if (!isNew && !before) throw new ForbiddenError();
       const currentOwner = before?.owner_user_id ?? actor.id;
 
-      const companyId = await findOrCreateCompany(tx, input.companyName);
+      const companyId = await findOrCreateCompany(tx, input.companyName, actor.id);
       // A deal made from a prospect keeps the prospect's contact, whatever number is in the form.
       const contactId = input.fromLeadId
         ? await contactOfLead(tx, input.fromLeadId)

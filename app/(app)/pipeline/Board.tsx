@@ -210,7 +210,7 @@ function BoardColumn({ column, cards, serverShown, compact, onMove }: ColumnProp
       <header className="px-1 pb-3">
         <div className="flex items-center gap-2">
           <span className={`h-3 w-3 shrink-0 ${MARKER[column.key]}`} aria-hidden="true" />
-          <h2 className="flex-1 font-bold text-ink">{t(`stage.${column.key}`)}</h2>
+          <h2 className="flex-1 font-bold text-ink" title={column.definition ?? undefined}>{t(`stage.${column.key}`)}</h2>
           <span className="text-sm text-slate">{closed ? t("stage.thisMonth") : percent(column.probability)}</span>
         </div>
         <p className="tabular mt-1 text-sm text-slate">

@@ -79,6 +79,14 @@ export function relDate(d: Date | string, now: Date = new Date()): string {
   return shortDate(day, today);
 }
 
+/** Hari ini · Kemarin · then the day and month (8 Nov), as in the Kontak design. */
+export function chatDate(d: Date | string, now: Date = new Date()): string {
+  const diff = dayNumber(dayOf(d)) - dayNumber(jakartaDay(now));
+  if (diff === 0) return t("common.today");
+  if (diff === -1) return t("common.yesterday");
+  return dayMonth(d);
+}
+
 /** 5 menit lalu · 3 jam lalu · then relDate() */
 export function relTime(ts: Date | string, now: Date = new Date()): string {
   const at = typeof ts === "string" ? new Date(ts) : ts;
@@ -87,4 +95,15 @@ export function relTime(ts: Date | string, now: Date = new Date()): string {
   if (minutes < 60) return t("common.minutesAgo", { n: Math.max(1, minutes) });
   if (minutes < 24 * 60) return t("common.hoursAgo", { n: Math.floor(minutes / 60) });
   return relDate(at, now);
+}
+
+/** Jun · Agu · Okt, from a YYYY-MM-DD month start (the month name, not shifted by time zones). */
+export function monthShort(day: string): string {
+  const m = new Intl.DateTimeFormat("id-ID", { month: "short", timeZone: "UTC" }).format(new Date(`${day.slice(0, 7)}-01T00:00:00Z`));
+  return m.replace(".", "");
+}
+
+/** Jan 2027 */
+export function monthYear(day: string): string {
+  return `${monthShort(day)} ${day.slice(0, 4)}`;
 }
