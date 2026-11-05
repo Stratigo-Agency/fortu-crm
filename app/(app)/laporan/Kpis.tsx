@@ -14,9 +14,10 @@ function Card({ label, value, children }: { label: string; value: string; childr
 
 export function Kpis({ k }: { k: ReportKpis }) {
   const pct = k.attainmentPct;
+  const when = t(`laporan.periodNow.${k.period}`);
   return (
-    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-      <Card label={t("laporan.kpiDone")} value={rupiahShort(k.wonInPeriod)}>
+    <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+      <Card label={t("laporan.kpiDoneWhen", { when })} value={rupiahShort(k.wonInPeriod)}>
         {k.targetAmount ? (
           <>
             <div className="mt-3 h-2 rounded-full bg-mist" role="img" aria-label={t("laporan.kpiDoneTarget", { pct: `${pct ?? 0}%`, target: rupiahShort(k.targetAmount) })}>
@@ -28,17 +29,26 @@ export function Kpis({ k }: { k: ReportKpis }) {
           <p className="mt-3 text-sm text-slate">{t("laporan.kpiNoTarget")}</p>
         )}
       </Card>
-      <Card label={t("laporan.kpiUnits")} value={`${k.unitsWon} unit`}>
+      <Card label={t("laporan.kpiUnitsWhen", { when })} value={`${k.unitsWon} unit`}>
         <p className="mt-3 text-sm text-slate">
           {k.targetUnits
-            ? t("laporan.kpiUnitsTarget", { n: k.targetUnits })
+            ? t(k.period === "month" ? "laporan.kpiUnitsTarget" : "laporan.kpiUnitsTargetPeriod", { n: k.targetUnits })
             : k.targetUnitsFrom
               ? t("laporan.kpiUnitsFrom", { n: k.targetUnitsNext ?? 0, m: monthYear(k.targetUnitsFrom) })
               : t("laporan.kpiNoTarget")}
         </p>
       </Card>
-      <Card label={t("laporan.kpiForecast")} value={rupiahShort(k.forecastEndOfPeriod)}>
-        <p className="mt-3 text-sm text-slate">{t("laporan.kpiForecastHint")}</p>
+      <Card label={t("laporan.kpiForecastWhen", { end: t(`laporan.periodEnd.${k.period}`) })} value={rupiahShort(k.forecastEndOfPeriod)}>
+        <p className="mt-3 text-sm text-slate">{t("laporan.kpiForecastHintWhen", { when })}</p>
+      </Card>
+      <Card label={t("laporan.kpiRunRate")} value={rupiahShort(k.runRate.month)}>
+        <p className="mt-3 text-sm text-slate">
+          {k.runRate.early
+            ? t("laporan.kpiRunRateEarly")
+            : k.runRate.yearly
+              ? t("laporan.kpiRunRateYear", { v: rupiahShort(k.runRate.yearly) })
+              : t("laporan.kpiRunRateNone")}
+        </p>
       </Card>
       <Card label={t("laporan.kpiPipeline")} value={rupiahShort(k.weightedOpen)}>
         <p className="mt-3 text-sm text-slate">{t("laporan.kpiPipelineOf", { total: rupiahShort(k.openAmount), n: k.openDeals })}</p>
