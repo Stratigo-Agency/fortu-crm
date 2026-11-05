@@ -51,8 +51,9 @@ test.describe.serial("Kontak", () => {
     const panel = page.getByRole("dialog");
     await expect(panel.getByText("20 hari lalu")).toBeVisible();
     await panel.getByText("Telepon", { exact: true }).click();
+    // Enter in the note logs the activity (it must not save the contact form)
     await panel.getByRole("textbox", { name: "Catatan" }).fill("Bahas jadwal demo");
-    await panel.getByRole("button", { name: "Catat", exact: true }).click();
+    await panel.getByRole("textbox", { name: "Catatan" }).press("Enter");
     await expect(page.getByText("Aktivitas dicatat")).toBeVisible();
     await expect(panel.getByText("Bahas jadwal demo")).toBeVisible();
     await expect(panel.getByText("20 hari lalu")).toHaveCount(0);

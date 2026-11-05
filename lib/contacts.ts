@@ -1,6 +1,6 @@
 import type { SessionUser } from "@/lib/auth";
 import { assertCanEditContact, ForbiddenError } from "@/lib/authz";
-import { sql } from "@/lib/db";
+import { pgError, sql } from "@/lib/db";
 import {
   ACTIVITY_TYPES,
   type ActivityType,
@@ -39,7 +39,7 @@ export class DuplicatePhoneError extends Error {
 }
 
 export class ContactInputError extends Error {
-  constructor(readonly field: "phone" | "date" | "type" | "name" | "form") {
+  constructor(readonly field: "phone" | "date" | "type" | "name" | "email" | "form") {
     super(`Invalid contact input: ${field}`);
     this.name = "ContactInputError";
   }
@@ -133,15 +133,19 @@ export type ContactInput = {
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
 /** What the form sent (it may be anything), as a clean ContactInput. */
+const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 export function parseContactInput(raw: unknown): ContactInput {
   const r = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const id = clip(r.id, 40) || null;
   if (id && !UUID.test(id)) throw new ContactInputError("form");
+  const email = clip(r.email, 200);
+  if (email && !EMAIL.test(email)) throw new ContactInputError("email");
   return {
     id,
     name: clip(r.name, 120),
     jobTitle: clip(r.jobTitle, 120),
-    email: clip(r.email, 200),
+    email,
     phone: clip(r.phone, 40),
     companyName: clip(r.companyName, 200),
   };
@@ -163,14 +167,14 @@ export async function saveContact(actor: Actor, input: ContactInput): Promise<st
     await assertCanEditContact(actor, input.id);
   }
 
-  return sql.begin(async (tx) => {
+  const run = () => sql.begin(async (tx) => {
     const [taken] = await tx<{ id: string; full_name: string | null; owner: string | null }[]>`
       SELECT c.id, c.full_name, u.full_name AS owner
         FROM contacts c LEFT JOIN users u ON u.id = contact_effective_owner(c.id)
        WHERE c.phone_e164 = ${phone} AND c.id IS DISTINCT FROM ${input.id}`;
     if (taken) throw new DuplicatePhoneError(taken.full_name, phone, taken.owner);
 
-    const companyId = await findOrCreateCompany(tx, input.companyName);
+    const companyId = await findOrCreateCompany(tx, input.companyName, actor.id);
     if (input.id === null) {
       const [c] = await tx<{ id: string }[]>`
         INSERT INTO contacts (phone_e164, full_name, job_title, email, company_id, owner_user_id)
@@ -186,6 +190,13 @@ export async function saveContact(actor: Actor, input: ContactInput): Promise<st
     if (rows.length === 0) throw new ForbiddenError();
     return input.id;
   });
+  try {
+    return await run();
+  } catch (err) {
+    // two saves with the same number at once: the database refuses the second, so answer like the check does
+    if (pgError(err)?.code === "23505") return await run();
+    throw err;
+  }
 }
 
 function jakartaToday(): string {

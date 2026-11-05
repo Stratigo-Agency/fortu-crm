@@ -11,7 +11,7 @@ export async function CompanyPanel({ id, closeHref }: { id: string; closeHref: s
   const user = await requireUser();
   const company: CompanyDetail | null =
     id === "new"
-      ? { id: null, name: "", industry: "", city: "", website: "", ownerName: user.full_name, canEdit: true, contacts: [], deals: [] }
+      ? { id: null, name: "", industry: "", city: "", website: "", ownerName: user.full_name, canEdit: user.role !== "marketing", contacts: [], deals: [] }
       : await getCompany(id, user.id);
   if (!company) notFound();
   return (

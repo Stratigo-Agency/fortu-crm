@@ -99,7 +99,18 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
             </div>
             <div className="md:col-span-2">
               <label htmlFor="co-web" className={label}>{t("perusahaan.fieldWebsite")}</label>
-              <input id="co-web" value={form.website} onChange={(e) => set("website", e.target.value)} className={field} />
+              <input
+                id="co-web"
+                value={form.website}
+                onChange={(e) => set("website", e.target.value)}
+                aria-invalid={!!errors.website || undefined}
+                className={`${field} ${errors.website ? "border-2 border-navy" : ""}`}
+              />
+              {errors.website && (
+                <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+                  {errors.website}
+                </p>
+              )}
             </div>
           </div>
         </fieldset>

@@ -44,7 +44,8 @@
     "sample": "Contoh",
     "unsaved": "Ada perubahan yang belum disimpan.",
     "keepEditing": "Lanjut ubah",
-    "discard": "Buang perubahan"
+    "discard": "Buang perubahan",
+    "showRest": "Tampilkan {n} lainnya"
   },
   "stage": {
     "chat": "Chat masuk",
@@ -290,7 +291,14 @@
     "colOpen": "Deal berjalan",
     "title_field": "Jabatan",
     "activity": "Aktivitas",
-    "activityTypes": { "whatsapp": "Chat WA", "call": "Telepon", "meeting": "Demo / meeting", "visit": "Kunjungan", "email": "Email", "note": "Catatan" },
+    "activityTypes": {
+      "whatsapp": "Chat WA",
+      "call": "Telepon",
+      "meeting": "Demo / meeting",
+      "visit": "Kunjungan",
+      "email": "Email",
+      "note": "Catatan"
+    },
     "log": "Catat",
     "noActivity": "Belum ada aktivitas.",
     "empty": "Belum ada kontak. Kontak dibuat otomatis saat prospek atau deal dicatat.",
@@ -310,7 +318,8 @@
     "logged": "Aktivitas dicatat.",
     "newTitle": "Kontak baru",
     "activityPlaceholder": "Apa yang dibicarakan",
-    "timelineEmpty": "Belum ada riwayat."
+    "timelineEmpty": "Belum ada riwayat.",
+    "invalidEmail": "Tulis email dengan benar, misalnya nama@perusahaan.com."
   },
   "perusahaan": {
     "title": "Perusahaan",
@@ -342,7 +351,8 @@
     "nameTaken": "Nama perusahaan ini sudah ada.",
     "viewOnly": "Hanya lihat. Perusahaan ini milik {name}.",
     "saved": "Perusahaan disimpan.",
-    "created": "Perusahaan dibuat."
+    "created": "Perusahaan dibuat.",
+    "invalidWebsite": "Tulis alamat website dengan benar, misalnya fortu.co.id."
   },
   "laporan": {
     "title": "Laporan",

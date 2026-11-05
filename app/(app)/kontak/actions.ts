@@ -8,7 +8,7 @@ import { formatPhone } from "@/lib/ingest/phone";
 
 export type ContactActionResult =
   | { ok: true; id: string }
-  | { ok: false; field: "name" | "phone" | "date" | "type" | "form"; message: string };
+  | { ok: false; field: "name" | "phone" | "email" | "date" | "type" | "form"; message: string };
 
 function failure(err: unknown): ContactActionResult {
   if (err instanceof DuplicatePhoneError) {
@@ -19,7 +19,7 @@ function failure(err: unknown): ContactActionResult {
     };
   }
   if (err instanceof ContactInputError) {
-    const message = err.field === "phone" ? t("quickAdd.invalidPhone") : err.field === "date" ? t("kontak.invalidDate") : t("errors.generic");
+    const message = err.field === "phone" ? t("quickAdd.invalidPhone") : err.field === "date" ? t("kontak.invalidDate") : err.field === "email" ? t("kontak.invalidEmail") : t("errors.generic");
     return { ok: false, field: err.field, message };
   }
   if (err instanceof ForbiddenError) return { ok: false, field: "form", message: t("authz.forbidden") };

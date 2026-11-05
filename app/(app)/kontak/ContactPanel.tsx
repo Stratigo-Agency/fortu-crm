@@ -13,7 +13,7 @@ export async function ContactPanel({ id, closeHref }: { id: string; closeHref: s
   if (id === "new") {
     contact = {
       id: null, name: "", jobTitle: "", email: "", phone: "", companyName: "", ownerName: user.full_name,
-      canEdit: true, lastChatAt: null, needsFollowup: false, timeline: [], deals: [],
+      canEdit: user.role !== "marketing", lastChatAt: null, needsFollowup: false, timeline: [], deals: [],
     };
   } else {
     contact = await getContact(id, user.id);

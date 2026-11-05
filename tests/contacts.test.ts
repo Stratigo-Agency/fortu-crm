@@ -191,3 +191,53 @@ describe("contact list search and sort", () => {
     expect((await listContacts({ ...base, q: "50%", sort: "name" })).rows).toHaveLength(0);
   });
 });
+
+describe("data checks", () => {
+  it("refuses an email or website that isn't one, and accepts ordinary ones", async () => {
+    const { parseContactInput } = await import("@/lib/contacts");
+    const { parseCompanyInput, CompanyInputError } = await import("@/lib/companies");
+    expect(() => parseContactInput({ email: "bukan email", phone: "0812" })).toThrow(ContactInputError);
+    expect(parseContactInput({ email: "rina@arunika.co.id", phone: "0812" }).email).toBe("rina@arunika.co.id");
+    expect(() => parseCompanyInput({ name: "PT A", website: "javascript:alert(1)" })).toThrow(CompanyInputError);
+    expect(parseCompanyInput({ name: "PT A", website: "https://fortu.co.id/produk" }).website).toBe("https://fortu.co.id/produk");
+    expect(parseCompanyInput({ name: "PT A", website: "fortu.co.id" }).website).toBe("fortu.co.id");
+  });
+
+  it("two saves at once with the same number or name leave one row and a clear refusal", async () => {
+    const a = await createUser();
+    const b = await createUser();
+    const phone = randomPhone();
+    const results = await Promise.allSettled([saveContact(a, contactInput({ phone })), saveContact(b, contactInput({ phone }))]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    const lost = results.find((r) => r.status === "rejected") as PromiseRejectedResult;
+    expect(lost.reason).toBeInstanceOf(DuplicatePhoneError);
+
+    const name = `PT Serentak ${randomUUID().slice(0, 6)}`;
+    const co = (u: typeof a) => saveCompany(u, { id: null, name, industry: "", city: "", website: "" });
+    const both = await Promise.allSettled([co(a), co(b)]);
+    expect(both.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect((both.find((r) => r.status === "rejected") as PromiseRejectedResult).reason).toBeInstanceOf(DuplicateCompanyError);
+    expect((await sql`SELECT 1 FROM companies WHERE lower(name) = lower(${name})`).length).toBe(1);
+  });
+
+  it("a company made from a contact belongs to the person who made it, and stays theirs when another touches a deal", async () => {
+    const a = await createUser();
+    const b = await createUser();
+    const name = `PT Pemilik ${randomUUID().slice(0, 6)}`;
+    const c = await saveContact(a, contactInput({ companyName: name }));
+    const [co] = await sql<{ id: string; owner_user_id: string }[]>`SELECT co.id, co.owner_user_id FROM companies co JOIN contacts c ON c.company_id = co.id WHERE c.id = ${c}`;
+    expect(co.owner_user_id).toBe(a.id);
+    const d = await createDealFor(c, b.id);
+    await sql`UPDATE deals SET company_id = ${co.id}, updated_at = now() WHERE id = ${d.id}`;
+    expect((await sql`SELECT can_edit_company(${b.id}, ${co.id}) AS ok`)[0].ok).toBe(false);
+    expect((await sql`SELECT can_edit_company(${a.id}, ${co.id}) AS ok`)[0].ok).toBe(true);
+  });
+
+  it("company search finds the industry by the name people see", async () => {
+    const rep = await createUser();
+    const name = `PT Sekolah ${randomUUID().slice(0, 6)}`;
+    await saveCompany(rep, { id: null, name, industry: "education", city: "", website: "" });
+    const { rows } = await listCompanies({ ownerId: null, q: "pendidikan", sort: "name", limit: 500 });
+    expect(rows.map((r) => r.name)).toContain(name);
+  });
+});

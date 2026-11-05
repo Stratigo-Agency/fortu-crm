@@ -32,13 +32,13 @@ export default function Page(props: PageProps<"/kontak">) {
 }
 
 async function Content({ searchParams }: { searchParams: PageProps<"/kontak">["searchParams"] }) {
-  await requireUser();
+  const user = await requireUser();
   const params = await searchParams;
   const q = (typeof params.q === "string" ? params.q : "").trim().slice(0, 100);
   const sort = parseContactSort(params.sort);
   const followupOnly = params.followup === "1";
   const ownerId = await getSalesFilter();
-  const { rows, total, followup, hasMore } = await listContacts({ ownerId, q, sort, followupOnly, limit: PAGE });
+  const { rows, total, followup, hasMore } = await listContacts({ ownerId, q, sort, followupOnly, limit: params.all === "1" ? 1000 : PAGE });
 
   return (
     <>
@@ -80,15 +80,17 @@ async function Content({ searchParams }: { searchParams: PageProps<"/kontak">["s
           hrefOn={kontakHref({ q, sort, followup: true })}
           hrefOff={kontakHref({ q, sort })}
         />
-        <Link
-          href={kontakHref({ q, sort, followup: followupOnly, contact: "new" })}
-          className="flex h-11 items-center gap-2 rounded-sm bg-navy px-5 text-base font-bold text-white md:ml-auto"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
-            <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-          </svg>
-          {t("kontak.new")}
-        </Link>
+        {user.role !== "marketing" && (
+          <Link
+            href={kontakHref({ q, sort, followup: followupOnly, contact: "new" })}
+            className="flex h-11 items-center gap-2 rounded-sm bg-navy px-5 text-base font-bold text-white md:ml-auto"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+              <path d="M7 1v12M1 7h12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+            {t("kontak.new")}
+          </Link>
+        )}
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-lg bg-white shadow-card">
@@ -116,7 +118,13 @@ async function Content({ searchParams }: { searchParams: PageProps<"/kontak">["s
           </table>
         )}
       </div>
-      {hasMore && <p className="mt-4 text-center text-sm text-slate">{t("pipeline.more", { n: total - rows.length })}</p>}
+      {hasMore && (
+        <p className="mt-4 text-center">
+          <Link href={kontakHref({ q, sort, followup: followupOnly, all: true })} className="font-bold text-navy underline">
+            {t("common.showRest", { n: total - rows.length })}
+          </Link>
+        </p>
+      )}
       {typeof params.contact === "string" && (
         <ContactPanel id={params.contact} closeHref={kontakHref({ q, sort, followup: followupOnly })} />
       )}

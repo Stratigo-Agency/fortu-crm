@@ -24,12 +24,12 @@ export default function Page(props: PageProps<"/perusahaan">) {
 }
 
 async function Content({ searchParams }: { searchParams: PageProps<"/perusahaan">["searchParams"] }) {
-  await requireUser();
+  const user = await requireUser();
   const params = await searchParams;
   const q = (typeof params.q === "string" ? params.q : "").trim().slice(0, 100);
   const sort = parseCompanySort(params.sort);
   const ownerId = await getSalesFilter();
-  const { rows, total, hasMore } = await listCompanies({ ownerId, q, sort, limit: PAGE });
+  const { rows, total, hasMore } = await listCompanies({ ownerId, q, sort, limit: params.all === "1" ? 1000 : PAGE });
 
   return (
     <>
@@ -55,9 +55,11 @@ async function Content({ searchParams }: { searchParams: PageProps<"/perusahaan"
           label={t("kontak.viewOptions")}
           options={COMPANY_SORTS.map((s) => ({ value: s, label: t(SORT_LABEL[s]), href: perusahaanHref({ q, sort: s }) }))}
         />
-        <Link href={perusahaanHref({ q, sort, company: "new" })} className="flex h-11 items-center gap-2 rounded-sm bg-navy px-5 text-base font-bold text-white md:ml-auto">
-          <span aria-hidden="true">+</span> {t("perusahaan.new")}
-        </Link>
+        {user.role !== "marketing" && (
+          <Link href={perusahaanHref({ q, sort, company: "new" })} className="flex h-11 items-center gap-2 rounded-sm bg-navy px-5 text-base font-bold text-white md:ml-auto">
+            <span aria-hidden="true">+</span> {t("perusahaan.new")}
+          </Link>
+        )}
       </div>
 
       <div className="mt-6 overflow-x-auto rounded-lg bg-white shadow-card">
@@ -86,7 +88,13 @@ async function Content({ searchParams }: { searchParams: PageProps<"/perusahaan"
           </table>
         )}
       </div>
-      {hasMore && <p className="mt-4 text-center text-sm text-slate">{t("pipeline.more", { n: total - rows.length })}</p>}
+      {hasMore && (
+        <p className="mt-4 text-center">
+          <Link href={perusahaanHref({ q, sort, all: true })} className="font-bold text-navy underline">
+            {t("common.showRest", { n: total - rows.length })}
+          </Link>
+        </p>
+      )}
       {typeof params.company === "string" && <CompanyPanel id={params.company} closeHref={perusahaanHref({ q, sort })} />}
     </>
   );

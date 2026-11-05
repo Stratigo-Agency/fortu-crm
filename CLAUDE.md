@@ -28,7 +28,7 @@ app/go/wa/route.ts                        tracked WhatsApp link → 302 to wa.me
 app/api/auth/[...nextauth]/route.ts
 lib/db.ts  lib/auth.ts  lib/authz.ts  lib/copy.ts  lib/format.ts  lib/stageRules.ts
 lib/ingest/{ingestLead,phone,codes,owner}.ts
-db/migrations/001_init.sql … 008_contacts.sql
+db/migrations/001_init.sql … 009_contact_integrity.sql
 db/seeds/seed_products.sql
 messages/id.json                          ALL user-facing text
 public/brand/                             logos

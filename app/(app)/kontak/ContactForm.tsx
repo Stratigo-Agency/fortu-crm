@@ -158,7 +158,19 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
             </div>
             <div className="md:col-span-2">
               <label htmlFor="c-email" className={label}>{t("kontak.fieldEmail")}</label>
-              <input id="c-email" type="email" value={form.email} onChange={(e) => set("email", e.target.value)} className={field} />
+              <input
+                id="c-email"
+                type="email"
+                value={form.email}
+                onChange={(e) => set("email", e.target.value)}
+                aria-invalid={!!errors.email || undefined}
+                className={`${field} ${errors.email ? bad : ""}`}
+              />
+              {errors.email && (
+                <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+                  {errors.email}
+                </p>
+              )}
             </div>
           </div>
         </fieldset>
@@ -186,11 +198,11 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                 <div className="grid gap-3 md:grid-cols-[200px_1fr]">
                   <div>
                     <label htmlFor="a-date" className={label}>{t("kontak.date")}</label>
-                    <input id="a-date" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} className={field} />
+                    <input id="a-date" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void log(); } }} className={field} />
                   </div>
                   <div>
                     <label htmlFor="a-note" className={label}>{t("deal.notes")}</label>
-                    <input id="a-note" value={note} placeholder={t("kontak.activityPlaceholder")} onChange={(e) => setNote(e.target.value)} className={field} />
+                    <input id="a-note" value={note} placeholder={t("kontak.activityPlaceholder")} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void log(); } }} className={field} />
                   </div>
                 </div>
                 {logError && (

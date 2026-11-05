@@ -1,7 +1,8 @@
 import type { SessionUser } from "@/lib/auth";
 import { assertCanEditCompany, ForbiddenError } from "@/lib/authz";
-import { sql } from "@/lib/db";
+import { pgError, sql } from "@/lib/db";
 import { COMPANY_SORTS, type CompanyDetail, type CompanyRow, type CompanySort, INDUSTRIES } from "@/lib/contactTypes";
+import { t } from "@/lib/copy";
 import { likePattern } from "@/lib/search";
 
 type Actor = Pick<SessionUser, "id" | "role">;
@@ -13,7 +14,7 @@ export function parseCompanySort(v: string | string[] | undefined): CompanySort 
 }
 
 export class CompanyInputError extends Error {
-  constructor(readonly field: "name" | "industry" | "form") {
+  constructor(readonly field: "name" | "industry" | "website" | "form") {
     super(`Invalid company input: ${field}`);
     this.name = "CompanyInputError";
   }
@@ -33,7 +34,10 @@ type ListOptions = { ownerId: string | null; q: string; sort: CompanySort; limit
 export async function listCompanies(o: ListOptions): Promise<{ rows: CompanyRow[]; total: number; hasMore: boolean }> {
   const q = o.q.trim().slice(0, 100);
   const owner = o.ownerId ? sql`AND owner_user_id = ${o.ownerId}` : sql``;
-  const search = q ? sql`AND (name ILIKE ${likePattern(q)} OR industry ILIKE ${likePattern(q)} OR city ILIKE ${likePattern(q)})` : sql``;
+  // people type the label (Pendidikan), the database holds the key (education)
+  const keys = INDUSTRIES.filter((k) => t(`industry.${k}`).toLowerCase().includes(q.toLowerCase()));
+  const byIndustry = keys.length ? sql` OR industry = ANY(${keys})` : sql``;
+  const search = q ? sql`AND (name ILIKE ${likePattern(q)}${byIndustry} OR city ILIKE ${likePattern(q)})` : sql``;
   const order =
     o.sort === "pipeline" ? sql`pipeline DESC`
     : o.sort === "won" ? sql`total_done DESC`
@@ -76,13 +80,17 @@ export type CompanyInput = { id: string | null; name: string; industry: string; 
 
 const clip = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
 
+const WEBSITE = /^(https?:\/\/)?([a-z0-9-]+\.)+[a-z]{2,}(\/\S*)?$/i;
+
 export function parseCompanyInput(raw: unknown): CompanyInput {
   const r = (typeof raw === "object" && raw !== null ? raw : {}) as Record<string, unknown>;
   const id = clip(r.id, 40) || null;
   if (id && !UUID.test(id)) throw new CompanyInputError("form");
   const industry = clip(r.industry, 30);
   if (industry && !(INDUSTRIES as readonly string[]).includes(industry)) throw new CompanyInputError("industry");
-  return { id, name: clip(r.name, 200), industry, city: clip(r.city, 100), website: clip(r.website, 200) };
+  const website = clip(r.website, 200);
+  if (website && !WEBSITE.test(website)) throw new CompanyInputError("website");
+  return { id, name: clip(r.name, 200), industry, city: clip(r.city, 100), website };
 }
 
 /** Create or update a company. Names are unique, ignoring letter case. */
@@ -94,7 +102,7 @@ export async function saveCompany(actor: Actor, input: CompanyInput): Promise<st
   } else {
     await assertCanEditCompany(actor, input.id);
   }
-  return sql.begin(async (tx) => {
+  const run = () => sql.begin(async (tx) => {
     const [dup] = await tx`SELECT 1 FROM companies WHERE lower(name) = lower(${input.name}) AND id IS DISTINCT FROM ${input.id}`;
     if (dup) throw new DuplicateCompanyError();
     if (input.id === null) {
@@ -111,4 +119,10 @@ export async function saveCompany(actor: Actor, input: CompanyInput): Promise<st
     if (rows.length === 0) throw new ForbiddenError();
     return input.id;
   });
+  try {
+    return await run();
+  } catch (err) {
+    if (pgError(err)?.code === "23505") throw new DuplicateCompanyError();
+    throw err;
+  }
 }
