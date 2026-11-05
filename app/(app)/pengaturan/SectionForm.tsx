@@ -26,7 +26,7 @@ export function SectionForm({ id, title, hint, action, children, saveLabel, tool
       <form action={formAction} className="mt-4">
         {children}
         <div className="mt-5 flex items-center gap-4">
-          <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 md:h-9 disabled:opacity-60">
+          <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 desk:h-9 disabled:opacity-60">
             {saveLabel ?? t("pengaturan.save")}
           </button>
           {result && (

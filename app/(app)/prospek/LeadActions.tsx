@@ -22,7 +22,7 @@ type Props = {
 };
 
 const initial: LeadActionState = { seq: 0 };
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
 const item = "flex min-h-11 w-full items-center rounded-sm px-3 text-left text-ink hover:bg-paper";
 
 /** The ⋯ menu of a prospect row: contacted, not a fit (with a reason) and reassign. */
@@ -57,7 +57,7 @@ export function LeadActions({ leadId, name, isNew, canReassign, currentOwnerId, 
       <details ref={menu} className="relative">
         <summary
           aria-label={t("prospek.moreActions", { name })}
-          className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm text-slate hover:bg-paper md:h-10 md:w-10 [&::-webkit-details-marker]:hidden"
+          className="flex h-11 w-11 cursor-pointer list-none items-center justify-center rounded-sm text-slate hover:bg-paper desk:h-10 desk:w-10 [&::-webkit-details-marker]:hidden"
         >
           <svg width="18" height="4" viewBox="0 0 18 4" fill="currentColor" aria-hidden="true">
             <circle cx="2" cy="2" r="1.6" />
@@ -137,11 +137,11 @@ function Dialog({
           <button
             type="button"
             onClick={() => dialog.current?.close()}
-            className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper md:h-9"
+            className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper desk:h-9"
           >
             {t("common.cancel")}
           </button>
-          <button type="submit" className="h-11 rounded-full bg-ink px-5 text-base font-semibold text-white hover:bg-ink/85 md:h-9">
+          <button type="submit" className="h-11 rounded-full bg-ink px-5 text-base font-semibold text-white hover:bg-ink/85 desk:h-9">
             {t("common.save")}
           </button>
         </div>
@@ -176,7 +176,7 @@ function NotFitDialog({ dialog, leadId }: { dialog: React.RefObject<HTMLDialogEl
             name="note"
             rows={3}
             maxLength={1000}
-            className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
+            className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40"
           />
         </label>
       </Dialog>

@@ -13,7 +13,7 @@ export function SearchBox({ placeholder, label, value, autoFocus }: { placeholde
         autoFocus={autoFocus}
         placeholder={placeholder}
         autoComplete="off"
-        className="h-14 w-full rounded-lg border border-line bg-white pl-13 pr-5 text-base text-ink shadow-card outline-none placeholder:text-faint focus:border-input md:h-13"
+        className="h-14 w-full rounded-lg border border-input bg-white pl-13 pr-5 text-base text-ink shadow-card placeholder:text-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40 desk:h-13"
       />
     </form>
   );

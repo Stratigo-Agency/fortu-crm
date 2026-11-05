@@ -10,7 +10,7 @@ import { formatPhone } from "@/lib/ingest/phone";
 import { PanelFrameDirty } from "../deal/PanelFrameDirty";
 import { saveCompanyAction } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper md:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 
 type Form = { name: string; industry: string; city: string; website: string };
@@ -168,7 +168,7 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
                 {status}
               </p>
             )}
-            <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 md:h-9 disabled:opacity-60">
+            <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 desk:h-9 disabled:opacity-60">
               {t("common.save")}
             </button>
           </div>

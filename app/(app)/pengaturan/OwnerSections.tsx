@@ -70,7 +70,7 @@ export async function OwnerSections() {
         <div className="flex flex-col gap-4">
           {stages.map((s) => (
             <Field key={s.id} id={`df-${s.id}`} label={s.name}>
-              <textarea id={`df-${s.id}`} name={`def:${s.id}`} rows={2} maxLength={400} defaultValue={s.definition} className="w-full rounded-sm border border-input bg-white px-3 py-2 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10" />
+              <textarea id={`df-${s.id}`} name={`def:${s.id}`} rows={2} maxLength={400} defaultValue={s.definition} className="w-full rounded-sm border border-input bg-white px-3 py-2 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40" />
             </Field>
           ))}
         </div>
@@ -171,8 +171,8 @@ export async function OwnerSections() {
         <h2 id="data-h" className="text-base font-semibold text-ink">{t("pengaturan.data")}</h2>
         <p className="mt-1 text-sm text-slate">{t("pengaturan.exportHint")}</p>
         <div className="mt-4 flex flex-wrap gap-3">
-          <a href="/pengaturan/ekspor/deals" download className="flex h-11 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9">{t("pengaturan.exportDeals")}</a>
-          <a href="/pengaturan/ekspor/kontak" download className="flex h-11 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9">{t("pengaturan.exportContacts")}</a>
+          <a href="/pengaturan/ekspor/deals" download className="flex h-11 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper desk:h-9">{t("pengaturan.exportDeals")}</a>
+          <a href="/pengaturan/ekspor/kontak" download className="flex h-11 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper desk:h-9">{t("pengaturan.exportContacts")}</a>
         </div>
       </section>
     </>

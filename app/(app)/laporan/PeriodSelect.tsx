@@ -20,7 +20,7 @@ export function PeriodSelect({ value, label, options }: { value: ReportPeriod; l
         if (!REPORT_PERIODS.includes(next)) return;
         start(() => router.replace(next === "month" ? "/laporan" : `/laporan?periode=${periodParam(next)}`));
       }}
-      className="h-11 rounded-full border border-line bg-white px-3.5 text-base font-medium text-ink md:h-9"
+      className="h-11 rounded-full border border-input bg-white px-3.5 text-base font-medium text-ink desk:h-9"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>{o.label}</option>

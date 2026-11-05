@@ -79,7 +79,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/pipeline">[
                 defaultValue={q}
                 placeholder={t("pipeline.searchPlaceholder")}
                 aria-label={t("pipeline.searchPlaceholder")}
-                className="h-11 w-full rounded-sm border border-line bg-paper pl-9 pr-3 text-base text-ink placeholder:text-faint focus:border-input focus:bg-white md:h-9"
+                className="h-11 w-full rounded-sm border border-input bg-white pl-9 pr-3 text-base text-ink placeholder:text-faint focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40 desk:h-9"
               />
             </div>
           </form>
@@ -116,7 +116,7 @@ function ViewLink({ view, current, q, lost }: { view: PipelineView; current: Pip
     <Link
       href={pipelineHref({ view, q, lost })}
       aria-current={active ? "page" : undefined}
-      className={`flex h-10 items-center rounded-full px-3.5 text-base md:h-8 ${active ? "bg-white font-semibold text-ink shadow-card" : "text-slate hover:text-ink"}`}
+      className={`flex h-11 items-center rounded-full px-3.5 text-base desk:h-8 ${active ? "bg-white font-semibold text-ink shadow-card" : "text-slate hover:text-ink"}`}
     >
       {t(VIEW_LABEL[view])}
     </Link>

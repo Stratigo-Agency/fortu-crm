@@ -82,7 +82,7 @@ export function PanelFrame({ variant, closeHref, label, children }: Props) {
                 type="button"
                 autoFocus
                 onClick={() => setAsking(false)}
-                className="h-11 rounded-full bg-ink px-5 text-base font-semibold text-white hover:bg-ink/85 md:h-9"
+                className="h-11 rounded-full bg-ink px-5 text-base font-semibold text-white hover:bg-ink/85 desk:h-9"
               >
                 {t("common.keepEditing")}
               </button>
@@ -92,7 +92,7 @@ export function PanelFrame({ variant, closeHref, label, children }: Props) {
                   dirty.current = false;
                   closeNow();
                 }}
-                className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper md:h-9"
+                className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper desk:h-9"
               >
                 {t("common.discard")}
               </button>
@@ -129,7 +129,7 @@ function CloseButton({ onClick }: { onClick: () => void }) {
       type="button"
       onClick={onClick}
       aria-label={t("common.close")}
-      className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-slate hover:bg-paper hover:text-ink md:h-9 md:w-9"
+      className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full text-slate hover:bg-paper hover:text-ink desk:h-9 desk:w-9"
     >
       <X size={18} strokeWidth={1.8} aria-hidden="true" />
     </button>

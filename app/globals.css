@@ -8,7 +8,7 @@
   --color-ink: #0a0a0b; /* text */
   --color-navy: #18181b; /* primary buttons, Done deal: near-black */
   --color-slate: #6b6b73; /* secondary text, 4.9:1 on white */
-  --color-faint: #9b9ba3; /* tertiary text, hints */
+  --color-faint: #707078; /* tertiary text, hints: 4.5:1 on paper */
   --color-mist: #ececef; /* avatars, tracks */
   --color-paper: #f6f6f7; /* sidebar, tiles, hover */
   --color-white: #ffffff; /* page and cards */
@@ -36,6 +36,9 @@
   --shadow-card: 0 0 0 1px rgb(10 10 11 / 0.06), 0 1px 2px rgb(10 10 11 / 0.04), 0 6px 20px -8px rgb(10 10 11 / 0.06);
   --shadow-pop: 0 0 0 1px rgb(10 10 11 / 0.06), 0 12px 40px -12px rgb(10 10 11 / 0.18);
 }
+
+/* Dense controls only for a desktop with a mouse; tablets and touch laptops keep 44px targets. */
+@custom-variant desk (@media (min-width: 768px) and (pointer: fine));
 
 @utility tabular {
   font-variant-numeric: tabular-nums;

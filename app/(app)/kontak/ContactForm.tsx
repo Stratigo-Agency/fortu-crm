@@ -11,7 +11,7 @@ import { rupiahShort, relTime } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { logActivityAction, saveContactAction } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper md:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 const bad = "border-2 border-navy";
 
@@ -242,7 +242,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
             <div className="mb-4 flex items-center justify-between gap-3">
               <h2 className="font-semibold text-ink">{t("kontak.deals")}</h2>
               {!readOnly && (
-                <Link href={`/deal/new?contact=${contact.id}`} className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9">
+                <Link href={`/deal/new?contact=${contact.id}`} className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper desk:h-9">
                   <span aria-hidden="true">+</span> {t("pipeline.newDeal")}
                 </Link>
               )}
@@ -278,7 +278,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                 {status}
               </p>
             )}
-            <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 md:h-9 disabled:opacity-60">
+            <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 desk:h-9 disabled:opacity-60">
               {t("common.save")}
             </button>
           </div>

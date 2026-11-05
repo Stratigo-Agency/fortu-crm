@@ -14,7 +14,7 @@ export function SalesFilter({ options, selected, allLabel, label }: Props) {
           name="sales"
           defaultValue={selected ?? "all"}
           onChange={(e) => e.currentTarget.form?.requestSubmit()}
-          className="h-11 w-full rounded-sm border border-line bg-white px-2.5 text-base text-ink md:h-9"
+          className="h-11 w-full rounded-sm border border-input bg-white px-2.5 text-base text-ink desk:h-9"
         >
           <option value="all">{allLabel}</option>
           {options.map((o) => (

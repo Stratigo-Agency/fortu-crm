@@ -8,7 +8,7 @@ import type { CodeInfo, PhoneStatus } from "@/lib/quickAdd";
 import { QUICK_ADD_SOURCES, type QuickAddSource } from "@/lib/quickAddSources";
 import { createLead, lookupCode, lookupPhone, type QuickAddState } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 
 type Interest = "IFP" | "DSS" | "LED" | "unknown";
@@ -223,7 +223,7 @@ function Fields({
           rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
+          className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40"
         />
       </div>
 

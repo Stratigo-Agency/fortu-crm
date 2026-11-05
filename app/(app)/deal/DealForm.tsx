@@ -59,7 +59,7 @@ type Props = {
   parentOptions: { id: string; name: string }[];
 };
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper md:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 const bad = "border-2 border-navy";
 
@@ -381,7 +381,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                       href={`https://wa.me/${waNumber(form.phone)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex h-12 shrink-0 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-10"
+                      className="flex h-12 shrink-0 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper desk:h-10"
                     >
                       {t("deal.chat")}
                     </a>
@@ -449,7 +449,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
               <button
                 type="button"
                 onClick={addLine}
-                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9"
+                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper desk:h-9"
               >
                 <span aria-hidden="true">+</span> {t("deal.addProduct")}
               </button>
@@ -627,7 +627,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   rows={3}
                   value={form.lostNote}
                   onChange={(e) => set("lostNote", e.target.value)}
-                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40"
                 />
               </Field>
             </Section>
@@ -642,7 +642,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   rows={3}
                   value={form.note}
                   onChange={(e) => set("note", e.target.value)}
-                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40"
                 />
               </Field>
             </Section>
@@ -670,14 +670,14 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
             <button
               type="button"
               onClick={frame.close}
-              className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper md:h-9"
+              className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper desk:h-9"
             >
               {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 md:h-9 disabled:opacity-60"
+              className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 desk:h-9 disabled:opacity-60"
             >
               {t("common.save")}
             </button>

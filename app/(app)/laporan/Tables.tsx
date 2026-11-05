@@ -38,7 +38,7 @@ export function RepTable({ reps, canPick }: { reps: RepRow[]; canPick: boolean }
                     {canPick ? (
                       <form action={setSalesFilter}>
                         <input type="hidden" name="sales" value={r.userId} />
-                        <button type="submit" className="min-h-11 text-left font-semibold text-ink hover:underline md:min-h-0">{r.name}</button>
+                        <button type="submit" className="min-h-11 text-left font-semibold text-ink hover:underline desk:min-h-0">{r.name}</button>
                       </form>
                     ) : (
                       r.name

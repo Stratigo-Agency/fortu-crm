@@ -36,7 +36,7 @@ export function DealHeader({ kind, name, stageKey, amount, weightedAmount, daysI
               disabled={disabled || !onStage}
               aria-pressed={active}
               onClick={() => onStage?.(key)}
-              className={`flex h-11 items-center gap-1.5 rounded-full border px-3 text-base md:h-8 ${
+              className={`flex h-11 items-center gap-1.5 rounded-full border px-3 text-base desk:h-8 ${
                 active
                   ? "border-ink bg-ink font-semibold text-white"
                   : passed
