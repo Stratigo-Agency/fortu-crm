@@ -66,7 +66,7 @@ describe("seeds", () => {
   it("loads 32 products and can run twice", async () => {
     for (let i = 0; i < 2; i++) {
       await runSeeds({ url, log: () => {} });
-      const [{ count }] = await sql`select count(*)::int as count from products`;
+      const [{ count }] = await sql`select count(*)::int as count from products where name not like 'Produk uji %'`; // other tests add their own
       expect(count).toBe(32);
     }
   });

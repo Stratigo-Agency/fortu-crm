@@ -91,12 +91,8 @@ export function Board({ columns, cards, compact }: Props) {
     setMoves((m) => ({ ...m, [card.id]: from }));
     if ("rule" in r) {
       say(t(`stageRule.${r.rule}`));
-      // The deal panel (T08) opens from these params with the target stage chosen and the missing field marked.
-      const params = new URLSearchParams(window.location.search);
-      params.set("deal", card.id);
-      params.set("stage", to);
-      params.set("missing", r.rule);
-      router.replace(`/pipeline?${params}`, { scroll: false });
+      // The deal panel opens with the target stage chosen and the missing field marked.
+      router.push(`/deal/${card.id}?stage=${to}&missing=${r.rule}`);
     } else {
       say(r.error);
     }
@@ -237,6 +233,7 @@ function BoardColumn({ column, cards, serverShown, compact, onMove }: ColumnProp
 }
 
 function Card({ card, compact, onMove }: { card: DealCard; compact: boolean; onMove: ColumnProps["onMove"] }) {
+  const router = useRouter();
   // A card the user may not edit can't be picked up at all.
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: card.id,
@@ -255,7 +252,11 @@ function Card({ card, compact, onMove }: { card: DealCard; compact: boolean; onM
         {...listeners}
         {...attributes}
         data-drag-handle
-        className={`rounded-sm outline-offset-4 outline-navy ${card.can_edit ? "cursor-grab" : "cursor-default"}`}
+        onClick={(e) => {
+          // a click (not a drag) opens the deal; links inside do it themselves
+          if (!(e.target as HTMLElement).closest("a")) router.push(`/deal/${card.id}`);
+        }}
+        className={`rounded-sm outline-offset-4 outline-navy ${card.can_edit ? "cursor-grab" : "cursor-pointer"}`}
       >
         {compact ? <DealCardCompact card={card} /> : <DealCardBody card={card} />}
       </div>

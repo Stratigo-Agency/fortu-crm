@@ -53,11 +53,14 @@ async function TopBar() {
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <HideOnPhone path="/tambah">
-        <Suspense fallback={<div className="h-16 bg-navy" />}>
-          <TopBar />
-        </Suspense>
-      </HideOnPhone>
+      {/* usePathname() in HideOnPhone needs a Suspense boundary on dynamic routes like /deal/[id] */}
+      <Suspense fallback={<div className="h-16 bg-navy" />}>
+        <HideOnPhone path="/tambah">
+          <Suspense fallback={<div className="h-16 bg-navy" />}>
+            <TopBar />
+          </Suspense>
+        </HideOnPhone>
+      </Suspense>
       <div className="flex-1">{children}</div>
     </>
   );

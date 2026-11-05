@@ -55,11 +55,11 @@ describe("listProspects", () => {
     const l1 = await createLead(mine.id, { receivedAt: hoursAgo(3) });
     const l2 = await createLead(theirs.id, { receivedAt: hoursAgo(1) });
     const l3 = await createLead(null);
-    const rows = (await list(mine.id)).rows;
+    const rows = (await list(mine.id, { limit: 500 })).rows; // other tests add leads too
     const by = (id: string) => rows.find((r) => r.id === id)!;
     expect([by(l1.id).can_edit, by(l2.id).can_edit, by(l3.id).can_edit]).toEqual([true, false, true]);
     expect([by(l1.id).is_late, by(l2.id).is_late]).toEqual([true, false]);
-    const asMarketing = (await list(marketing.id)).rows;
+    const asMarketing = (await list(marketing.id, { limit: 500 })).rows;
     expect(asMarketing.find((r) => r.id === l3.id)!.can_edit).toBe(false);
   });
 

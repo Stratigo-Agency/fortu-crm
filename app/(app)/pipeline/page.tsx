@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
@@ -24,6 +25,8 @@ export default function Page(props: PageProps<"/pipeline">) {
 async function Content({ searchParams }: { searchParams: PageProps<"/pipeline">["searchParams"] }) {
   const user = await requireUser();
   const params = await searchParams;
+  // Prospek's "Jadikan deal" used /pipeline?fromLead=<id>: it opens the deal form for that prospect
+  if (typeof params.fromLead === "string") redirect(`/deal/new?fromLead=${encodeURIComponent(params.fromLead)}`);
   const view = parseView(params.view);
   const q = (typeof params.q === "string" ? params.q : "").trim().slice(0, 100);
   const showLost = params.lost === "1";
@@ -92,7 +95,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/pipeline">[
           hrefOff={pipelineHref({ view, q, lost: false })}
         />
         <Link
-          href="/pipeline?deal=new"
+          href="/deal/new"
           className="flex h-11 items-center gap-2 rounded-sm bg-navy px-5 text-base font-bold text-white md:ml-auto"
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">

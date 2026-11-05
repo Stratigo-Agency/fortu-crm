@@ -1,6 +1,7 @@
 import { AuthError } from "next-auth";
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { Suspense } from "react";
 import { auth, signIn } from "@/auth";
 import { t } from "@/lib/copy";
@@ -31,6 +32,7 @@ const inputClass =
   "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink";
 
 async function SignInForm({ searchParams }: { searchParams: PageProps<"/masuk">["searchParams"] }) {
+  await connection(); // the form reads the session and the URL: render it per request, never at build
   const { error, next } = await searchParams;
   const nextPath = safeNext(typeof next === "string" ? next : undefined);
   if (await auth()) redirect(nextPath);

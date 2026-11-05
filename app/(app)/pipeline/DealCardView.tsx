@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { t } from "@/lib/copy";
 import { dayMonth, relDate, rupiahShort } from "@/lib/format";
 import type { DealCard, StageKey } from "@/lib/pipelineTypes";
@@ -42,7 +43,11 @@ export function DealCardBody({ card }: { card: DealCard }) {
   const late = card.next_step_overdue;
   return (
     <>
-      <p className="font-bold leading-snug text-ink">{card.name}</p>
+      <p className="font-bold leading-snug text-ink">
+        <Link href={`/deal/${card.id}`} className="hover:underline">
+          {card.name}
+        </Link>
+      </p>
       {card.company_name && <p className="mt-0.5 text-slate">{card.company_name}</p>}
       <div className="mt-2 flex items-baseline justify-between gap-2">
         <span className="tabular text-lg font-bold text-ink">{rupiahShort(card.amount)}</span>
@@ -78,7 +83,11 @@ export function DealCardCompact({ card }: { card: DealCard }) {
   return (
     <>
       <div className="flex items-baseline justify-between gap-2">
-        <p className="min-w-0 truncate font-bold text-ink">{card.name}</p>
+        <p className="min-w-0 truncate font-bold text-ink">
+          <Link href={`/deal/${card.id}`} className="hover:underline">
+            {card.name}
+          </Link>
+        </p>
         <span className="tabular shrink-0 font-bold text-ink">{rupiahShort(card.amount)}</span>
       </div>
       <div className="mt-0.5 flex items-center gap-2 text-sm text-slate">

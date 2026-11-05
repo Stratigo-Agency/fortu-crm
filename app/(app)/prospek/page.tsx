@@ -189,7 +189,7 @@ function Row({
         {row.can_edit ? (
           <>
             <Link
-              href={`/pipeline?fromLead=${row.id}`}
+              href={`/deal/new?fromLead=${row.id}`}
               className="flex h-11 items-center rounded-sm bg-navy px-4 font-bold text-white md:h-10"
             >
               {t("prospek.toDeal")}
