@@ -35,10 +35,10 @@ function reasonText(a: AttentionRow): string {
 
 function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
-    <div className="rounded-md bg-paper px-4 py-3.5">
-      <p className="text-sm text-slate">{label}</p>
-      <p className="tabular mt-1 text-2xl font-semibold text-ink">{value}</p>
-      <p className="mt-0.5 text-sm text-faint">{sub}</p>
+    <div className="min-w-0 rounded-md bg-paper px-3 py-3 sm:px-4 sm:py-3.5">
+      <p className="text-sm leading-snug text-slate">{label}</p>
+      <p className="tabular mt-1 truncate text-lg font-semibold text-ink sm:text-2xl">{value}</p>
+      <p className="mt-0.5 text-sm leading-snug text-faint">{sub}</p>
     </div>
   );
 }
@@ -79,7 +79,7 @@ async function Content() {
         ))}
       </ul>
 
-      <div className="mt-12 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mt-10 grid grid-cols-3 gap-2 sm:mt-12 sm:gap-3">
         <Stat
           label={t("beranda.done")}
           value={rupiahShort(home.wonThisMonth)}

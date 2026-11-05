@@ -1,10 +1,12 @@
 /** The thin bar at the top of every screen (Attio): a small title, a quiet note, actions on the right. */
 export function PageHeader({ title, meta, actions }: { title: string; meta?: string; actions?: React.ReactNode }) {
   return (
-    <header className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-2 border-b border-line px-4 py-2.5 md:px-6">
-      <h1 className="text-lg font-semibold text-ink">{title}</h1>
-      {meta && <p className="text-sm text-faint">{meta}</p>}
-      {actions && <div className="ml-auto flex items-center gap-2">{actions}</div>}
+    <header className="flex min-h-14 items-center gap-3 border-b border-line px-4 py-2.5 md:px-6">
+      <div className="flex min-w-0 flex-1 flex-col md:flex-row md:items-baseline md:gap-3">
+        <h1 className="truncate text-lg font-semibold text-ink">{title}</h1>
+        {meta && <p className="truncate text-sm text-faint">{meta}</p>}
+      </div>
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </header>
   );
 }
