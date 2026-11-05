@@ -16,7 +16,7 @@ export function Kpis({ k }: { k: ReportKpis }) {
   const pct = k.attainmentPct;
   return (
     <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-      <Card label={t("laporan.kpiDone")} value={rupiahShort(k.wonThisMonth)}>
+      <Card label={t("laporan.kpiDone")} value={rupiahShort(k.wonInPeriod)}>
         {k.targetAmount ? (
           <>
             <div className="mt-3 h-2 rounded-full bg-mist" role="img" aria-label={t("laporan.kpiDoneTarget", { pct: `${pct ?? 0}%`, target: rupiahShort(k.targetAmount) })}>
@@ -37,7 +37,7 @@ export function Kpis({ k }: { k: ReportKpis }) {
               : t("laporan.kpiNoTarget")}
         </p>
       </Card>
-      <Card label={t("laporan.kpiForecast")} value={rupiahShort(k.forecastEndOfMonth)}>
+      <Card label={t("laporan.kpiForecast")} value={rupiahShort(k.forecastEndOfPeriod)}>
         <p className="mt-3 text-sm text-slate">{t("laporan.kpiForecastHint")}</p>
       </Card>
       <Card label={t("laporan.kpiPipeline")} value={rupiahShort(k.weightedOpen)}>

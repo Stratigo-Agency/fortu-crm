@@ -43,14 +43,14 @@ describe("Laporan numbers match the database", () => {
     const weightedNegotiation = Math.round(40_000_000 * Number(probs.negotiation));
 
     const { kpis } = await getReport(rep.id);
-    expect(num(kpis.wonThisMonth)).toBe(80_000_000);
+    expect(num(kpis.wonInPeriod)).toBe(80_000_000);
     expect(kpis.unitsWon).toBe(3);
     expect(num(kpis.targetAmount)).toBe(200_000_000);
     expect(kpis.attainmentPct).toBe(40);
     expect(kpis.openDeals).toBe(3); // chat + quotation + negotiation
     expect(num(kpis.openAmount)).toBe(50_000_000 + 40_000_000 + 0);
     expect(num(kpis.weightedOpen)).toBe(weightedQuotation + weightedNegotiation);
-    expect(num(kpis.forecastEndOfMonth)).toBe(80_000_000 + weightedQuotation); // the later deal is not this month's
+    expect(num(kpis.forecastEndOfPeriod)).toBe(80_000_000 + weightedQuotation); // the later deal is not this month's
     expect(kpis.won90).toBe(2);
     expect(kpis.lost90).toBe(1);
     expect(kpis.winRatePct).toBe(67);
@@ -122,13 +122,13 @@ describe("Laporan numbers match the database", () => {
     const [{ s }] = await sql<{ s: string }[]>`
       SELECT COALESCE(sum(d.amount), 0)::text AS s FROM deals d JOIN pipeline_stages st ON st.id = d.stage_id
        WHERE st.is_won AND d.closed_on >= date_trunc('month', jakarta_today()::timestamp)::date`;
-    expect(total.wonThisMonth).toBe(s);
+    expect(total.wonInPeriod).toBe(s);
   });
 
   it("with no deals everything is zero, nothing is invented", async () => {
     const rep = await createUser();
     const r = await getReport(rep.id);
-    expect(r.kpis).toMatchObject({ wonThisMonth: "0", unitsWon: 0, openDeals: 0, winRatePct: null, attainmentPct: null, targetAmount: null });
+    expect(r.kpis).toMatchObject({ wonInPeriod: "0", unitsWon: 0, openDeals: 0, winRatePct: null, attainmentPct: null, targetAmount: null });
     expect(r.attention).toEqual({ rows: [], total: 0 });
     expect(r.months.every((m) => num(m.amount) === 0)).toBe(true);
   });
