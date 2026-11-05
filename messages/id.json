@@ -7,9 +7,44 @@
     "laporan": "Laporan",
     "pengaturan": "Pengaturan",
     "allReps": "Semua sales",
-    "salesFilter": "Tampilkan sales",
+    "salesFilter": "Lihat data",
     "signOut": "Keluar",
-    "iklan": "Iklan"
+    "iklan": "Iklan",
+    "beranda": "Beranda",
+    "search": "Cari",
+    "add": "Tambah prospek",
+    "menu": "Menu",
+    "main": "Navigasi",
+    "shortcut": "⌘K"
+  },
+  "beranda": {
+    "greeting": {
+      "morning": "Selamat pagi, {name}",
+      "noon": "Selamat siang, {name}",
+      "afternoon": "Selamat sore, {name}",
+      "evening": "Selamat malam, {name}"
+    },
+    "searchPlaceholder": "Cari deal, kontak, atau perusahaan",
+    "addLead": "Tambah prospek",
+    "newLeads": "Prospek baru",
+    "attention": "Perlu perhatian",
+    "seeAll": "Lihat semua",
+    "allClear": "Semua deal aman.",
+    "done": "Done bulan ini",
+    "ofTarget": "{pct} dari target",
+    "noTarget": "Belum ada target",
+    "estimate": "Perkiraan pipeline",
+    "openDeals": "{n} deal berjalan",
+    "late": "Next step terlambat",
+    "lateHint": "deal"
+  },
+  "cari": {
+    "title": "Cari",
+    "deals": "Deal",
+    "contacts": "Kontak",
+    "companies": "Perusahaan",
+    "none": "Tidak ada yang cocok.",
+    "tooShort": "Ketik minimal 2 huruf."
   },
   "common": {
     "appName": "CRM",

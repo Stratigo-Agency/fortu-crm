@@ -1,5 +1,3 @@
-import Image from "next/image";
-import Link from "next/link";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
@@ -7,63 +5,60 @@ import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
 import { canOpenSettings, newLeadCount } from "@/lib/shell";
 import { HideOnPhone } from "./HideOnPhone";
 import { SalesFilter } from "./SalesFilter";
-import { type NavItem, TopNav } from "./TopNav";
+import { type NavItem, Sidebar } from "./Sidebar";
 import { UserChip } from "./UserChip";
 
-async function TopBar() {
+async function Shell() {
   const user = await requireUser();
-  const [prospek, options, selected] = await Promise.all([
-    newLeadCount(user),
-    salesOptions(),
-    getSalesFilter(),
-  ]);
+  const [prospek, options, selected] = await Promise.all([newLeadCount(user), salesOptions(), getSalesFilter()]);
   const items: NavItem[] = [
-    { href: "/pipeline", label: t("nav.pipeline"), also: ["/deal"] },
-    { href: "/prospek", label: t("nav.prospek"), badge: prospek },
-    { href: "/kontak", label: t("nav.kontak") },
-    { href: "/perusahaan", label: t("nav.perusahaan") },
-    { href: "/laporan", label: t("nav.laporan") },
-    ...(canOpenSettings(user) ? [{ href: "/pengaturan", label: t("nav.pengaturan"), also: ["/pengaturan/iklan"] }] : []),
+    { href: "/beranda", label: t("nav.beranda"), icon: "home", also: ["/cari"] },
+    { href: "/pipeline", label: t("nav.pipeline"), icon: "pipeline", also: ["/deal"] },
+    { href: "/prospek", label: t("nav.prospek"), icon: "prospek", badge: prospek },
+    { href: "/kontak", label: t("nav.kontak"), icon: "kontak" },
+    { href: "/perusahaan", label: t("nav.perusahaan"), icon: "perusahaan" },
+    { href: "/laporan", label: t("nav.laporan"), icon: "laporan" },
+  ];
+  const bottomItems: NavItem[] = [
+    ...(canOpenSettings(user) ? [{ href: "/pengaturan", label: t("nav.pengaturan"), icon: "pengaturan" as const, also: ["/pengaturan/iklan"] }] : []),
     // marketing sees the ads screen only (CLAUDE.md Roles)
-    ...(user.role === "marketing" ? [{ href: "/pengaturan/iklan", label: t("nav.iklan") }] : []),
+    ...(user.role === "marketing" ? [{ href: "/pengaturan/iklan", label: t("nav.iklan"), icon: "iklan" as const }] : []),
   ];
 
   return (
-    <header className="flex flex-wrap items-center gap-x-3 gap-y-2 bg-navy px-4 py-2 md:min-h-16 md:flex-nowrap md:gap-x-6 md:px-8 md:py-0">
-      <Link href="/pipeline" className="flex h-11 shrink-0 items-center gap-2 md:gap-3">
-        <Image src="/brand/fortu-logo-white.png" alt="Fortu" width={104} height={31} priority />
-        <span className="border-l border-white/30 pl-2 text-sm tracking-widest text-mist md:pl-3">
-          {t("common.appName")}
-        </span>
-      </Link>
-      <TopNav items={items} />
-      <div className="ml-auto flex items-center gap-2 md:gap-3">
-        <SalesFilter
-          // remount when the choice changes elsewhere, so the select shows it
-          key={selected ?? "all"}
-          options={options}
-          selected={selected}
-          allLabel={t("nav.allReps")}
-          label={t("nav.salesFilter")}
-        />
-        <UserChip fullName={user.full_name} />
-      </div>
-    </header>
+    <Sidebar
+      items={items}
+      bottomItems={bottomItems}
+      labels={{ search: t("nav.search"), add: t("nav.add"), menu: t("nav.menu"), close: t("common.close"), main: t("nav.main"), shortcut: t("nav.shortcut") }}
+      footer={
+        <div className="flex flex-col gap-2">
+          <SalesFilter
+            // remount when the choice changes elsewhere, so the select shows it
+            key={selected ?? "all"}
+            options={options}
+            selected={selected}
+            allLabel={t("nav.allReps")}
+            label={t("nav.salesFilter")}
+          />
+          <UserChip fullName={user.full_name} role={t(`pengaturan.role.${user.role}`)} />
+        </div>
+      }
+    />
   );
 }
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <div className="flex min-h-dvh flex-col md:flex-row">
       {/* usePathname() in HideOnPhone needs a Suspense boundary on dynamic routes like /deal/[id] */}
-      <Suspense fallback={<div className="h-16 bg-navy" />}>
+      <Suspense fallback={<div className="h-14 border-b border-line md:h-dvh md:w-60 md:border-b-0 md:border-r md:bg-paper" />}>
         <HideOnPhone path="/tambah">
-          <Suspense fallback={<div className="h-16 bg-navy" />}>
-            <TopBar />
+          <Suspense fallback={<div className="h-14 border-b border-line md:h-dvh md:w-60 md:border-b-0 md:border-r md:bg-paper" />}>
+            <Shell />
           </Suspense>
         </HideOnPhone>
       </Suspense>
-      <div className="flex-1">{children}</div>
-    </>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
   );
 }
