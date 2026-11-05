@@ -1,4 +1,5 @@
 import { t } from "@/lib/copy";
+import { Select } from "../ui/Select";
 import { getCatalog, getRules, getStages, getTeam, PRODUCT_LINES, TEAM_ROLES } from "@/lib/settings";
 import {
   addMemberAction, saveCatalogAction, saveDefinitionsAction, saveProbabilitiesAction, saveRulesAction, saveTeamAction,
@@ -8,8 +9,8 @@ import { SectionForm } from "./SectionForm";
 
 const digits = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
 const fmt = (v: string | number | null) => (v === null || v === "" ? "" : digits.format(Number(v)));
-const th = "px-3 py-2 text-left text-sm font-semibold text-slate";
-const checkbox = "h-5 w-5 accent-ink";
+const th = "px-3 py-2 text-left text-sm font-medium text-faint";
+const checkbox = "check";
 
 function Field({ id, label, hint, children }: { id: string; label: string; hint?: string; children: React.ReactNode }) {
   return (
@@ -29,7 +30,7 @@ export async function OwnerSections() {
   return (
     <>
       <SectionForm id="aturan" title={t("pengaturan.rules")} action={saveRulesAction}>
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <Field id="md" label={t("pengaturan.maxDiscount")} hint={t("pengaturan.maxDiscountHint")}>
             <input id="md" name="maxDiscountPct" inputMode="decimal" defaultValue={String(rules.maxDiscountPct).replace(".", ",")} className={`${inputCls} tabular`} />
           </Field>
@@ -47,7 +48,7 @@ export async function OwnerSections() {
           </Field>
         </div>
         <h3 className="mb-2 mt-6 font-semibold text-ink">{t("pengaturan.staleDays")}</h3>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {open.map((s) => (
             <Field key={s.id} id={`st-${s.id}`} label={s.name}>
               <input id={`st-${s.id}`} name={`stale:${s.id}`} inputMode="numeric" defaultValue={s.staleDays} className={`${inputCls} tabular`} />
@@ -57,7 +58,7 @@ export async function OwnerSections() {
       </SectionForm>
 
       <SectionForm id="peluang" title={t("pengaturan.probabilities")} hint={t("pengaturan.probabilitiesHint")} action={saveProbabilitiesAction}>
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {open.map((s) => (
             <Field key={s.id} id={`pr-${s.id}`} label={s.name}>
               <input id={`pr-${s.id}`} name={`prob:${s.id}`} inputMode="numeric" defaultValue={s.probabilityPct} className={`${inputCls} tabular`} />
@@ -70,7 +71,7 @@ export async function OwnerSections() {
         <div className="flex flex-col gap-4">
           {stages.map((s) => (
             <Field key={s.id} id={`df-${s.id}`} label={s.name}>
-              <textarea id={`df-${s.id}`} name={`def:${s.id}`} rows={2} maxLength={400} defaultValue={s.definition} className="w-full rounded-sm border border-input bg-white px-3 py-2 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40" />
+              <textarea id={`df-${s.id}`} name={`def:${s.id}`} rows={2} maxLength={400} defaultValue={s.definition} className="w-full rounded-sm border border-input bg-white px-3 py-2 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15" />
             </Field>
           ))}
         </div>
@@ -98,11 +99,13 @@ export async function OwnerSections() {
                     <p className="text-sm text-slate">{m.email}</p>
                   </td>
                   <td className="px-3 py-2">
-                    <select name={`role:${m.id}`} defaultValue={m.role} aria-label={`${t("pengaturan.colRole")} ${m.fullName}`} className={inputCls}>
-                      {TEAM_ROLES.map((r) => (
-                        <option key={r} value={r}>{t(`pengaturan.role.${r}`)}</option>
-                      ))}
-                    </select>
+                    <Select
+                      name={`role:${m.id}`}
+                      defaultValue={m.role}
+                      label={`${t("pengaturan.colRole")} ${m.fullName}`}
+                      options={TEAM_ROLES.map((r) => ({ value: r, label: t(`pengaturan.role.${r}`) }))}
+                      className="min-w-36"
+                    />
                   </td>
                   <td className="px-3 py-3"><input type="checkbox" name={`active:${m.id}`} defaultChecked={m.isActive} aria-label={`${t("pengaturan.active")} ${m.fullName}`} className={checkbox} /></td>
                   <td className="px-3 py-3"><input type="checkbox" name={`accepting:${m.id}`} defaultChecked={m.acceptingLeads} aria-label={`${t("pengaturan.colAccepting")} ${m.fullName}`} className={checkbox} /></td>
@@ -116,8 +119,8 @@ export async function OwnerSections() {
                       ))}
                     </div>
                   </td>
-                  <td className="px-3 py-2"><input name={`wa:${m.id}`} defaultValue={m.waPhone} inputMode="tel" aria-label={`${t("pengaturan.colWa")} ${m.fullName}`} className={`${inputCls} tabular`} /></td>
-                  <td className="px-3 py-2"><input name={`walabel:${m.id}`} defaultValue={m.waLabel} aria-label={`${t("pengaturan.colWaLabel")} ${m.fullName}`} className={inputCls} /></td>
+                  <td className="px-3 py-2"><input name={`wa:${m.id}`} defaultValue={m.waPhone} inputMode="tel" aria-label={`${t("pengaturan.colWa")} ${m.fullName}`} className={`${inputCls} tabular min-w-44`} /></td>
+                  <td className="px-3 py-2"><input name={`walabel:${m.id}`} defaultValue={m.waLabel} aria-label={`${t("pengaturan.colWaLabel")} ${m.fullName}`} className={`${inputCls} min-w-40`} /></td>
                 </tr>
               ))}
             </tbody>
@@ -130,11 +133,12 @@ export async function OwnerSections() {
           <Field id="am-name" label={t("pengaturan.colName")}><input id="am-name" name="name" className={inputCls} /></Field>
           <Field id="am-email" label={t("pengaturan.colEmail")}><input id="am-email" name="email" type="email" autoComplete="off" className={inputCls} /></Field>
           <Field id="am-role" label={t("pengaturan.colRole")}>
-            <select id="am-role" name="role" defaultValue="sales_rep" className={inputCls}>
-              {TEAM_ROLES.map((r) => (
-                <option key={r} value={r}>{t(`pengaturan.role.${r}`)}</option>
-              ))}
-            </select>
+            <Select
+              id="am-role"
+              name="role"
+              defaultValue="sales_rep"
+              options={TEAM_ROLES.map((r) => ({ value: r, label: t(`pengaturan.role.${r}`) }))}
+            />
           </Field>
         </div>
       </SectionForm>
@@ -167,7 +171,7 @@ export async function OwnerSections() {
         </div>
       </SectionForm>
 
-      <section aria-labelledby="data-h" className="rounded-lg bg-white p-5 shadow-card">
+      <section id="data" aria-labelledby="data-h" className="scroll-mt-16 rounded-lg bg-white p-5 shadow-card">
         <h2 id="data-h" className="text-base font-semibold text-ink">{t("pengaturan.data")}</h2>
         <p className="mt-1 text-sm text-slate">{t("pengaturan.exportHint")}</p>
         <div className="mt-4 flex flex-wrap gap-3">

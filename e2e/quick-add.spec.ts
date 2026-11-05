@@ -1,6 +1,7 @@
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 import { AD, REP } from "./global-setup";
+import { pick } from "./select";
 
 const PHONE = "0813 2210 4471";
 const E164 = "+6281322104471";
@@ -92,7 +93,7 @@ test.describe.serial("Tambah cepat on a phone", () => {
   test("without a code a source can be picked, and a time today can be chosen", async ({ page }) => {
     await page.getByLabel("Nomor WhatsApp").fill("0812 5550 0001");
     await page.getByLabel("Pesan pertama").fill("Tanya harga LED");
-    await page.getByLabel("Sumber chat").selectOption("referral");
+    await pick(page.getByRole("combobox", { name: "Sumber chat" }), "Referral");
     await page.getByRole("radio", { name: "LED" }).check({ force: true });
     await page.getByRole("radio", { name: "Pilih jam" }).check({ force: true });
     await page.getByLabel("Pilih jam", { exact: true }).last().fill("00:00");

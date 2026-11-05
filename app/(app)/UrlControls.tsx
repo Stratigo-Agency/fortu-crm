@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "./ui/Select";
 import { useRouter } from "next/navigation";
 
 /** A select that puts its choice in the URL (e.g. the sort order), so it survives a reload. */
@@ -14,17 +15,12 @@ export function UrlSelect({
 }) {
   const router = useRouter();
   return (
-    <select
-      aria-label={label}
+    <Select
+      variant="pill"
+      label={label}
       value={value}
-      onChange={(e) => router.push(options.find((o) => o.value === e.target.value)?.href ?? "")}
-      className="h-11 rounded-full border border-input bg-white px-3.5 text-base text-ink hover:bg-paper desk:h-9"
-    >
-      {options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))}
-    </select>
+      options={options}
+      onChange={(v) => router.push(options.find((o) => o.value === v)?.href ?? "")}
+    />
   );
 }

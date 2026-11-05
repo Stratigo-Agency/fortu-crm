@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "../ui/Select";
 import { useActionState, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { t } from "@/lib/copy";
 import { parseCodes } from "@/lib/ingest/codes";
@@ -8,7 +9,7 @@ import type { CodeInfo, PhoneStatus } from "@/lib/quickAdd";
 import { QUICK_ADD_SOURCES, type QuickAddSource } from "@/lib/quickAddSources";
 import { createLead, lookupCode, lookupPhone, type QuickAddState } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 
 type Interest = "IFP" | "DSS" | "LED" | "unknown";
@@ -25,7 +26,7 @@ function Chip(props: {
   children: React.ReactNode;
 }) {
   return (
-    <label className="flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-white px-3.5 text-base text-ink has-checked:border-navy has-checked:bg-ink has-checked:font-semibold has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ink">
+    <label className="flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-white px-3.5 text-base text-ink has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold has-checked:text-accent-strong has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent">
       <input
         type="radio"
         name={props.name}
@@ -223,7 +224,7 @@ function Fields({
           rows={3}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40"
+          className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15"
         />
       </div>
 
@@ -239,19 +240,13 @@ function Fields({
           <label htmlFor="source" className={label}>
             {t("quickAdd.source")}
           </label>
-          <select
+          <Select
             id="source"
             name="source"
             value={source}
-            onChange={(e) => setSource(e.target.value as QuickAddSource)}
-            className={field}
-          >
-            {QUICK_ADD_SOURCES.map((value) => (
-              <option key={value} value={value}>
-                {t(`sourceChannel.${value}`)}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => setSource(v as QuickAddSource)}
+            options={QUICK_ADD_SOURCES.map((value) => ({ value, label: t(`sourceChannel.${value}`) }))}
+          />
         </div>
       )}
 

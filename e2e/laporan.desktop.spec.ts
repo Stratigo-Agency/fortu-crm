@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { pick, shown } from "./select";
 import { REP } from "./global-setup";
 
 test("a sales rep sees only their own row and numbers in Laporan", async ({ page }) => {
@@ -25,13 +26,13 @@ test("Laporan shows the rest of the panels, and the period select changes the ke
   await expect(page.locator("p", { hasText: /^Run rate bulanan$/ })).toBeVisible();
   await expect(page.locator("p", { hasText: /^Done deal bulan ini$/ })).toBeVisible();
 
-  await page.getByRole("combobox", { name: "Periode" }).selectOption("quarter");
+  await pick(page.getByRole("combobox", { name: "Periode" }), "Kuartal ini");
   await expect(page).toHaveURL(/periode=kuartal/);
   await expect(page.locator("p", { hasText: /^Done deal kuartal ini$/ })).toBeVisible();
   await expect(page.locator("p", { hasText: /^Perkiraan akhir kuartal$/ })).toBeVisible();
 
   await page.goto("/laporan?periode=tahun");
-  await expect(page.getByRole("combobox", { name: "Periode" })).toHaveValue("year");
+  expect(await shown(page.getByRole("combobox", { name: "Periode" }))).toBe("Tahun ini");
   await expect(page.locator("p", { hasText: /^Done deal tahun ini$/ })).toBeVisible();
   // an unknown value falls back to this month
   await page.goto("/laporan?periode=xx");

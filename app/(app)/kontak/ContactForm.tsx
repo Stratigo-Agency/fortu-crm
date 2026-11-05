@@ -5,13 +5,14 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ACTIVITY_TYPES, type ActivityType, type ContactDetail } from "@/lib/contactTypes";
 import { t } from "@/lib/copy";
+import { Suggest } from "../ui/Suggest";
 import { lookupCompanies } from "../deal/actions";
 import { PanelFrameDirty } from "../deal/PanelFrameDirty";
 import { rupiahShort, relTime } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { logActivityAction, saveContactAction } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 const bad = "border-2 border-navy";
 
@@ -131,12 +132,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
             </div>
             <div>
               <label htmlFor="c-company" className={label}>{t("kontak.colCompany")}</label>
-              <input id="c-company" list="c-company-list" autoComplete="off" value={form.companyName} onChange={(e) => set("companyName", e.target.value)} className={field} />
-              <datalist id="c-company-list">
-                {companyHits?.names.map((n) => (
-                  <option key={n} value={n} />
-                ))}
-              </datalist>
+              <Suggest id="c-company" value={form.companyName} onChange={(v) => set("companyName", v)} suggestions={companyHits?.names ?? []} className={field} />
             </div>
             <div>
               <label htmlFor="c-phone" className={label}>{t("kontak.colPhone")}</label>
@@ -187,7 +183,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                     {ACTIVITY_TYPES.map((a) => (
                       <label
                         key={a}
-                        className="flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-white px-3.5 text-base text-ink has-checked:border-navy has-checked:bg-ink has-checked:font-semibold has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-ink"
+                        className="flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-white px-3.5 text-base text-ink has-checked:border-accent has-checked:bg-accent-soft has-checked:font-semibold has-checked:text-accent-strong has-focus-visible:outline-2 has-focus-visible:outline-accent"
                       >
                         <input type="radio" name="activity-type" value={a} checked={type === a} onChange={() => setType(a)} className="sr-only" />
                         {t(`kontak.activityTypes.${a}`)}

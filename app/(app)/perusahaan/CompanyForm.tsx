@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "../ui/Select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -10,7 +11,7 @@ import { formatPhone } from "@/lib/ingest/phone";
 import { PanelFrameDirty } from "../deal/PanelFrameDirty";
 import { saveCompanyAction } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/40";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper desk:h-10 focus:border-accent focus:outline-none focus:ring-4 focus:ring-accent/15";
 const label = "mb-1.5 block text-sm font-medium text-slate";
 
 type Form = { name: string; industry: string; city: string; website: string };
@@ -84,14 +85,12 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
             </div>
             <div>
               <label htmlFor="co-industry" className={label}>{t("perusahaan.fieldIndustry")}</label>
-              <select id="co-industry" value={form.industry} onChange={(e) => set("industry", e.target.value)} className={field}>
-                <option value="" />
-                {INDUSTRIES.map((i) => (
-                  <option key={i} value={i}>
-                    {t(`industry.${i}`)}
-                  </option>
-                ))}
-              </select>
+              <Select
+                id="co-industry"
+                value={form.industry}
+                onChange={(v) => set("industry", v)}
+                options={[{ value: "", label: "—" }, ...INDUSTRIES.map((i) => ({ value: i, label: t(`industry.${i}`) }))]}
+              />
             </div>
             <div>
               <label htmlFor="co-city" className={label}>{t("perusahaan.fieldCity")}</label>

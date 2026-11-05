@@ -5,14 +5,15 @@ import { t } from "@/lib/copy";
 import { relTime, rupiahShort } from "@/lib/format";
 import { salesOptions } from "@/lib/salesFilter";
 import { inputCls } from "../formStyles";
-import { PageHeader } from "../../PageHeader";
+import { Select } from "../../ui/Select";
+import { PageHeader, PageSkeleton } from "../../PageHeader";
 import { SectionForm } from "../SectionForm";
 import { saveAdCodesAction, saveAdSetLinesAction, saveCampaignOwnersAction } from "./actions";
 
 export default function Page() {
   return (
     <main className="w-full">
-      <Suspense>
+      <Suspense fallback={<PageSkeleton />}>
         <Ads />
       </Suspense>
     </main>
@@ -41,7 +42,7 @@ async function Ads() {
         title={t("iklan.title")}
         meta={cfg.lastSync ? t("iklan.lastSync", { when: relTime(cfg.lastSync.at) }) : t("iklan.neverSynced")}
       />
-      <div className="max-w-5xl px-4 py-5 md:px-6">
+      <div className="px-4 py-5 md:px-6">
       {cfg.lastFailure && (
         <p role="alert" className="mb-4 rounded-md bg-late-bg px-4 py-3 text-late">
           {t("iklan.lastFailure", { when: relTime(cfg.lastFailure.at), message: cfg.lastFailure.message })}
@@ -63,10 +64,13 @@ async function Ads() {
                       <td className="px-3 py-2 font-medium text-ink">{c.name}</td>
                       <td className="px-3 py-2">
                         <input type="hidden" name={`orig:owner:${c.id}`} value={c.ownerId ?? ""} />
-                        <select name={`owner:${c.id}`} defaultValue={c.ownerId ?? ""} aria-label={`${t("iklan.colOwner")} ${c.name}`} className={inputCls}>
-                          <option value="">{t("iklan.noOwner")}</option>
-                          {reps.map((r) => <option key={r.id} value={r.id}>{r.full_name}</option>)}
-                        </select>
+                        <Select
+                          name={`owner:${c.id}`}
+                          defaultValue={c.ownerId ?? ""}
+                          label={`${t("iklan.colOwner")} ${c.name}`}
+                          options={[{ value: "", label: t("iklan.noOwner") }, ...reps.map((r) => ({ value: r.id, label: r.full_name }))]}
+                          className="min-w-40"
+                        />
                       </td>
                       <td className="tabular px-3 py-2 text-right">{rupiahShort(c.spend30)}</td>
                     </tr>
@@ -89,10 +93,13 @@ async function Ads() {
                       <td className="px-3 py-2 text-slate">{s.campaignName}</td>
                       <td className="px-3 py-2">
                         <input type="hidden" name={`orig:line:${s.id}`} value={s.productLine ?? ""} />
-                        <select name={`line:${s.id}`} defaultValue={s.productLine ?? ""} aria-label={`${t("iklan.colLine")} ${s.name}`} className={inputCls}>
-                          <option value="">{t("iklan.noLine")}</option>
-                          {LINES.map((l) => <option key={l} value={l}>{t(`productLine.${l}`)}</option>)}
-                        </select>
+                        <Select
+                          name={`line:${s.id}`}
+                          defaultValue={s.productLine ?? ""}
+                          label={`${t("iklan.colLine")} ${s.name}`}
+                          options={[{ value: "", label: t("iklan.noLine") }, ...LINES.map((l) => ({ value: l, label: t(`productLine.${l}`) }))]}
+                          className="min-w-36"
+                        />
                       </td>
                       <td className="tabular px-3 py-2 text-right">{rupiahShort(s.spend30)}</td>
                     </tr>
@@ -115,7 +122,7 @@ async function Ads() {
                       <td className="px-3 py-2 text-slate">{a.adSetName}</td>
                       <td className="px-3 py-2">
                         <input type="hidden" name={`orig:code:${a.id}`} value={a.code} />
-                        <input name={`code:${a.id}`} defaultValue={a.code} placeholder={t("iklan.codePlaceholder")} maxLength={12} autoCapitalize="characters" aria-label={`${t("iklan.colCode")} ${a.name}`} className={`${inputCls} font-mono uppercase`} />
+                        <input name={`code:${a.id}`} defaultValue={a.code} placeholder={t("iklan.codePlaceholder")} maxLength={12} autoCapitalize="characters" aria-label={`${t("iklan.colCode")} ${a.name}`} className={`${inputCls} min-w-36 font-mono uppercase`} />
                       </td>
                       <td className="tabular px-3 py-2 text-right">{rupiahShort(a.spend30)}</td>
                     </tr>
