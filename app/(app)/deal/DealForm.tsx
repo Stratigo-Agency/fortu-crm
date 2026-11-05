@@ -59,8 +59,8 @@ type Props = {
   parentOptions: { id: string; name: string }[];
 };
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper";
-const label = "mb-1.5 block text-base text-slate";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper md:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const label = "mb-1.5 block text-sm font-medium text-slate";
 const bad = "border-2 border-navy";
 
 let lineKey = 0;
@@ -381,7 +381,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                       href={`https://wa.me/${waNumber(form.phone)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex h-12 shrink-0 items-center rounded-sm border border-line bg-white px-4 font-bold text-navy"
+                      className="flex h-12 shrink-0 items-center rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-10"
                     >
                       {t("deal.chat")}
                     </a>
@@ -449,14 +449,14 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
               <button
                 type="button"
                 onClick={addLine}
-                className="flex h-11 items-center gap-2 rounded-sm border border-line bg-white px-4 font-bold text-ink"
+                className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9"
               >
                 <span aria-hidden="true">+</span> {t("deal.addProduct")}
               </button>
             }
           >
             {errors.lines && (
-              <p role="alert" className="font-bold text-ink">
+              <p role="alert" className="font-semibold text-ink">
                 {errors.lines}
               </p>
             )}
@@ -511,7 +511,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                           className={`${field} tabular`}
                         />
                         <div className="flex items-center justify-between gap-2 md:justify-end">
-                          <span className="tabular font-bold text-ink">{rupiah(l.qtyN * l.priceN)}</span>
+                          <span className="tabular font-semibold text-ink">{rupiah(l.qtyN * l.priceN)}</span>
                           <button
                             type="button"
                             aria-label={t("deal.removeProduct")}
@@ -532,7 +532,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                 </ul>
                 <div className="flex items-baseline justify-between gap-3 rounded-sm bg-paper px-4 py-3">
                   <span className="text-slate">
-                    {t("deal.total")} <span className="tabular text-xl font-bold text-ink">{rupiah(previewTotal)}</span>
+                    {t("deal.total")} <span className="tabular text-xl font-semibold text-ink">{rupiah(previewTotal)}</span>
                   </span>
                   <span className="text-slate">{t("common.screenUnits", { n: previewUnits })}</span>
                 </div>
@@ -627,7 +627,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   rows={3}
                   value={form.lostNote}
                   onChange={(e) => set("lostNote", e.target.value)}
-                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink"
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
                 />
               </Field>
             </Section>
@@ -642,7 +642,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   rows={3}
                   value={form.note}
                   onChange={(e) => set("note", e.target.value)}
-                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink"
+                  className="w-full rounded-sm border border-input bg-white px-3 py-3 text-base text-ink focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
                 />
               </Field>
             </Section>
@@ -656,9 +656,9 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
         )}
 
         {!readOnly && (
-          <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-line bg-white px-6 py-4">
+          <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-line bg-white/95 px-6 py-3 backdrop-blur">
             {errors.form && (
-              <p role="alert" className="mr-auto font-bold text-ink">
+              <p role="alert" className="mr-auto font-semibold text-ink">
                 {errors.form}
               </p>
             )}
@@ -670,14 +670,14 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
             <button
               type="button"
               onClick={frame.close}
-              className="h-11 rounded-sm border border-input bg-white px-5 text-base text-ink"
+              className="h-11 rounded-full border border-line bg-white px-5 text-base text-ink hover:bg-paper md:h-9"
             >
               {t("common.cancel")}
             </button>
             <button
               type="submit"
               disabled={pending}
-              className="h-11 rounded-sm bg-navy px-6 text-base font-bold text-white disabled:opacity-60"
+              className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 md:h-9 disabled:opacity-60"
             >
               {t("common.save")}
             </button>
@@ -698,7 +698,7 @@ function Section({ title, action, children }: { title: string; action?: React.Re
   return (
     <section className="border-t border-line px-6 py-5">
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-bold text-ink">{title}</h2>
+        <h2 className="font-semibold text-ink">{title}</h2>
         {action}
       </div>
       <div className="flex flex-col gap-4">{children}</div>
@@ -726,7 +726,7 @@ function Field({
       </label>
       {children}
       {error ? (
-        <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+        <p role="alert" className="mt-1.5 text-sm font-semibold text-ink">
           {error}
         </p>
       ) : hint ? (

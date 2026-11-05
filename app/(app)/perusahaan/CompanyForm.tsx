@@ -10,8 +10,8 @@ import { formatPhone } from "@/lib/ingest/phone";
 import { PanelFrameDirty } from "../deal/PanelFrameDirty";
 import { saveCompanyAction } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper";
-const label = "mb-1.5 block text-base text-slate";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper md:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const label = "mb-1.5 block text-sm font-medium text-slate";
 
 type Form = { name: string; industry: string; city: string; website: string };
 
@@ -51,7 +51,7 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
       <PanelFrameDirty dirty={dirty && !readOnly} />
       <div className="px-6 pb-4 pt-5">
         <p className="text-sm text-slate">{t("perusahaan.new")}</p>
-        <h1 className="pr-14 text-2xl font-bold text-ink">{form.name || t("perusahaan.newTitle")}</h1>
+        <h1 className="pr-14 text-2xl font-semibold text-ink">{form.name || t("perusahaan.newTitle")}</h1>
       </div>
       {readOnly && (
         <p className="mx-6 mb-2 rounded-sm bg-paper px-3 py-2 text-slate" role="note">
@@ -77,7 +77,7 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
                 className={`${field} ${errors.name ? "border-2 border-navy" : ""}`}
               />
               {errors.name && (
-                <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+                <p role="alert" className="mt-1.5 text-sm font-semibold text-ink">
                   {errors.name}
                 </p>
               )}
@@ -107,7 +107,7 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
                 className={`${field} ${errors.website ? "border-2 border-navy" : ""}`}
               />
               {errors.website && (
-                <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+                <p role="alert" className="mt-1.5 text-sm font-semibold text-ink">
                   {errors.website}
                 </p>
               )}
@@ -118,14 +118,14 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
         {!isNew && (
           <>
             <section className="border-t border-line px-6 py-5">
-              <h2 className="mb-3 font-bold text-ink">{t("perusahaan.contacts")}</h2>
+              <h2 className="mb-3 font-semibold text-ink">{t("perusahaan.contacts")}</h2>
               {company.contacts.length === 0 ? (
                 <p className="text-slate">{t("perusahaan.noContacts")}</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {company.contacts.map((c) => (
                     <li key={c.id} className="flex items-baseline justify-between gap-3">
-                      <Link href={`/kontak?contact=${c.id}`} className="font-bold text-ink hover:underline">
+                      <Link href={`/kontak?contact=${c.id}`} className="font-semibold text-ink hover:underline">
                         {c.name ?? formatPhone(c.phone)}
                       </Link>
                       <span className="text-slate">{c.jobTitle ?? formatPhone(c.phone)}</span>
@@ -135,14 +135,14 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
               )}
             </section>
             <section className="border-t border-line px-6 py-5">
-              <h2 className="mb-3 font-bold text-ink">{t("perusahaan.deals")}</h2>
+              <h2 className="mb-3 font-semibold text-ink">{t("perusahaan.deals")}</h2>
               {company.deals.length === 0 ? (
                 <p className="text-slate">{t("perusahaan.noDeals")}</p>
               ) : (
                 <ul className="flex flex-col gap-2">
                   {company.deals.map((d) => (
                     <li key={d.id} className="flex items-baseline justify-between gap-3">
-                      <Link href={`/deal/${d.id}`} className="font-bold text-ink hover:underline">
+                      <Link href={`/deal/${d.id}`} className="font-semibold text-ink hover:underline">
                         {d.name}
                       </Link>
                       <span className="tabular shrink-0 text-slate">
@@ -159,7 +159,7 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
         {!readOnly && (
           <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-line bg-white px-6 py-4">
             {errors.form && (
-              <p role="alert" className="mr-auto font-bold text-ink">
+              <p role="alert" className="mr-auto font-semibold text-ink">
                 {errors.form}
               </p>
             )}
@@ -168,7 +168,7 @@ export function CompanyForm({ company }: { company: CompanyDetail }) {
                 {status}
               </p>
             )}
-            <button type="submit" disabled={pending} className="h-11 rounded-sm bg-navy px-6 text-base font-bold text-white disabled:opacity-60">
+            <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 md:h-9 disabled:opacity-60">
               {t("common.save")}
             </button>
           </div>

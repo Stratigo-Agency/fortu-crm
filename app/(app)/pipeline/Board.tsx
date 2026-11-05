@@ -173,7 +173,7 @@ export function Board({ columns, cards, compact }: Props) {
               <button
                 type="button"
                 onClick={toast.undo}
-                className="-my-1 h-11 shrink-0 rounded-sm px-3 font-bold text-white underline underline-offset-2"
+                className="-my-1 h-11 shrink-0 rounded-sm px-3 font-semibold text-white underline underline-offset-2"
               >
                 {t("common.undo")}
               </button>

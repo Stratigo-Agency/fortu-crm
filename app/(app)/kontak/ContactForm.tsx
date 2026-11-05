@@ -11,8 +11,8 @@ import { rupiahShort, relTime } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { logActivityAction, saveContactAction } from "./actions";
 
-const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper";
-const label = "mb-1.5 block text-base text-slate";
+const field = "h-12 w-full rounded-sm border border-input bg-white px-3 text-base text-ink disabled:bg-paper md:h-10 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10";
+const label = "mb-1.5 block text-sm font-medium text-slate";
 const bad = "border-2 border-navy";
 
 type Form = { name: string; jobTitle: string; email: string; phone: string; companyName: string };
@@ -98,7 +98,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
       <PanelFrameDirty dirty={dirty && !readOnly} />
       <div className="px-6 pb-4 pt-5">
         <p className="text-sm text-slate">{t("kontak.new")}</p>
-        <h1 className="pr-14 text-2xl font-bold text-ink">{form.name || (isNew ? t("kontak.newTitle") : formatPhone(form.phone))}</h1>
+        <h1 className="pr-14 text-2xl font-semibold text-ink">{form.name || (isNew ? t("kontak.newTitle") : formatPhone(form.phone))}</h1>
         {!isNew && contact.lastChatAt && (
           <p className="mt-1 text-slate">
             {t("kontak.colLast")}: {relTime(contact.lastChatAt)}
@@ -151,7 +151,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                 className={`${field} ${errors.phone ? bad : ""}`}
               />
               {errors.phone && (
-                <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+                <p role="alert" className="mt-1.5 text-sm font-semibold text-ink">
                   {errors.phone}
                 </p>
               )}
@@ -167,7 +167,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                 className={`${field} ${errors.email ? bad : ""}`}
               />
               {errors.email && (
-                <p role="alert" className="mt-1.5 text-sm font-bold text-ink">
+                <p role="alert" className="mt-1.5 text-sm font-semibold text-ink">
                   {errors.email}
                 </p>
               )}
@@ -178,7 +178,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
         {/* ---- Aktivitas (Catat) ----------------------------------------------------------- */}
         {!isNew && (
           <section className="border-t border-line px-6 py-5">
-            <h2 className="mb-4 font-bold text-ink">{t("kontak.activity")}</h2>
+            <h2 className="mb-4 font-semibold text-ink">{t("kontak.activity")}</h2>
             {!readOnly && (
               <div className="mb-5 flex flex-col gap-3">
                 <fieldset>
@@ -187,7 +187,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                     {ACTIVITY_TYPES.map((a) => (
                       <label
                         key={a}
-                        className="flex min-h-11 cursor-pointer items-center rounded-sm border border-line bg-white px-3.5 text-base text-ink has-checked:border-navy has-checked:bg-navy has-checked:font-bold has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-navy"
+                        className="flex min-h-11 cursor-pointer items-center rounded-full border border-line bg-white px-3.5 text-base text-ink has-checked:border-navy has-checked:bg-ink has-checked:font-semibold has-checked:text-white has-focus-visible:outline-2 has-focus-visible:outline-ink"
                       >
                         <input type="radio" name="activity-type" value={a} checked={type === a} onChange={() => setType(a)} className="sr-only" />
                         {t(`kontak.activityTypes.${a}`)}
@@ -206,11 +206,11 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                   </div>
                 </div>
                 {logError && (
-                  <p role="alert" className="font-bold text-ink">
+                  <p role="alert" className="font-semibold text-ink">
                     {logError}
                   </p>
                 )}
-                <button type="button" onClick={log} disabled={logging} className="h-11 self-start rounded-sm bg-navy px-6 text-base font-bold text-white disabled:opacity-60">
+                <button type="button" onClick={log} disabled={logging} className="h-11 self-start rounded-full bg-ink px-6 text-base font-semibold text-white disabled:opacity-60">
                   {t("kontak.log")}
                 </button>
               </div>
@@ -221,7 +221,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
               <ul className="flex flex-col gap-3">
                 {contact.timeline.map((i) => (
                   <li key={i.id}>
-                    <p className="font-bold text-ink">
+                    <p className="font-semibold text-ink">
                       {i.kind === "lead" ? t("kontak.timelineLead") : t(`kontak.activityTypes.${i.type as ActivityType}`)}
                     </p>
                     {i.text && <p className="text-ink">{i.text}</p>}
@@ -240,9 +240,9 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
         {!isNew && (
           <section className="border-t border-line px-6 py-5">
             <div className="mb-4 flex items-center justify-between gap-3">
-              <h2 className="font-bold text-ink">{t("kontak.deals")}</h2>
+              <h2 className="font-semibold text-ink">{t("kontak.deals")}</h2>
               {!readOnly && (
-                <Link href={`/deal/new?contact=${contact.id}`} className="flex h-11 items-center gap-2 rounded-sm border border-line bg-white px-4 font-bold text-ink">
+                <Link href={`/deal/new?contact=${contact.id}`} className="flex h-11 items-center gap-1.5 rounded-full border border-line bg-white px-4 font-medium text-ink hover:bg-paper md:h-9">
                   <span aria-hidden="true">+</span> {t("pipeline.newDeal")}
                 </Link>
               )}
@@ -253,7 +253,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
               <ul className="flex flex-col gap-2">
                 {contact.deals.map((d) => (
                   <li key={d.id} className="flex items-baseline justify-between gap-3">
-                    <Link href={`/deal/${d.id}`} className="font-bold text-ink hover:underline">
+                    <Link href={`/deal/${d.id}`} className="font-semibold text-ink hover:underline">
                       {d.name}
                     </Link>
                     <span className="tabular shrink-0 text-slate">
@@ -269,7 +269,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
         {!readOnly && (
           <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-line bg-white px-6 py-4">
             {errors.form && (
-              <p role="alert" className="mr-auto font-bold text-ink">
+              <p role="alert" className="mr-auto font-semibold text-ink">
                 {errors.form}
               </p>
             )}
@@ -278,7 +278,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                 {status}
               </p>
             )}
-            <button type="submit" disabled={pending} className="h-11 rounded-sm bg-navy px-6 text-base font-bold text-white disabled:opacity-60">
+            <button type="submit" disabled={pending} className="h-11 rounded-full bg-ink px-6 text-base font-semibold text-white hover:bg-ink/85 md:h-9 disabled:opacity-60">
               {t("common.save")}
             </button>
           </div>
