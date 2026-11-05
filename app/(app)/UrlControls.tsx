@@ -18,7 +18,7 @@ export function UrlSelect({
       aria-label={label}
       value={value}
       onChange={(e) => router.push(options.find((o) => o.value === e.target.value)?.href ?? "")}
-      className="h-11 rounded-sm border border-input bg-white px-3 text-base text-ink"
+      className="h-11 rounded-full border border-line bg-white px-3.5 text-base text-ink hover:bg-paper md:h-9"
     >
       {options.map((o) => (
         <option key={o.value} value={o.value}>

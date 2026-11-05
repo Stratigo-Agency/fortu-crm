@@ -85,7 +85,7 @@ export function LeadActions({ leadId, name, isNew, canReassign, currentOwnerId, 
         </div>
       </details>
       {contactedState.error && (
-        <p role="alert" className="basis-full text-sm font-bold text-ink">
+        <p role="alert" className="basis-full text-sm font-semibold text-ink">
           {contactedState.error}
         </p>
       )}
@@ -125,11 +125,11 @@ function Dialog({
       onClose={() => setSeen(state)}
       className="m-auto w-[min(92vw,28rem)] rounded-lg bg-white p-6 text-ink shadow-card backdrop:bg-ink/40"
     >
-      <h2 className="text-xl font-bold">{title}</h2>
+      <h2 className="text-xl font-semibold">{title}</h2>
       <div className="mt-4 flex flex-col gap-4">
         {children}
         {error && (
-          <p role="alert" className="font-bold">
+          <p role="alert" className="font-semibold">
             {error}
           </p>
         )}
@@ -141,7 +141,7 @@ function Dialog({
           >
             {t("common.cancel")}
           </button>
-          <button type="submit" className="h-11 rounded-sm bg-navy px-5 text-base font-bold text-white">
+          <button type="submit" className="h-11 rounded-full bg-ink px-5 text-base font-semibold text-white">
             {t("common.save")}
           </button>
         </div>
