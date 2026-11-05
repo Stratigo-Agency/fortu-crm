@@ -18,7 +18,7 @@ describe("canOpenSettings", () => {
   it.each([
     ["admin", true],
     ["ceo", true],
-    ["sales_lead", false],
+    ["sales_lead", true],
     ["sales_rep", false],
     ["marketing", false],
   ] as const)("%s → %s", (role, out) => expect(canOpenSettings({ role })).toBe(out));

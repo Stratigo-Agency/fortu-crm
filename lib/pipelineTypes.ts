@@ -42,6 +42,8 @@ export type Column = {
   probability: string;
   is_won: boolean;
   is_lost: boolean;
+  /** pipeline_stages.definition, shown as the column header tooltip (set in Pengaturan) */
+  definition: string | null;
   deal_count: number;
   amount: string;
   /** Done deal / Lost closed before this month: they live in Laporan */

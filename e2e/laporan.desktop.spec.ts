@@ -1,0 +1,26 @@
+import { expect, test } from "@playwright/test";
+import { REP } from "./global-setup";
+
+test("a sales rep sees only their own row and numbers in Laporan", async ({ page }) => {
+  await page.goto("/laporan");
+  await expect(page.getByRole("heading", { name: "Laporan" })).toBeVisible();
+  await expect(page.getByText("Angka kamu sendiri")).toBeVisible();
+  const table = page.getByRole("region", { name: "Kinerja sales" }).locator("tbody tr");
+  await expect(table).toHaveCount(1);
+  await expect(table.first()).toContainText(REP.name);
+  // no way to pick another person from the table
+  await expect(page.getByRole("region", { name: "Kinerja sales" }).getByRole("button", { name: REP.name })).toHaveCount(0);
+  for (const label of ["Done deal bulan ini", "Unit layar bulan ini", "Perkiraan akhir bulan", "Perkiraan pipeline", "Win rate 90 hari"]) {
+    await expect(page.locator("p", { hasText: new RegExp(`^${label}$`) })).toBeVisible();
+  }
+  await expect(page.getByRole("region", { name: "Done deal per bulan" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Pipeline per tahap" })).toBeVisible();
+});
+
+test("a sales rep can't open Pengaturan and has no link to it", async ({ page }) => {
+  await page.goto("/pengaturan");
+  await expect(page.getByRole("alert").filter({ hasText: "Pengaturan hanya" })).toContainText("Pengaturan hanya untuk admin dan CEO");
+  await expect(page.getByRole("link", { name: "Pengaturan" })).toHaveCount(0);
+  const csv = await page.request.get("/pengaturan/ekspor/deals");
+  expect(csv.status()).toBe(403);
+});
