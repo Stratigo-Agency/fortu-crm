@@ -28,7 +28,7 @@ app/go/wa/route.ts                        tracked WhatsApp link → 302 to wa.me
 app/api/auth/[...nextauth]/route.ts
 lib/db.ts  lib/auth.ts  lib/authz.ts  lib/copy.ts  lib/format.ts  lib/stageRules.ts
 lib/ingest/{ingestLead,phone,codes,owner}.ts
-db/migrations/001_init.sql … 007_pipeline.sql
+db/migrations/001_init.sql … 008_contacts.sql
 db/seeds/seed_products.sql
 messages/id.json                          ALL user-facing text
 public/brand/                             logos
@@ -44,7 +44,7 @@ public/brand/                             logos
    - Quotation, Negotiation, PO: `expected_close_date`
    - Lost: `lost_reason` (competitor optional). Done deal / Lost: `closed_on` (payment date for Done deal; defaults to today in Jakarta)
    The trigger raises `stage_rule:<key>`; map `<key>` to `t('stageRule.<key>')`. A failed drag opens the deal panel with the missing fields marked.
-5. **Numbers come from SQL views**, never from totals computed in components: `v_deals_enriched`, `v_pipeline_summary`, `v_rep_scorecard`, `v_stage_conversion`, `v_ad_leakage_daily`, `v_units_won_monthly`, `v_target_attainment`, `v_sku_demand`, `v_deal_line_discounts`, `v_attention`, `v_contacts_followup`, `v_demo_effect_90d`, `v_lost_reasons_90d`, `v_sources_90d`, `v_leads_enriched`, `v_prospek_stats`, `v_pipeline_board`, `v_pipeline_summary_by_owner`.
+5. **Numbers come from SQL views**, never from totals computed in components: `v_deals_enriched`, `v_pipeline_summary`, `v_rep_scorecard`, `v_stage_conversion`, `v_ad_leakage_daily`, `v_units_won_monthly`, `v_target_attainment`, `v_sku_demand`, `v_deal_line_discounts`, `v_attention`, `v_contacts_followup`, `v_demo_effect_90d`, `v_lost_reasons_90d`, `v_sources_90d`, `v_leads_enriched`, `v_prospek_stats`, `v_pipeline_board`, `v_pipeline_summary_by_owner`, `v_contacts_enriched`, `v_companies_enriched`.
 6. **Deal amount follows its products.** `deals.amount` = sum of `deal_line_items.line_total` (trigger), or `est_amount` while no products are listed. Never let a user type the amount of a deal that has products.
 7. **Money** is whole Rupiah before PPN (`numeric(15,0)`). Display: `Rp540.000.000` or `Rp540 jt`, `Rp1,12 M` (id-ID, comma decimals). Always say "sebelum PPN" once per screen, not per number.
 8. **Time** is stored UTC, shown in `Asia/Jakarta`. Day/month grouping uses Jakarta time; `closed_on` is already a Jakarta date.
