@@ -3,7 +3,8 @@ import { getCatalog, getRules, getStages, getTeam, PRODUCT_LINES, TEAM_ROLES } f
 import {
   addMemberAction, saveCatalogAction, saveDefinitionsAction, saveProbabilitiesAction, saveRulesAction, saveTeamAction,
 } from "./actions";
-import { inputCls, labelCls, SectionForm } from "./SectionForm";
+import { inputCls, labelCls } from "./formStyles";
+import { SectionForm } from "./SectionForm";
 
 const digits = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
 const fmt = (v: string | number | null) => (v === null || v === "" ? "" : digits.format(Number(v)));

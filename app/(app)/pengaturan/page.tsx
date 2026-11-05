@@ -7,7 +7,8 @@ import { getTargets } from "@/lib/settings";
 import { saveTargetsAction } from "./actions";
 import { UrlSelect } from "../UrlControls";
 import { OwnerSections } from "./OwnerSections";
-import { inputCls, SectionForm } from "./SectionForm";
+import { inputCls } from "./formStyles";
+import { SectionForm } from "./SectionForm";
 
 const digits = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
 const fmt = (v: string | number | null) => (v === null || v === "" ? "" : digits.format(Number(v)));
