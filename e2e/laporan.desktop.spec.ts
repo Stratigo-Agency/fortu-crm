@@ -17,6 +17,27 @@ test("a sales rep sees only their own row and numbers in Laporan", async ({ page
   await expect(page.getByRole("region", { name: "Pipeline per tahap" })).toBeVisible();
 });
 
+test("Laporan shows the rest of the panels, and the period select changes the key figures", async ({ page }) => {
+  await page.goto("/laporan");
+  for (const name of ["Perkiraan per bulan close", "Dari iklan ke CRM", "Demo dan alasan lost", "Permintaan per SKU", "Sumber prospek"]) {
+    await expect(page.getByRole("region", { name })).toBeVisible();
+  }
+  await expect(page.locator("p", { hasText: /^Run rate bulanan$/ })).toBeVisible();
+  await expect(page.locator("p", { hasText: /^Done deal bulan ini$/ })).toBeVisible();
+
+  await page.getByRole("combobox", { name: "Periode" }).selectOption("quarter");
+  await expect(page).toHaveURL(/periode=kuartal/);
+  await expect(page.locator("p", { hasText: /^Done deal kuartal ini$/ })).toBeVisible();
+  await expect(page.locator("p", { hasText: /^Perkiraan akhir kuartal$/ })).toBeVisible();
+
+  await page.goto("/laporan?periode=tahun");
+  await expect(page.getByRole("combobox", { name: "Periode" })).toHaveValue("year");
+  await expect(page.locator("p", { hasText: /^Done deal tahun ini$/ })).toBeVisible();
+  // an unknown value falls back to this month
+  await page.goto("/laporan?periode=xx");
+  await expect(page.locator("p", { hasText: /^Done deal bulan ini$/ })).toBeVisible();
+});
+
 test("a sales rep can't open Pengaturan and has no link to it", async ({ page }) => {
   await page.goto("/pengaturan");
   await expect(page.getByRole("alert").filter({ hasText: "Pengaturan hanya" })).toContainText("Pengaturan hanya untuk admin dan CEO");
