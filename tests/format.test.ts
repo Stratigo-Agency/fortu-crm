@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { relDate, relTime, rupiah, rupiahShort } from "@/lib/format";
+import { dayMonth, percent, relDate, relTime, rupiah, rupiahShort } from "@/lib/format";
 
 describe("rupiah", () => {
   it.each([
@@ -64,4 +64,14 @@ describe("relTime", () => {
     ["2026-11-20T03:00:00Z", "4 hari lalu"],
     ["2026-11-25T03:00:00Z", "besok"],
   ])("%s → %s", (ts, out) => expect(relTime(ts, now)).toBe(out));
+});
+
+describe("dayMonth and percent", () => {
+  it("formats close dates and probabilities", () => {
+    expect(dayMonth("2026-11-21", now)).toBe("21 Nov");
+    expect(dayMonth("2025-11-21", now)).toBe("21 Nov 2025");
+    expect(percent("0.100")).toBe("10%");
+    expect(percent("0.900")).toBe("90%");
+    expect(percent(1)).toBe("100%");
+  });
 });

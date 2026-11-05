@@ -33,8 +33,15 @@ export default defineConfig({
   projects: [
     { name: "setup", testMatch: /auth\.setup\.ts/ },
     {
+      name: "desktop",
+      testMatch: /.*\.desktop\.spec\.ts/,
+      dependencies: ["setup"],
+      use: { viewport: { width: 1440, height: 1135 }, storageState: AUTH_FILE },
+    },
+    {
       name: "phone",
       testMatch: /.*\.spec\.ts/,
+      testIgnore: /.*\.desktop\.spec\.ts/,
       dependencies: ["setup"],
       use: {
         ...devices["Pixel 7"],

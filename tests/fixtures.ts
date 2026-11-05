@@ -136,3 +136,28 @@ export async function createDealFor(contactId: string, ownerId: string, { lost =
   }
   return deal;
 }
+
+/** A product of its own (tests share one database and don't rely on the product seed). */
+export async function createProduct({ line = "IFP", listPrice = 30_000_000 }: { line?: string; listPrice?: number } = {}) {
+  const sku = `T${randomUUID().replace(/-/g, "").slice(0, 7).toUpperCase()}`;
+  const [p] = await sql<{ id: string; sku: string }[]>`
+    INSERT INTO products (sku, name, product_line, list_price)
+    VALUES (${sku}, ${`Produk uji ${sku}`}, ${line}, ${listPrice}) RETURNING id, sku`;
+  return p;
+}
+
+/** Adds a product line to a deal (qty × unit price). */
+export async function addLineItem(dealId: string, { qty = 2, unitPrice = 25_000_000 }: { qty?: number; unitPrice?: number } = {}) {
+  const p = await createProduct();
+  await sql`INSERT INTO deal_line_items (deal_id, product_id, qty, unit_price) VALUES (${dealId}, ${p.id}, ${qty}, ${unitPrice})`;
+  return p;
+}
+
+/** A deal ready for Quotation: products and an expected close date. */
+export async function createQuotableDeal(ownerId: string) {
+  const contact = await createContact();
+  const deal = await createDealFor(contact.id, ownerId);
+  await addLineItem(deal.id);
+  await sql`UPDATE deals SET expected_close_date = current_date + 30 WHERE id = ${deal.id}`;
+  return deal;
+}

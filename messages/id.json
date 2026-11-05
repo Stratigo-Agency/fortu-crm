@@ -139,7 +139,18 @@
     "tagStale": "{n} hari tanpa update",
     "tagDemo": "Sudah demo",
     "doneOn": "Done {date}",
-    "lostOn": "Lost {date}"
+    "lostOn": "Lost {date}",
+    "colDeal": "Deal",
+    "colStage": "Tahap",
+    "moveTo": "Pindah ke tahap",
+    "views": "Tampilan",
+    "dealsAmount": "{n} deal · {amount}",
+    "dragHelp": "Tekan spasi untuk mengambil deal. Pakai tombol panah untuk memindahkan, spasi lagi untuk melepas, Escape untuk batal.",
+    "dragStart": "{name} diambil.",
+    "dragOver": "{name} di atas {stage}.",
+    "dragEnd": "{name} dilepas di {stage}.",
+    "dragCancel": "{name} batal dipindah.",
+    "cardRole": "kartu deal yang bisa dipindah"
   },
   "deal": {
     "kind": "Deal",
