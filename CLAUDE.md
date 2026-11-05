@@ -15,7 +15,7 @@ Backlog: Linear project "Fortu CRM — MVP & Rollout" (team Fortu, MAR-…). Sal
 ## Layout
 ```
 app/(app)/pipeline/page.tsx               Pipeline: Board / Ringkas / List (home)
-app/(app)/pipeline/@panel/(.)deal/[id]    deal opens as a side panel over the board (intercepting route)
+app/(app)/pipeline/@panel/(..)deal/[id]   deal opens as a side panel over the board (intercepting route)
 app/(app)/deal/[id]/page.tsx              same deal as a full page (phones, shared links)
 app/(app)/prospek/page.tsx                Prospek: chats not yet a deal
 app/(app)/tambah/page.tsx                 Tambah cepat (phone quick-add)
