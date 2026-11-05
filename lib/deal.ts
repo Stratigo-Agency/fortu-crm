@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
-import type { DealDetail, DealKind, DealLine, HistoryItem, ProductOption } from "@/lib/dealTypes";
+import type { DealDetail, DealKind, DealLine, DealSettings, HistoryItem, ProductOption } from "@/lib/dealTypes";
+import { normalizePhone } from "@/lib/ingest/phone";
 import type { StageKey } from "@/lib/pipelineTypes";
 
 // Reads for the deal panel and page. Money comes out of the database views (rule 5):
@@ -121,8 +122,11 @@ export async function dealHistory(dealId: string): Promise<HistoryItem[]> {
 
 /** The product list for the line selects. */
 export async function productOptions(): Promise<ProductOption[]> {
-  const rows = await sql<{ id: string; sku: string; name: string; list_price: string | null; counts_as_screen: boolean }[]>`
-    SELECT id, sku, name, list_price::text AS list_price, counts_as_screen
+  const rows = await sql<
+    { id: string; sku: string; name: string; list_price: string | null; counts_as_screen: boolean; max_discount_pct: string }[]
+  >`
+    SELECT id, sku, name, list_price::text AS list_price, counts_as_screen,
+           COALESCE(max_discount_pct, setting_num('max_discount_pct'))::text AS max_discount_pct
       FROM products WHERE is_active ORDER BY sku`;
   return rows.map((r) => ({
     id: r.id,
@@ -130,9 +134,59 @@ export async function productOptions(): Promise<ProductOption[]> {
     name: r.name,
     msrp: r.list_price === null ? null : Number(r.list_price),
     countsAsScreen: r.counts_as_screen,
+    maxDiscountPct: Number(r.max_discount_pct),
   }));
 }
 
+/** Thresholds of the "Deal proyek" note, from app_settings. */
+export async function dealSettings(): Promise<DealSettings> {
+  const [r] = await sql<{ units: string; amount: string }[]>`
+    SELECT setting_num('project_min_units')::text AS units, setting_num('project_min_amount')::text AS amount`;
+  return { projectMinUnits: Number(r.units), projectMinAmount: Number(r.amount) };
+}
+
+/** Company names for the combobox. */
+export async function searchCompanies(q: string): Promise<string[]> {
+  const term = q.trim().slice(0, 100);
+  if (!term) return [];
+  const rows = await sql<{ name: string }[]>`
+    SELECT name FROM companies WHERE name ILIKE ${`%${term.replace(/[\\%_]/g, (c) => `\\${c}`)}%`}
+     ORDER BY name LIMIT 8`;
+  return rows.map((r) => r.name);
+}
+
+export type ContactMatch = { name: string | null; phone: string; rep: string | null };
+
+/** A contact that already has this number, and the rep who has an open deal or lead with them. */
+export async function contactByPhone(raw: string): Promise<ContactMatch | null> {
+  let phone: string;
+  try {
+    phone = normalizePhone(raw);
+  } catch {
+    return null;
+  }
+  const [c] = await sql<{ id: string; full_name: string | null }[]>`
+    SELECT id, full_name FROM contacts WHERE phone_e164 = ${phone}`;
+  if (!c) return null;
+  const [rep] = await sql<{ full_name: string }[]>`
+    SELECT u.full_name FROM (
+      SELECT d.owner_user_id, d.updated_at FROM deals d JOIN pipeline_stages s ON s.id = d.stage_id
+       WHERE d.contact_id = ${c.id} AND NOT s.is_won AND NOT s.is_lost
+      UNION ALL
+      SELECT l.owner_user_id, l.received_at FROM leads l
+       WHERE l.contact_id = ${c.id} AND l.status IN ('new', 'contacted', 'qualified')
+    ) x JOIN users u ON u.id = x.owner_user_id ORDER BY x.updated_at DESC LIMIT 1`;
+  return { name: c.full_name, phone, rep: rep?.full_name ?? null };
+}
+
+/** The company's deals, for the parent of a repeat, upsell or rental deal. */
+export async function parentDeals(companyName: string): Promise<{ id: string; name: string }[]> {
+  const name = companyName.trim();
+  if (!name) return [];
+  return sql<{ id: string; name: string }[]>`
+    SELECT d.id, d.name FROM deals d JOIN companies co ON co.id = d.company_id
+     WHERE lower(co.name) = lower(${name}) ORDER BY d.created_at DESC LIMIT 20`;
+}
 
 /** A blank deal for "+ Deal": the signed-in rep owns it, stage Chat masuk, next step in 2 days. */
 export function emptyDeal(ownerId: string, ownerName: string | null, nextStepText: string): DealDetail {

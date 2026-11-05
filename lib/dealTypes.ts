@@ -67,7 +67,12 @@ export type ProductOption = {
   name: string;
   msrp: number | null;
   countsAsScreen: boolean;
+  /** the most discount from MSRP allowed without approval: the product's own limit or the app setting */
+  maxDiscountPct: number;
 };
+
+/** Values from app_settings that the form needs for its live preview. */
+export type DealSettings = { projectMinUnits: number; projectMinAmount: number };
 
 export type DealInput = {
   id: string | null;
