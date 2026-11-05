@@ -47,6 +47,43 @@
     "none": "Tidak ada yang cocok.",
     "tooShort": "Ketik minimal 2 huruf."
   },
+  "notif": {
+    "title": "Pengingat",
+    "open": "Buka pengingat",
+    "unread": "{n} belum dibaca",
+    "empty": "Belum ada pengingat.",
+    "error": "Belum bisa dimuat. Coba lagi sebentar.",
+    "markAll": "Tandai semua dibaca",
+    "kind": {
+      "high_value_lead": "Deal besar: {deal}",
+      "stale_deal": "{deal} belum bergerak",
+      "won": "{deal} Done deal",
+      "sla_breach": "Chat {deal} belum dijawab",
+      "next_step_overdue": "Next step terlambat: {deal}",
+      "discount_approval": "Diskon perlu disetujui: {deal}"
+    },
+    "detail": {
+      "high_value_lead": "{amount} · {owner}",
+      "stale_deal": "Masih di {stage} · {amount}",
+      "won": "{amount} · {owner}",
+      "sla_breach": "{owner}",
+      "next_step_overdue": "{step}",
+      "discount_approval": "{amount} · {owner}"
+    },
+    "email": {
+      "hello": "Halo {name},",
+      "intro": "Ada deal yang perlu kamu lihat:",
+      "line": "- {deal} ({stage}, {amount}): {reason}",
+      "link": "  Buka: {url}",
+      "bye": "Salam,\nFortu CRM",
+      "subjectMany": "{n} deal perlu perhatian",
+      "subjectOne": "{deal} · {reason}",
+      "reason": {
+        "high_value_lead": "deal bernilai besar",
+        "stale_deal": "belum ada gerakan"
+      }
+    }
+  },
   "common": {
     "appName": "CRM",
     "placeholder": "Halaman ini sedang disiapkan.",

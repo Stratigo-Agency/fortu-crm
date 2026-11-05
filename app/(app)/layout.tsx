@@ -2,7 +2,9 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
+import { unreadCount } from "@/lib/notifications";
 import { canOpenSettings, newLeadCount } from "@/lib/shell";
+import { NotificationBell } from "./NotificationBell";
 import { HideOnPhone } from "./HideOnPhone";
 import { SalesFilter } from "./SalesFilter";
 import { type NavItem, Sidebar } from "./Sidebar";
@@ -10,7 +12,7 @@ import { UserChip } from "./UserChip";
 
 async function Shell() {
   const user = await requireUser();
-  const [prospek, options, selected] = await Promise.all([newLeadCount(user), salesOptions(), getSalesFilter()]);
+  const [prospek, options, selected, unread] = await Promise.all([newLeadCount(user), salesOptions(), getSalesFilter(), unreadCount(user.id)]);
   const items: NavItem[] = [
     { href: "/beranda", label: t("nav.beranda"), icon: "home", also: ["/cari"] },
     { href: "/pipeline", label: t("nav.pipeline"), icon: "pipeline", also: ["/deal"] },
@@ -29,6 +31,12 @@ async function Shell() {
     <Sidebar
       items={items}
       bottomItems={bottomItems}
+      bell={
+        <NotificationBell
+          initialUnread={unread}
+          labels={{ title: t("notif.title"), open: t("notif.open"), unread: t("notif.unread"), empty: t("notif.empty"), markAll: t("notif.markAll"), error: t("notif.error") }}
+        />
+      }
       labels={{ search: t("nav.search"), add: t("nav.add"), menu: t("nav.menu"), close: t("common.close"), main: t("nav.main"), shortcutMac: t("nav.shortcutMac"), shortcutOther: t("nav.shortcutOther") }}
       footer={
         <div className="flex flex-col gap-2">

@@ -34,7 +34,7 @@ test.beforeAll(async () => {
     INSERT INTO contacts (phone_e164, full_name) VALUES (${`+62815${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`}, 'Kontak Lain') RETURNING id`;
   [{ id: otherDealId }] = await sql<{ id: string }[]>`
     INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date, est_amount)
-    SELECT ${`Deal Milik Lain ${tag}`}, ${oc.id}, ${other.id}, id, 'Telepon', current_date + 1, 10000000 FROM pipeline_stages WHERE key = 'chat'
+    SELECT ${`Deal Milik Lain ${tag}`}, ${oc.id}, ${other.id}, id, 'Telepon', jakarta_today() + 1, 10000000 FROM pipeline_stages WHERE key = 'chat'
     RETURNING id`;
 });
 

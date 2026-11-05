@@ -18,12 +18,12 @@ async function deal(ownerId: string, stage: "chat" | "quotation" | "negotiation"
   if (stage !== "chat") await sql`INSERT INTO deal_line_items (deal_id, product_id, qty, unit_price) VALUES (${d.id}, ${productId}, ${o.qty ?? 1}, ${o.price ?? 10_000_000})`;
   await sql.unsafe(`
     UPDATE deals SET stage_id = (SELECT id FROM pipeline_stages WHERE key = '${stage}'),
-           expected_close_date = ${o.closeSql ?? "current_date + 3"},
+           expected_close_date = ${o.closeSql ?? "jakarta_today() + 3"},
            lost_reason = ${stage === "lost" ? `'${o.reason ?? "harga"}'` : "NULL"},
-           demo_date = ${o.demo ? "current_date - 2" : "NULL"},
+           demo_date = ${o.demo ? "jakarta_today() - 2" : "NULL"},
            lead_id = ${o.leadId ? `'${o.leadId}'` : "NULL"},
-           closed_on = ${stage === "done" || stage === "lost" ? (o.closedOn ?? "current_date") : "NULL"},
-           next_step_date = current_date + 5
+           closed_on = ${stage === "done" || stage === "lost" ? (o.closedOn ?? "jakarta_today()") : "NULL"},
+           next_step_date = jakarta_today() + 5
      WHERE id = '${d.id}'`);
   return d.id;
 }
@@ -109,7 +109,7 @@ describe("Perkiraan per bulan close", () => {
     const rep = await createUser();
     const q = await prob("quotation");
     const m = (n: number) => `(date_trunc('month', jakarta_today()::timestamp) + interval '${n} months')::date`;
-    await deal(rep.id, "quotation", { price: 10_000_000, closeSql: "current_date - 10" });
+    await deal(rep.id, "quotation", { price: 10_000_000, closeSql: "jakarta_today() - 10" });
     await deal(rep.id, "quotation", { price: 20_000_000, closeSql: `(${m(1)} - 1)` }); // last day of this month
     await deal(rep.id, "quotation", { price: 30_000_000, closeSql: `(${m(1)} + 4)` });
     await deal(rep.id, "quotation", { price: 40_000_000, closeSql: `(${m(2)} + 9)` });
@@ -131,7 +131,7 @@ describe("Perkiraan per bulan close", () => {
   it("is all zero for a sales without open deals, and the total sums every sales", async () => {
     const rep = await createUser();
     expect((await getReport(rep.id)).closeForecast.every((x) => x.deals === 0 && num(x.weighted) === 0)).toBe(true);
-    await deal(rep.id, "quotation", { price: 10_000_000, closeSql: "current_date - 3" });
+    await deal(rep.id, "quotation", { price: 10_000_000, closeSql: "jakarta_today() - 3" });
     const total = (await getReport(null)).closeForecast.find((x) => x.key === "past")!;
     const [{ n, w }] = await sql<{ n: number; w: string }[]>`
       SELECT count(*)::int AS n, COALESCE(sum(weighted_amount), 0)::text AS w FROM v_deals_enriched

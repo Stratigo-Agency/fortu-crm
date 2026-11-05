@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railway.com/railway.schema.json",
+  "build": {
+    "buildCommand": "npm run build"
+  },
+  "deploy": {
+    "startCommand": "node jobs/sweeper.js",
+    "cronSchedule": "0 1-13 * * *",
+    "preDeployCommand": []
+  }
+}

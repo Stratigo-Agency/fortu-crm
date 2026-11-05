@@ -18,6 +18,7 @@
     "e2e": "playwright test",
     "jobs:build": "node scripts/build-jobs.mjs",
     "insights:sync": "node --env-file-if-exists=.env.local jobs/insights-sync.js",
+    "sweeper:run": "node --env-file-if-exists=.env.local jobs/sweeper.js",
     "ads:codes": "npm run jobs:build --silent && node --env-file-if-exists=.env.local jobs/ad-codes.js"
   },
   "dependencies": {
@@ -25,6 +26,7 @@
     "lucide-react": "^0.544.0",
     "next": "16.4.5",
     "next-auth": "5.0.0-beta.32",
+    "nodemailer": "^7.0.9",
     "postgres": "3.4.9",
     "react": "19.3.0",
     "react-dom": "19.3.0",
@@ -34,6 +36,7 @@
     "@playwright/test": "1.64.1",
     "@tailwindcss/turbopack": "4.3.4",
     "@types/node": "24.19.2",
+    "@types/nodemailer": "^8.0.2",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "esbuild": "0.28.2",
