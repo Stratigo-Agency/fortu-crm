@@ -19,7 +19,7 @@ type Props = {
 export function SectionForm({ id, title, hint, action, children, saveLabel, toolbar }: Props) {
   const [result, formAction, pending] = useActionState(action, null);
   return (
-    <section aria-labelledby={`${id}-h`} className="rounded-lg bg-white p-5 shadow-card">
+    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-16 rounded-lg bg-white p-5 shadow-card">
       <h2 id={`${id}-h`} className="text-base font-semibold text-ink">{title}</h2>
       {hint && <p className="mt-1 text-sm text-slate">{hint}</p>}
       {toolbar && <div className="mt-4">{toolbar}</div>}

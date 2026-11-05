@@ -10,7 +10,7 @@ import { UrlSelect } from "../UrlControls";
 import { OwnerSections } from "./OwnerSections";
 import { inputCls } from "./formStyles";
 import { SectionForm } from "./SectionForm";
-import { PageHeader, secondaryButton } from "../PageHeader";
+import { PageHeader, PageSkeleton, secondaryButton } from "../PageHeader";
 
 const digits = new Intl.NumberFormat("id-ID", { maximumFractionDigits: 0 });
 const fmt = (v: string | number | null) => (v === null || v === "" ? "" : digits.format(Number(v)));
@@ -18,7 +18,7 @@ const fmt = (v: string | number | null) => (v === null || v === "" ? "" : digits
 export default function Page(props: PageProps<"/pengaturan">) {
   return (
     <main className="w-full">
-      <Suspense>
+      <Suspense fallback={<PageSkeleton />}>
         <Settings searchParams={props.searchParams} />
       </Suspense>
     </main>
@@ -60,7 +60,16 @@ async function Settings({ searchParams }: { searchParams: PageProps<"/pengaturan
         title={t("pengaturan.title")}
         actions={owner ? <Link href="/pengaturan/iklan" className={secondaryButton}>{t("iklan.linkFromSettings")}</Link> : undefined}
       />
-      <div className="flex max-w-5xl flex-col gap-4 px-4 py-5 md:px-6">
+      <div className="flex flex-col gap-4 px-4 py-5 md:px-6">
+        {owner && (
+          <nav aria-label={t("pengaturan.title")} className="sticky top-0 z-20 -mx-4 flex gap-1 overflow-x-auto border-b border-line bg-white/90 px-4 py-2 backdrop-blur md:-mx-6 md:px-6">
+            {(["target", "aturan", "peluang", "definisi", "tim", "katalog", "data"] as const).map((id) => (
+              <a key={id} href={`#${id}`} className="flex h-11 shrink-0 items-center rounded-full px-3.5 text-base text-slate transition hover:bg-accent-soft hover:text-accent-strong desk:h-9">
+                {t(`pengaturan.nav.${id}`)}
+              </a>
+            ))}
+          </nav>
+        )}
         <SectionForm
           id="target"
           title={t("pengaturan.targets")}
