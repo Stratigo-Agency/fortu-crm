@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { sql } from "@/lib/db";
 import { csvField, stockCsv } from "@/lib/exportCsv";
 import { canOpenStock } from "@/lib/shell";
-import { parseStockFilter, stockHref, stockRows, stockSummary } from "@/lib/stock";
+import { mayOpenStock, parseStockFilter, stockHref, stockRows, stockSummary } from "@/lib/stock";
 import { createDeal, createProduct, createUser } from "./fixtures";
 
 // Stok & Permintaan (T21). The screen reads v_stock_cover; every value must equal v_sku_demand
@@ -18,7 +18,7 @@ async function line(ownerId: string, productId: string, stage: "negotiation" | "
 const snapshot = (productId: string, daysAgo: number, qty: number, warehouse = "main") =>
   sql`INSERT INTO inventory_snapshots (product_id, snapshot_date, warehouse, qty_on_hand) VALUES (${productId}, jakarta_today() - ${daysAgo}::int, ${warehouse}, ${qty})`;
 const sold = (productId: string, monthsAgo: number, qty: number) =>
-  sql`INSERT INTO sales_monthly (product_id, period_month, qty_sold) VALUES (${productId}, (date_trunc('month', now()) - make_interval(months => ${monthsAgo}))::date, ${qty})`;
+  sql`INSERT INTO sales_monthly (product_id, period_month, qty_sold) VALUES (${productId}, (date_trunc('month', jakarta_today()) - make_interval(months => ${monthsAgo}))::date, ${qty})`;
 const po = (productId: string, qty: number, status = "open") =>
   sql`INSERT INTO purchase_orders (product_id, qty, status) VALUES (${productId}, ${qty}, ${status})`;
 
@@ -36,14 +36,14 @@ async function seed() {
   // safe: stock 100, little demand
   const safe = await createProduct({ line: "IFP" });
   await snapshot(safe.id, 0, 100);
-  await sold(safe.id, 1, 2);
+  for (const m of [1, 2, 3]) await sold(safe.id, m, 2); // all 3 months have a row, so v_sku_demand agrees
   // pipeline-driven: no sales history, 30 weighted-ish units in negotiation
   const pipe = await createProduct({ line: "IFP" });
   await snapshot(pipe.id, 0, 20);
   await line(rep.id, pipe.id, "negotiation", 30);
   // unknown stock: no snapshot at all
   const unknown = await createProduct({ line: "DSS" });
-  await sold(unknown.id, 1, 4);
+  for (const m of [1, 2, 3]) await sold(unknown.id, m, 4);
   // no demand at all
   const idle = await createProduct({ line: "IFP" });
   await snapshot(idle.id, 0, 7);
@@ -118,27 +118,94 @@ describe("Stok & Permintaan", () => {
     expect(r.poExceedsStock).toBe(true);
   });
 
-  it("summary counts come from the same view, and the subtitle date is the latest snapshot", async () => {
-    await seed();
+  it("summary counts the at-risk rows of the view, and the subtitle date is the latest snapshot", async () => {
+    const seeded = await seed();
+    const mine = Object.values(seeded).map((p) => p.id);
     const sum = await stockSummary();
-    const [c] = await sql<{ skus: number; risk: number; last: string }[]>`
-      SELECT count(*)::int AS skus, count(*) FILTER (WHERE cover_short OR po_exceeds_stock)::int AS risk,
-             (SELECT max(snapshot_date)::text FROM inventory_snapshots) AS last FROM v_stock_cover`;
-    expect(sum).toMatchObject({ skus: c.skus, atRisk: c.risk, lastSnapshot: c.last });
-    expect(sum.atRisk).toBeGreaterThan(0);
+    // other test files write to the same database at the same time, so only the rows made here are compared exactly
+    expect((await only(mine, { line: null, risk: true })).map((r) => r.productId)).toEqual([seeded.thin.id]);
+    expect(sum.atRisk).toBeGreaterThanOrEqual(1);
+    expect(sum.skus).toBeGreaterThanOrEqual(5);
+    const [today] = await sql<{ d: string }[]>`SELECT jakarta_today()::text AS d`;
+    expect(sum.lastSnapshot! >= today.d).toBe(true);
   });
 
   it("exports the same rows as the table, with the filter, safe for spreadsheets", async () => {
     const s = await seed();
     const csv = await stockCsv({ line: "LED", risk: true });
     const lines = csv.replace(/^﻿/, "").trim().split("\r\n");
-    expect(lines[0]).toBe("sku;nama;lini;terjual_per_bulan;unit_di_pipeline;perkiraan_unit;di_tahap_po;stok;po_terbuka;bulan_cakupan;berisiko");
+    expect(lines[0]).toBe("sku;nama;lini;terjual_per_bulan;unit_di_pipeline;perkiraan_unit;di_tahap_po;stok;stok_per;po_terbuka;bulan_cakupan;berisiko");
     const mine = lines.filter((l) => l.startsWith(`${s.thin.sku};`));
     expect(mine).toHaveLength(1);
     expect(mine[0]).toContain(";LED;6;");
-    expect(mine[0].endsWith(";2;1;0.5;ya")).toBe(true);
+    expect(mine[0]).toMatch(/;2;\d{4}-\d{2}-\d{2};1;0\.5;ya$/);
     expect(lines.some((l) => l.startsWith(`${s.safe.sku};`))).toBe(false);
     expect(csvField("=HYPERLINK(1)")).toBe("'=HYPERLINK(1)");
+  });
+
+  it("adds up the latest snapshot of each warehouse, even when they were counted on different days", async () => {
+    const p = await createProduct();
+    await snapshot(p.id, 9, 50, "A"); // older A snapshot: ignored
+    await snapshot(p.id, 6, 10, "A");
+    await snapshot(p.id, 3, 4, "B");
+    const [r] = await only([p.id]);
+    expect(r.stock).toBe(14);
+    expect(r.stockDate).toBe((await sql<{ d: string }[]>`SELECT (jakarta_today() - 3)::text AS d`)[0].d); // the SKU's newest snapshot
+    expect(r.stockStale).toBe(false);
+  });
+
+  it("marks stock as old when the SKU's newest snapshot is more than 3 days old", async () => {
+    const old = await createProduct();
+    const edge = await createProduct();
+    await snapshot(old.id, 4, 5);
+    await snapshot(edge.id, 3, 5);
+    const rows = await only([old.id, edge.id]);
+    expect(Object.fromEntries(rows.map((r) => [r.productId, r.stockStale]))).toEqual({ [old.id]: true, [edge.id]: false });
+  });
+
+  it("keeps a SKU with PO units but no stock figure in the risk list, without the late flags", async () => {
+    const rep = await createUser();
+    const p = await createProduct();
+    await line(rep.id, p.id, "po", 3);
+    const [r] = await only([p.id], { line: null, risk: true });
+    expect(r).toMatchObject({ stock: null, stockDate: null, coverMonths: null, coverShort: false, poExceedsStock: false, poWithoutStock: true, atRisk: true });
+    const quiet = await createProduct();
+    await sold(quiet.id, 1, 3);
+    expect(await only([quiet.id], { line: null, risk: true })).toEqual([]);
+    expect((await stockSummary()).atRisk).toBeGreaterThan(0);
+  });
+
+  it("flags short cover from the rounded number the screen shows", async () => {
+    const a = await createProduct();
+    const b = await createProduct();
+    for (const p of [a, b]) for (const m of [1, 2, 3]) await sold(p.id, m, 25);
+    await snapshot(a.id, 0, 24); // 24 / 25 = 0,96 -> shown as 1,0 -> not short
+    await snapshot(b.id, 0, 23); // 0,92 -> shown as 0,9 -> short
+    const rows = Object.fromEntries((await only([a.id, b.id])).map((r) => [r.productId, r]));
+    expect(rows[a.id]).toMatchObject({ coverMonths: "1.0", coverShort: false });
+    expect(rows[b.id]).toMatchObject({ coverMonths: "0.9", coverShort: true });
+  });
+
+  it("averages the last 3 full Jakarta months and counts a month without a row as 0", async () => {
+    const p = await createProduct();
+    await sold(p.id, 1, 6); // months 2 and 3 have no row
+    await sold(p.id, 4, 100); // outside the window
+    const [r] = await only([p.id]);
+    expect(r.soldPerMonth).toBe("2.0");
+    const [{ m }] = await sql<{ m: string }[]>`SELECT date_trunc('month', jakarta_today())::date::text AS m`;
+    await sql`INSERT INTO sales_monthly (product_id, period_month, qty_sold) VALUES (${p.id}, ${m}, 900)`; // this month is not a full month
+    expect((await only([p.id]))[0].soldPerMonth).toBe("2.0");
+    const none = await createProduct();
+    expect((await only([none.id]))[0].soldPerMonth).toBeNull();
+  });
+
+  it("checks the role in the database, not the session", async () => {
+    const lead = await createUser({ role: "sales_lead" });
+    const rep = await createUser();
+    expect(await mayOpenStock(lead.id)).toBe(true);
+    expect(await mayOpenStock(rep.id)).toBe(false);
+    await sql`UPDATE users SET is_active = false WHERE id = ${lead.id}`;
+    expect(await mayOpenStock(lead.id)).toBe(false);
   });
 
   it("only admin, ceo and sales_lead may open it; the filter in the URL ignores junk", () => {

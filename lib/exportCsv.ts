@@ -64,8 +64,8 @@ export async function stockCsv(filter: StockFilter): Promise<string> {
   const rows = await stockRows(filter);
   const num = (v: string | null) => (v === null ? null : Number(v));
   return toCsv(
-    ["sku", "nama", "lini", "terjual_per_bulan", "unit_di_pipeline", "perkiraan_unit", "di_tahap_po", "stok", "po_terbuka", "bulan_cakupan", "berisiko"],
-    rows.map((r) => [r.sku, r.name, r.productLine, num(r.soldPerMonth), r.unitsInPipeline, num(r.weightedUnits), r.unitsAtPo, r.stock, r.openPo, num(r.coverMonths),
-      r.coverShort || r.poExceedsStock ? "ya" : "tidak"]),
+    ["sku", "nama", "lini", "terjual_per_bulan", "unit_di_pipeline", "perkiraan_unit", "di_tahap_po", "stok", "stok_per", "po_terbuka", "bulan_cakupan", "berisiko"],
+    rows.map((r) => [r.sku, r.name, r.productLine, num(r.soldPerMonth), r.unitsInPipeline, num(r.weightedUnits), r.unitsAtPo, r.stock, r.stockDate, r.openPo, num(r.coverMonths),
+      r.atRisk ? "ya" : "tidak"]),
   );
 }
