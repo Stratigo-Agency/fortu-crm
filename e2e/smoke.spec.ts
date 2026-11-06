@@ -22,7 +22,9 @@ const LATE_ORANGE = "rgb(194, 65, 12)"; // --color-late, #C2410C
 let dealId = "";
 let otherDealId = "";
 
-const isoDay = (offset: number) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+// Dates are Jakarta dates (CLAUDE.md rule 8); en-CA formats as YYYY-MM-DD.
+const isoDay = (offset: number) =>
+  new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date(Date.now() + offset * 86_400_000));
 const card = (page: Page, id: string) => page.locator(`[data-deal-id="${id}"]`);
 const column = (page: Page, name: string) => page.locator(`section[aria-label="${name}"]`);
 const toast = (page: Page) => page.locator("div[role=status].fixed");
@@ -95,7 +97,8 @@ test.describe.serial("Pilot flow", () => {
     await expect.poll(() => pathname(page)).toMatch(/^\/deal\/[0-9a-f-]{36}$/);
     dealId = pathname(page).split("/").pop() as string;
 
-    await expect(page.getByText("Rp90 jt")).toBeVisible();
+    // the deal header figure; line totals elsewhere on the page show money too
+    await expect(page.locator("span.tabular.font-semibold", { hasText: /^Rp90 jt$/ })).toHaveCount(1);
     const [d] = await sql`SELECT amount, stage_id FROM deals WHERE id = ${dealId}`;
     expect(Number(d.amount)).toBe(90_000_000);
     expect(await stageOf(dealId)).toBe("chat");
