@@ -16,7 +16,8 @@
     "menu": "Menu",
     "main": "Navigasi",
     "shortcutMac": "⌘K",
-    "shortcutOther": "Ctrl K"
+    "shortcutOther": "Ctrl K",
+    "stok": "Stok"
   },
   "beranda": {
     "greeting": {
@@ -536,7 +537,8 @@
     "colDeals": "Deal",
     "colSource": "Sumber",
     "colRate": "Win rate",
-    "colSku": "SKU"
+    "colSku": "SKU",
+    "skuOpenStock": "Buka Stok"
   },
   "pengaturan": {
     "nav": {
@@ -626,7 +628,8 @@
     "email": "Email",
     "password": "Password",
     "signIn": "Masuk",
-    "wrongCredentials": "Email atau password salah."
+    "wrongCredentials": "Email atau password salah.",
+    "stockOnly": "Stok hanya untuk admin, CEO, dan sales lead."
   },
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",
@@ -662,5 +665,34 @@
     },
     "codePlaceholder": "F-IFP-01",
     "colLeads7": "Chat 7 hari"
+  },
+  "stok": {
+    "title": "Stok & Permintaan",
+    "subtitle": "Stok per {date}",
+    "subtitleNone": "Belum ada data stok",
+    "statSkus": "SKU",
+    "statAtRisk": "Berisiko",
+    "statAtPo": "Unit di tahap PO",
+    "lineLabel": "Lini produk",
+    "lineAll": "Semua lini",
+    "onlyRisk": "Hanya yang berisiko",
+    "export": "Ekspor CSV",
+    "tableLabel": "Stok per SKU",
+    "colSku": "SKU",
+    "colSold": "Terjual/bulan",
+    "colPipeline": "Unit di pipeline",
+    "colForecast": "Perkiraan",
+    "colAtPo": "Di tahap PO",
+    "colStock": "Stok",
+    "colOpenPo": "PO terbuka",
+    "colCover": "Bulan cakupan",
+    "coverValue": "{n} bulan",
+    "flagShort": "Stok tipis",
+    "flagPo": "PO melebihi stok",
+    "coverHint": "Cakupan = (stok + PO terbuka) ÷ kebutuhan per bulan: yang terbesar antara terjual/bulan dan perkiraan ÷ 3.",
+    "emptyTitle": "Belum ada data stok dari Accurate",
+    "emptyBody": "Tabel terisi setelah Accurate tersambung.",
+    "noMatch": "Tidak ada SKU yang cocok dengan filter ini.",
+    "noStock": "Stok belum tercatat"
   }
 }

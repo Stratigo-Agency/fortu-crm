@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { t, type MessageKey } from "@/lib/copy";
 import { count, decimal, rupiahShort } from "@/lib/format";
 import type { AdsToCrm, DemoEffect, LostReasonRow, SkuRow, SourceRow } from "@/lib/reports";
@@ -49,12 +50,15 @@ const tdTight = "tabular px-2 py-3 text-right";
 const dash = "—";
 
 /** Permintaan per SKU: units in open deals, weighted by stage, at PO and done this month (for stock planning). */
-export function SkuTable({ rows }: { rows: SkuRow[] }) {
+export function SkuTable({ rows, canOpenStock }: { rows: SkuRow[]; canOpenStock: boolean }) {
   return (
     <section className="min-w-0 rounded-lg bg-white p-5 shadow-card xl:col-span-2" aria-label={t("laporan.skuDemand")}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-base font-semibold text-ink">{t("laporan.skuDemand")}</h2>
-        <p className="text-sm text-slate">{t("laporan.skuDemandHint")}</p>
+        <p className="text-sm text-slate">
+          {t("laporan.skuDemandHint")}
+          {canOpenStock && <> · <Link href="/stok" className="font-semibold text-accent-strong hover:underline">{t("laporan.skuOpenStock")}</Link></>}
+        </p>
       </div>
       {rows.length === 0 ? (
         <p className="mt-4 text-slate">{t("laporan.noRows")}</p>

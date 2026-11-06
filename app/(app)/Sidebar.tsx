@@ -1,19 +1,19 @@
 "use client";
 
 import {
-  BarChart3, Building2, Home, Inbox, KanbanSquare, Megaphone, Menu, Plus, Search, Settings, Users, X,
+  BarChart3, Boxes, Building2, Home, Inbox, KanbanSquare, Megaphone, Menu, Plus, Search, Settings, Users, X,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
-export type NavIcon = "home" | "pipeline" | "prospek" | "kontak" | "perusahaan" | "laporan" | "pengaturan" | "iklan";
+export type NavIcon = "home" | "pipeline" | "prospek" | "kontak" | "perusahaan" | "laporan" | "pengaturan" | "iklan" | "stok";
 export type NavItem = { href: string; label: string; icon: NavIcon; badge?: number; also?: string[] };
 
 const ICONS = {
   home: Home, pipeline: KanbanSquare, prospek: Inbox, kontak: Users, perusahaan: Building2,
-  laporan: BarChart3, pengaturan: Settings, iklan: Megaphone,
+  laporan: BarChart3, pengaturan: Settings, iklan: Megaphone, stok: Boxes,
 } as const;
 
 const noSubscribe = () => () => {};
