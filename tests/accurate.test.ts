@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { describe, expect, it } from "vitest";
-import { AccurateApiError, apiTimestamp, configFromEnv, createAccurateClient, sign } from "@/lib/accurate/client";
-import { isoDate, mapSales } from "@/lib/accurate/map";
-import { applyPlan, buildPlan, fetchAccurate } from "@/lib/accurate/sync";
+import { beforeEach, describe, expect, it } from "vitest";
+import { AccurateApiError, apiTimestamp, assertAccurateHost, configFromEnv, createAccurateClient, sign } from "@/lib/accurate/client";
+import { isoDate, mapItem, mapPoLines, mapSales, mapStock, poState } from "@/lib/accurate/map";
+import { applyPlan, buildPlan, fetchAccurate, jakartaToday, MIN_CLOSES, summarize } from "@/lib/accurate/sync";
 import { sql } from "@/lib/db";
 
 // Synthetic answers written from the documented shapes (tests/fixtures/accurate-*.json), not recorded from a live database.
@@ -122,6 +122,10 @@ describe("mapping", () => {
 });
 
 describe("sync", () => {
+  beforeEach(async () => {
+    await sql`DELETE FROM purchase_orders WHERE accurate_po_id IS NOT NULL`;
+  });
+
   async function seedCrm(s: Skus, over: { aName?: string; aPrice?: number | null; bPrice?: number | null } = {}) {
     const [a] = await sql<{ id: string }[]>`INSERT INTO products (sku, name, product_line, list_price) VALUES (${s.A}, ${over.aName ?? "Nama dari CRM"}, 'IFP', ${over.aPrice === undefined ? 31_000_000 : over.aPrice}) RETURNING id`;
     const [b] = await sql<{ id: string }[]>`INSERT INTO products (sku, name, product_line, list_price) VALUES (${s.B}, 'Produk B', 'IFP', ${over.bPrice === undefined ? null : over.bPrice}) RETURNING id`;
@@ -180,18 +184,20 @@ describe("sync", () => {
     expect(again.po.update.filter((l) => [s.A, s.B].includes(l.sku))).toHaveLength(0);
   });
 
-  it("closes an Accurate PO line that is no longer open, and leaves hand-made POs alone", async () => {
+  it("closes a saved line whose PO is listed as closed, and leaves hand-made POs and unlisted POs alone", async () => {
     const s = skus();
     const ids = await seedCrm(s);
-    const [gone] = await sql<{ id: string }[]>`INSERT INTO purchase_orders (product_id, qty, status, accurate_po_id) VALUES (${ids.a}, 3, 'open', '999:1') RETURNING id`;
+    const [gone] = await sql<{ id: string }[]>`INSERT INTO purchase_orders (product_id, qty, status, accurate_po_id) VALUES (${ids.a}, 3, 'open', '503:1') RETURNING id`;
+    const [old] = await sql<{ id: string }[]>`INSERT INTO purchase_orders (product_id, qty, status, accurate_po_id) VALUES (${ids.a}, 3, 'open', '999:1') RETURNING id`;
     const [mine] = await sql<{ id: string }[]>`INSERT INTO purchase_orders (product_id, qty, status) VALUES (${ids.a}, 4, 'open') RETURNING id`;
     const { f } = fakeAccurate(s);
     const plan = await buildPlan(await fetchAccurate(client(f), { today: "2026-11-05" }));
     await applyPlan(plan, "2026-11-05");
-    expect((await sql`SELECT status FROM purchase_orders WHERE id = ${gone.id}`)[0].status).toBe("received");
-    expect((await sql`SELECT status FROM purchase_orders WHERE id = ${mine.id}`)[0].status).toBe("open");
+    const st = async (id: string) => (await sql`SELECT status FROM purchase_orders WHERE id = ${id}`)[0].status;
+    expect(await st(gone.id)).toBe("received");
+    expect(await st(old.id)).toBe("open"); // PO 999 is outside the list (older than the PO window): not proof of anything
+    expect(await st(mine.id)).toBe("open");
   });
-
   it("fills an empty CRM price only when Accurate's is above 0, and never sets Rp0", async () => {
     const s = skus();
     const ids = await seedCrm(s, { aPrice: null, bPrice: 0 });
@@ -212,5 +218,271 @@ describe("sync", () => {
     expect(plan.conflicts.some((c) => c.startsWith(s.A) && c.includes(owner))).toBe(true);
     expect(plan.products.find((p) => p.sku === s.A)!.set).not.toHaveProperty("accurate_item_id");
     await expect(applyPlan(plan, "2026-11-05")).resolves.toBeUndefined();
+  });
+});
+
+// ---- hardening ----------------------------------------------------------------------------------------------
+
+/** Lets a test replace some answers of the fake Accurate; return undefined to fall through. */
+const override = (f: typeof fetch, fn: (u: URL) => unknown | undefined) =>
+  (async (url: string, init: RequestInit) => {
+    const r = fn(new URL(url));
+    return r !== undefined ? json(r) : (f as unknown as (u: string, i: RequestInit) => Promise<Response>)(url, init);
+  }) as unknown as typeof fetch;
+const okEmpty = { s: true, d: [], sp: { page: 1, pageCount: 1, rowCount: 0 } };
+
+describe("client hardening", () => {
+  it("only accepts https://<name>.accurate.id as the database host", async () => {
+    for (const h of ["http://zeus.accurate.id", "https://evil.example", "https://accurate.id.evil.example", "https://zeus.accurate.id@evil.example", "https://u:p@zeus.accurate.id", "https://zeus.accurate.id:8443", "https://zeus.accurate.id/x", "https://notaccurate.id", "nonsense"])
+      expect(() => assertAccurateHost(h), h).toThrow(AccurateApiError);
+    expect(assertAccurateHost("https://zeus.accurate.id/")).toBe("https://zeus.accurate.id");
+    expect(() => createAccurateClient({ token: "t", signatureSecret: "s", host: "https://evil.example" })).toThrow(/accurate\.id/);
+  });
+  it("refuses a host that api-token.do returns when it is not an accurate.id host, before sending the token there", async () => {
+    const urls: string[] = [];
+    const f = (async (url: string) => { urls.push(url); return json({ s: true, d: { database: { host: "https://evil.example", id: 1 } } }); }) as unknown as typeof fetch;
+    await expect(createAccurateClient({ token: "t", signatureSecret: "s", fetch: f, sleep: noSleep }).get("/api/item/list.do")).rejects.toThrow(/accurate\.id/);
+    expect(urls).toHaveLength(1);
+  });
+  it("allows exactly the endpoints the sync uses", async () => {
+    const { f, calls } = fakeAccurate(skus());
+    const bad = [
+      "/api/item/list.do?x=1", "/api/item/list.do#a", "/api/item/LIST.DO", "/api/item/list.DO", "//host/..", "//evil.example/api/item/list.do",
+      "/api/item/%2e%2e/save.do", "/api/item/../item/list.do", "/api/item/list.do/", "/accurate/api/item/list.do", "api/item/list.do",
+      "/api/customer/list.do", "/api/item/detail.do", "/api/purchase-order/save.do", "https://evil.example/api/item/list.do", "",
+    ];
+    for (const p of bad) await expect(client(f).get(p), p).rejects.toThrow(AccurateApiError);
+    expect(calls).toHaveLength(0);
+    for (const p of ["/api/item/list.do", "/api/item/list-stock.do", "/api/warehouse/list.do", "/api/purchase-order/list.do", "/api/purchase-order/detail.do", "/api/sales-invoice/list.do", "/api/sales-invoice/detail.do"])
+      await expect(client(override(f, () => ({ s: true, d: [] }))).get(p), p).resolves.toBeTruthy();
+  });
+  it("refuses parameter names it does not know", async () => {
+    const { f, calls } = fakeAccurate(skus());
+    for (const k of ["x", "id=1&delete", "sp.page\n", "__proto__", "filter.transDate.val&x"])
+      await expect(client(f).get("/api/item/list.do", { [k]: "1" }), k).rejects.toThrow(/parameter/);
+    expect(calls).toHaveLength(0);
+  });
+  it("never follows a redirect", async () => {
+    const seen: RequestInit[] = [];
+    const f = (async (_u: string, init: RequestInit) => { seen.push(init); return new Response(null, { status: 302, headers: { location: "https://evil.example/" } }); }) as unknown as typeof fetch;
+    await expect(client(f).get("/api/item/list.do")).rejects.toThrow(/redirect/);
+    expect(seen[0].redirect).toBe("error");
+    const throws = (async () => { throw new TypeError("redirect mode is set to error"); }) as unknown as typeof fetch;
+    await expect(client(throws).get("/api/item/list.do")).rejects.toThrow(AccurateApiError);
+  });
+  it("uses GET for every call of a full fetch", async () => {
+    const { f, calls } = fakeAccurate(skus());
+    await fetchAccurate(client(f), { today: "2026-11-05" });
+    expect(calls.length).toBeGreaterThan(8);
+    expect(calls.every((c) => c.method === "GET")).toBe(true);
+  });
+  it("retries a 5xx with a growing wait, then reports the status", async () => {
+    let n = 0;
+    const waits: number[] = [];
+    const f = (async () => (++n < 3 ? json({}, 503) : json({ s: true, d: [] }))) as unknown as typeof fetch;
+    const c = createAccurateClient({ token: "t", signatureSecret: "s", host: HOST, databaseId: "1", fetch: f, sleep: async (ms) => void waits.push(ms) });
+    await c.get("/api/item/list.do");
+    expect(waits).toEqual([2000, 4000]);
+    const always = (async () => json({}, 500)) as unknown as typeof fetch;
+    await expect(createAccurateClient({ token: "t", signatureSecret: "s", host: HOST, databaseId: "1", fetch: always, sleep: noSleep, maxRetries: 1 }).get("/api/item/list.do")).rejects.toThrow(/500/);
+  });
+  it("listAll fails when a page has rows but no sp", async () => {
+    const f = (async () => json({ s: true, d: [{ a: 1 }] })) as unknown as typeof fetch;
+    await expect(client(f).listAll("/api/item/list.do")).rejects.toThrow(/paging info/);
+  });
+  it("listAll fails when the count differs from sp.rowCount or a page in the middle is empty", async () => {
+    const short = (async () => json({ s: true, d: [{ a: 1 }], sp: { pageCount: 1, rowCount: 2 } })) as unknown as typeof fetch;
+    await expect(client(short).listAll("/api/item/list.do")).rejects.toThrow(/Accurate says 2/);
+    let n = 0;
+    const hole = (async () => json({ s: true, d: ++n === 1 ? [{ a: 1 }] : [], sp: { pageCount: 3, rowCount: 1 } })) as unknown as typeof fetch;
+    await expect(client(hole).listAll("/api/item/list.do")).rejects.toThrow(/empty/);
+    const noList = (async () => json({ s: true, sp: { pageCount: 1 } })) as unknown as typeof fetch;
+    await expect(client(noList).listAll("/api/item/list.do")).rejects.toThrow(/row list/);
+    let m = 0;
+    const ok = (async () => json({ s: true, d: [{ n: ++m }, { n: ++m }], sp: { pageCount: 2, rowCount: 4 } })) as unknown as typeof fetch;
+    expect(await client(ok).listAll("/api/item/list.do")).toHaveLength(4);
+  });
+});
+
+describe("mapping hardening", () => {
+  it("throws when a quantity is missing instead of reading it as 0", () => {
+    expect(() => mapStock({ no: "X" }, "W")).toThrow(/quantity/);
+    expect(() => mapStock({ no: "X", quantity: "abc" }, "W")).toThrow(/non-numeric/);
+    expect(mapStock({ no: "X", quantity: 0 }, "W")).toMatchObject({ qty: 0 });
+    expect(mapStock({ no: "X", availableQuantity: "4" }, "W")).toMatchObject({ qty: 4 });
+    expect(() => mapSales([{ transDate: "01/10/2026", detailItem: [{ item: { no: "X" }, totalPrice: 5 }] }])).toThrow(/quantity/);
+    expect(() => mapSales([{ transDate: "01/10/2026", detailItem: [{ item: { no: "X" }, quantity: 1 }] }])).toThrow(/price/);
+  });
+  it("reads the open quantity of a PO line when Accurate shows one, else the ordered quantity", () => {
+    const po = { id: 1, detailItem: [
+      { id: 1, item: { no: "A" }, quantity: 10, remainingQuantity: 4 },
+      { id: 2, item: { no: "B" }, quantity: 10 },
+      { id: 3, item: { no: "C" }, quantity: 10, remainingQuantity: 0 },
+    ] };
+    expect(mapPoLines(po).map((l) => [l.sku, l.qty])).toEqual([["A", 4], ["B", 10]]);
+  });
+  it("sorts PO statuses into open, closed and unknown", () => {
+    expect(poState("Menunggu diproses")).toBe("open");
+    expect(poState("Sebagian diproses")).toBe("open");
+    expect(poState("Diproses")).toBe("closed");
+    expect(poState("Ditutup")).toBe("closed");
+    expect(poState("")).toBe("unknown");
+    expect(poState("Aneh")).toBe("unknown");
+  });
+  it("does not treat an unknown item type as stock", () => {
+    expect(mapItem({ no: "X", itemType: "MYSTERY" })).toMatchObject({ itemType: "unknown", rawType: "MYSTERY" });
+    expect(mapItem({ no: "X" })).toMatchObject({ itemType: "unknown" });
+    expect(mapItem({ no: "X", itemType: "NON_INVENTORY" })).toMatchObject({ itemType: "non_inventory" });
+    expect(mapItem({ no: "X", itemType: "INVENTORY" })).toMatchObject({ itemType: "inventory" });
+  });
+  it("dates the snapshot in Jakarta time", () => {
+    expect(jakartaToday(new Date("2026-11-05T16:59:59Z"))).toBe("2026-11-05");
+    expect(jakartaToday(new Date("2026-11-05T17:00:00Z"))).toBe("2026-11-06");
+    expect(jakartaToday(new Date("2026-11-05T23:59:59Z"))).toBe("2026-11-06");
+    expect(jakartaToday(new Date("2026-11-06T00:00:00Z"))).toBe("2026-11-06");
+  });
+});
+
+describe("sync hardening", () => {
+  beforeEach(async () => {
+    await sql`DELETE FROM purchase_orders WHERE accurate_po_id IS NOT NULL`;
+  });
+  async function seed(s: Skus) {
+    const [a] = await sql<{ id: string }[]>`INSERT INTO products (sku, name, product_line, list_price) VALUES (${s.A}, 'A', 'IFP', 31000000) RETURNING id`;
+    const [b] = await sql<{ id: string }[]>`INSERT INTO products (sku, name, product_line) VALUES (${s.B}, 'B', 'IFP') RETURNING id`;
+    return { a: a.id, b: b.id };
+  }
+  const plan = async (f: typeof fetch, opts: Partial<Parameters<typeof fetchAccurate>[1]> = {}) => buildPlan(await fetchAccurate(client(f), { today: "2026-11-05", ...opts }));
+  const poStatus = async (key: string) => (await sql`SELECT status FROM purchase_orders WHERE accurate_po_id = ${key}`)[0]?.status;
+  const savePo = (productId: string, key: string, status = "open") => sql`INSERT INTO purchase_orders (product_id, qty, status, accurate_po_id) VALUES (${productId}, 3, ${status}, ${key})`;
+
+  it("an empty PO list closes nothing and says so", async () => {
+    const s = skus(); const ids = await seed(s);
+    await savePo(ids.a, "503:1");
+    const { f } = fakeAccurate(s);
+    const p = await plan(override(f, (u) => (u.pathname.endsWith("/purchase-order/list.do") ? okEmpty : undefined)));
+    expect(p.po.close).toEqual([]);
+    expect(p.warnings.join(" ")).toMatch(/listed no purchase orders/);
+    await applyPlan(p, "2026-11-05");
+    expect(await poStatus("503:1")).toBe("open");
+  });
+  it("a PO list without any open PO closes nothing and says so", async () => {
+    const s = skus(); const ids = await seed(s);
+    await savePo(ids.a, "503:1");
+    const { f } = fakeAccurate(s);
+    const onlyClosed = { s: true, d: [{ id: 503, statusName: "Ditutup" }], sp: { page: 1, pageCount: 1, rowCount: 1 } };
+    const p = await plan(override(f, (u) => (u.pathname.endsWith("/purchase-order/list.do") ? onlyClosed : undefined)));
+    expect(p.po.close).toEqual([]);
+    expect(p.warnings.join(" ")).toMatch(/none of 1 listed/);
+  });
+  it("a truncated PO list (rowCount says more) fails the fetch instead of closing lines", async () => {
+    const s = skus();
+    const { f } = fakeAccurate(s);
+    const cut = { s: true, d: [{ id: 501, statusName: "Menunggu diproses" }], sp: { page: 1, pageCount: 1, rowCount: 3 } };
+    await expect(fetchAccurate(client(override(f, (u) => (u.pathname.endsWith("/purchase-order/list.do") ? cut : undefined))), { today: "2026-11-05" })).rejects.toThrow(/Accurate says 3/);
+  });
+  it("a status Accurate does not name never closes a line", async () => {
+    const s = skus(); const ids = await seed(s);
+    await savePo(ids.a, "503:1");
+    const { f } = fakeAccurate(s);
+    const odd = { s: true, d: [{ id: 501, statusName: "Menunggu diproses" }, { id: 503 }], sp: { page: 1, pageCount: 1, rowCount: 2 } };
+    const p = await plan(override(f, (u) => (u.pathname.endsWith("/purchase-order/list.do") ? odd : undefined)));
+    expect(p.po.close).toEqual([]);
+  });
+  it("closes a line that is gone from a PO whose detail was read, and keeps lines that are still there", async () => {
+    const s = skus(); const ids = await seed(s);
+    await savePo(ids.a, "501:9999");
+    await savePo(ids.a, "501:9001");
+    const { f } = fakeAccurate(s);
+    const p = await plan(f);
+    expect(p.po.close).toEqual(["501:9999"]);
+    await applyPlan(p, "2026-11-05");
+    expect(await poStatus("501:9999")).toBe("received");
+    expect(await poStatus("501:9001")).toBe("open");
+  });
+  it("caps closes per run and reports it", async () => {
+    const s = skus(); const ids = await seed(s);
+    for (let i = 0; i < 12; i++) await savePo(ids.a, `503:${i}`);
+    const { f } = fakeAccurate(s);
+    const p = await plan(f);
+    expect(p.po.close).toHaveLength(MIN_CLOSES);
+    expect(p.warnings.join(" ")).toMatch(/capped: 12 lines/);
+    await applyPlan(p, "2026-11-05");
+    expect((await sql`SELECT 1 FROM purchase_orders WHERE accurate_po_id LIKE '503:%' AND status = 'open'`)).toHaveLength(12 - MIN_CLOSES);
+  });
+  it("does not reopen a line the CRM marked received or cancelled, and a second run changes nothing", async () => {
+    const s = skus(); const ids = await seed(s);
+    await savePo(ids.a, "501:9001", "received");
+    await savePo(ids.b, "502:9003", "cancelled");
+    const { f } = fakeAccurate(s);
+    const p = await plan(f);
+    expect(p.po.insert.map((l) => l.lineKey)).not.toContain("501:9001");
+    expect(p.po.update).toHaveLength(0);
+    await applyPlan(p, "2026-11-05");
+    expect(await poStatus("501:9001")).toBe("received");
+    expect(await poStatus("502:9003")).toBe("cancelled");
+    const again = await plan(f);
+    expect(again.po.insert).toHaveLength(0);
+    expect(again.po.update).toHaveLength(0);
+    expect(again.po.close).toHaveLength(0);
+  });
+  it("two overlapping runs do not duplicate PO lines", async () => {
+    const s = skus(); const ids = await seed(s);
+    const { f } = fakeAccurate(s);
+    const p1 = await plan(f);
+    const p2 = await plan(f);
+    await Promise.all([applyPlan(p1, "2026-11-05"), applyPlan(p2, "2026-11-05")]);
+    expect((await sql`SELECT 1 FROM purchase_orders WHERE product_id = ${ids.a} AND accurate_po_id = '501:9001'`)).toHaveLength(1);
+    expect((await sql`SELECT 1 FROM purchase_orders WHERE product_id = ${ids.b} AND accurate_po_id = '502:9003'`)).toHaveLength(1);
+  });
+  it("a dry run (plan only) writes nothing", async () => {
+    const s = skus(); const ids = await seed(s);
+    const count = async () => Number((await sql`SELECT (SELECT count(*) FROM purchase_orders WHERE accurate_po_id IS NOT NULL) + (SELECT count(*) FROM inventory_snapshots WHERE product_id IN (${ids.a}, ${ids.b})) + (SELECT count(*) FROM sales_monthly WHERE product_id IN (${ids.a}, ${ids.b})) AS n`)[0].n);
+    const before = await count();
+    const { f, calls } = fakeAccurate(s);
+    const p = await plan(f);
+    expect(p.stock.length + p.po.insert.length + p.sales.length).toBeGreaterThan(0);
+    expect(await count()).toBe(before);
+    expect(calls.every((c) => c.method === "GET")).toBe(true);
+  });
+  it("refuses an all-zero stock answer and keeps a good snapshot from earlier today", async () => {
+    const s = skus(); const ids = await seed(s);
+    await sql`INSERT INTO inventory_snapshots (product_id, snapshot_date, warehouse, qty_on_hand) VALUES (${ids.a}, '2026-11-05', 'Gudang Utama', 12)`;
+    const { f } = fakeAccurate(s);
+    const zeros = override(f, (u) => (u.pathname.endsWith("/item/list-stock.do") ? { s: true, d: [{ no: s.A, quantity: 0 }, { no: s.B, quantity: 0 }], sp: { page: 1, pageCount: 1, rowCount: 2 } } : undefined));
+    const p = await plan(zeros);
+    expect(p.stock).toEqual([]);
+    expect(p.warnings.join(" ")).toMatch(/stock skipped/);
+    await applyPlan(p, "2026-11-05");
+    expect((await sql`SELECT qty_on_hand FROM inventory_snapshots WHERE product_id = ${ids.a} AND snapshot_date = '2026-11-05'`)[0].qty_on_hand).toBe(12);
+    const empty = override(f, (u) => (u.pathname.endsWith("/item/list-stock.do") ? okEmpty : undefined));
+    expect((await plan(empty)).warnings.join(" ")).toMatch(/stock skipped/);
+  });
+  it("fails the fetch when a stock row has no quantity", async () => {
+    const s = skus();
+    const { f } = fakeAccurate(s);
+    const noQty = override(f, (u) => (u.pathname.endsWith("/item/list-stock.do") ? { s: true, d: [{ no: s.A }], sp: { page: 1, pageCount: 1, rowCount: 1 } } : undefined));
+    await expect(fetchAccurate(client(noQty), { today: "2026-11-05" })).rejects.toThrow(/stock quantity/);
+  });
+  it("leaves items of an unknown type alone and reports them", async () => {
+    const s = skus(); const ids = await seed(s);
+    const { f } = fakeAccurate(s);
+    const odd = override(f, (u) => (u.pathname.endsWith("/item/list.do")
+      ? { s: true, d: [{ id: s.IDA, no: s.A, name: "A", itemType: "MYSTERY", unit1Name: "UNIT", unitPrice: 0 }], sp: { page: 1, pageCount: 1, rowCount: 1 } } : undefined));
+    const typeBefore = (await sql`SELECT item_type::text AS t FROM products WHERE id = ${ids.a}`)[0].t;
+    const p = await plan(odd);
+    expect(p.unknownTypes).toEqual([{ sku: s.A, type: "MYSTERY" }]);
+    expect(p.products.find((x) => x.sku === s.A)).toBeUndefined();
+    expect(p.stock.some((x) => x.sku === s.A)).toBe(false);
+    await applyPlan(p, "2026-11-05");
+    expect((await sql`SELECT item_type::text AS t FROM products WHERE id = ${ids.a}`)[0].t).toBe(typeBefore);
+    expect(summarize(p).unknownTypes).toBe(1);
+  });
+  it("pauses between invoice detail calls when a throttle is set", async () => {
+    const s = skus();
+    const { f } = fakeAccurate(s);
+    const waits: number[] = [];
+    await fetchAccurate(client(f), { today: "2026-11-05", throttleMs: 50, sleep: async (ms) => void waits.push(ms) });
+    expect(waits).toEqual([50, 50]); // three invoices, two pauses
   });
 });

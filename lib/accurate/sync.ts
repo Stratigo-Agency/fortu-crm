@@ -1,13 +1,27 @@
 import { sql } from "@/lib/db";
 import type { AccurateClient } from "./client";
-import { accurateDate, isOpenPo, mapItem, mapPoLines, mapSales, mapStock, type AItem, type APoLine, type ASale, type AStock } from "./map";
+import { accurateDate, mapItem, poState, mapPoLines, mapSales, mapStock, type AItem, type APoLine, type ASale, type AStock, type PoState } from "./map";
 
 // Accurate → CRM, read-only on the Accurate side. products, inventory_snapshots, purchase_orders, sales_monthly.
 // Rules: a name or list_price already in the CRM is never overwritten; a price from Accurate fills only an empty CRM
 // price and only when it is above 0 (the first export had Rp0 everywhere); is_active is never touched.
 
-export type AccurateData = { items: AItem[]; stock: AStock[]; poLines: APoLine[]; sales: ASale[] };
-export type FetchOptions = { today: string; months?: number; poMonths?: number; maxInvoices?: number };
+export type AccurateData = {
+  items: AItem[]; stock: AStock[]; poLines: APoLine[]; sales: ASale[];
+  /** every PO the list call returned (inside the PO window) with its status, and the POs whose detail was read */
+  pos: { id: string; state: PoState }[]; poDetailed: string[];
+};
+export type FetchOptions = { today: string; months?: number; poMonths?: number; maxInvoices?: number; throttleMs?: number; sleep?: (ms: number) => Promise<void> };
+
+/** Today's date in Jakarta (yyyy-MM-dd); 17:00-24:00 UTC is already the next day there. */
+export function jakartaToday(d: Date = new Date()): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(d);
+}
+
+/** At most this share of the open saved lines (minimum MIN_CLOSES) may be closed in one run. */
+export const MAX_CLOSE_SHARE = 0.25;
+export const MIN_CLOSES = 5;
+const poIdOf = (lineKey: string) => lineKey.split(":")[0];
 type Raw = Record<string, unknown>;
 
 const detailOf = (r: unknown): Raw => ((r as { d?: Raw }).d ?? {}) as Raw;
@@ -36,8 +50,16 @@ export async function fetchAccurate(c: AccurateClient, o: FetchOptions): Promise
     fields: "id,number,transDate,statusName", "filter.transDate.op": "GREATER_EQUAL_THAN", "filter.transDate.val": accurateDate(poFrom),
   });
   const poLines: APoLine[] = [];
-  for (const po of pos.filter((p) => isOpenPo(p.statusName))) {
-    poLines.push(...mapPoLines(detailOf(await c.get("/api/purchase-order/detail.do", { id: String(po.id) }))));
+  const poList: AccurateData["pos"] = [];
+  const poDetailed: string[] = [];
+  for (const po of pos) {
+    const id = String(po.id ?? "");
+    if (!id) continue;
+    const state = poState(po.statusName);
+    poList.push({ id, state });
+    if (state !== "open") continue;
+    poLines.push(...mapPoLines(detailOf(await c.get("/api/purchase-order/detail.do", { id }))));
+    poDetailed.push(id);
   }
 
   const from = addMonths(o.today, -((o.months ?? 3) - 1));
@@ -46,8 +68,13 @@ export async function fetchAccurate(c: AccurateClient, o: FetchOptions): Promise
   });
   if (invoices.length > (o.maxInvoices ?? 5000)) throw new Error(`Too many invoices (${invoices.length}); narrow the window`);
   const details: Raw[] = [];
-  for (const inv of invoices) details.push(detailOf(await c.get("/api/sales-invoice/detail.do", { id: String(inv.id) })));
-  return { items, stock, poLines, sales: mapSales(details) };
+  const pause = o.throttleMs ?? 0;
+  const sleep = o.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
+  for (const inv of invoices) {
+    if (pause > 0 && details.length > 0) await sleep(pause);
+    details.push(detailOf(await c.get("/api/sales-invoice/detail.do", { id: String(inv.id) })));
+  }
+  return { items, stock, poLines, sales: mapSales(details), pos: poList, poDetailed };
 }
 
 type ProductRow = { id: string; sku: string; name: string; list_price: string | null; accurate_item_id: string | null; item_type: string; unit: string; barcode: string | null; accurate_category: string | null };
@@ -60,6 +87,10 @@ export type Plan = {
   onlyInAccurate: { sku: string; name: string }[];
   onlyInCrm: { sku: string; name: string }[];
   conflicts: string[];
+  /** types Accurate sent that the CRM does not know; these items are left alone */
+  unknownTypes: { sku: string; type: string }[];
+  /** things that stopped a part of the sync; the job still applies the rest and then exits 1 */
+  warnings: string[];
 };
 
 type Db = typeof sql;
@@ -70,11 +101,13 @@ export async function buildPlan(data: AccurateData, db: Db = sql): Promise<Plan>
   const aSkus = new Set(data.items.map((i) => i.sku));
   const idOwner = new Map(prods.filter((p) => p.accurate_item_id).map((p) => [p.accurate_item_id!, p.sku]));
   const conflicts: string[] = [];
+  const warnings: string[] = [];
+  const unknownTypes = data.items.filter((i) => i.itemType === "unknown").map((i) => ({ sku: i.sku, type: i.rawType || "(empty)" }));
 
   const products: ProductChange[] = [];
   for (const it of data.items) {
     const p = bySku.get(it.sku);
-    if (!p) continue;
+    if (!p || it.itemType === "unknown") continue;
     const set: ProductChange["set"] = {};
     if (it.accurateId && p.accurate_item_id !== it.accurateId) {
       const owner = idOwner.get(it.accurateId);
@@ -94,10 +127,16 @@ export async function buildPlan(data: AccurateData, db: Db = sql): Promise<Plan>
   const onlyInCrm = prods.filter((p) => !aSkus.has(p.sku)).map((p) => ({ sku: p.sku, name: p.name }));
 
   const inventorySkus = new Set(data.items.filter((i) => i.itemType === "inventory").map((i) => i.sku));
-  const stock = data.stock.flatMap((s) => {
+  let stock = data.stock.flatMap((s) => {
     const p = bySku.get(s.sku);
     return p && inventorySkus.has(s.sku) ? [{ productId: p.id, sku: s.sku, warehouse: s.warehouse, qty: s.qty }] : [];
   });
+  // Accurate answered but every quantity is 0 (or nothing came back) although it has stock items: more likely a broken
+  // answer than an empty warehouse. Do not write today's snapshot, so a good one from earlier today stays.
+  if (inventorySkus.size > 0 && !stock.some((s) => s.qty > 0)) {
+    if (stock.length > 0 || data.stock.length === 0) warnings.push(`stock skipped: Accurate has ${inventorySkus.size} stock items but no quantity above 0 came back`);
+    stock = [];
+  }
 
   const existing = await db<{ id: string; accurate_po_id: string; product_id: string; qty: number; eta_date: string | null; status: string }[]>`
     SELECT id, accurate_po_id, product_id, qty, to_char(eta_date, 'YYYY-MM-DD') AS eta_date, status FROM purchase_orders WHERE accurate_po_id IS NOT NULL`;
@@ -106,25 +145,49 @@ export async function buildPlan(data: AccurateData, db: Db = sql): Promise<Plan>
   const po: Plan["po"] = { insert: [], update: [], close: [] };
   for (const l of data.poLines) {
     const p = bySku.get(l.sku);
-    if (!p) continue;
+    if (!p || seen.has(l.lineKey)) continue;
     seen.add(l.lineKey);
     const row = { ...l, productId: p.id };
     const e = exMap.get(l.lineKey);
     if (!e) po.insert.push(row);
-    else if (e.product_id !== p.id || e.qty !== l.qty || e.eta_date !== l.eta || e.status !== "open") po.update.push(row);
+    // only lines the CRM still has open are updated; received or cancelled lines are never reopened
+    else if (e.status === "open" && (e.product_id !== p.id || e.qty !== l.qty || e.eta_date !== l.eta)) po.update.push(row);
   }
-  // Lines we saved earlier that Accurate no longer lists as open: received or closed there. Hand-made POs (no accurate_po_id) stay.
-  for (const e of existing) if (e.status === "open" && !seen.has(e.accurate_po_id)) po.close.push(e.accurate_po_id);
+
+  // Close a saved open line only when Accurate says so about its PO: the PO was listed this run with a closed status,
+  // or it was listed open, its detail was read and the line is no longer in it. A PO that was not listed at all
+  // (older than the PO window, or a list that came back short) never closes anything.
+  const openSaved = existing.filter((e) => e.status === "open");
+  const state = new Map(data.pos.map((x) => [x.id, x.state]));
+  const detailed = new Set(data.poDetailed);
+  const candidates = openSaved.filter((e) => {
+    const id = poIdOf(e.accurate_po_id);
+    const st = state.get(id);
+    if (st === "closed") return true;
+    return st === "open" && detailed.has(id) && !seen.has(e.accurate_po_id);
+  }).map((e) => e.accurate_po_id).sort();
+  if (openSaved.length > 0) {
+    const openListed = data.pos.filter((x) => x.state === "open").length;
+    if (data.pos.length === 0) warnings.push(`PO closing skipped: Accurate listed no purchase orders but ${openSaved.length} saved lines are open`);
+    else if (openListed === 0) warnings.push(`PO closing skipped: none of ${data.pos.length} listed purchase orders has an open status but ${openSaved.length} saved lines are open`);
+    else {
+      const cap = Math.max(MIN_CLOSES, Math.ceil(openSaved.length * MAX_CLOSE_SHARE));
+      if (candidates.length > cap) warnings.push(`PO closing capped: ${candidates.length} lines should close, only ${cap} (${MAX_CLOSE_SHARE * 100}% of ${openSaved.length} open, minimum ${MIN_CLOSES}) were closed this run`);
+      po.close = candidates.slice(0, cap);
+    }
+  }
 
   const sales = data.sales.flatMap((s) => {
     const p = bySku.get(s.sku);
     return p ? [{ ...s, productId: p.id }] : [];
   });
-  return { products, stock, po, sales, onlyInAccurate, onlyInCrm, conflicts };
+  return { products, stock, po, sales, onlyInAccurate, onlyInCrm, conflicts, unknownTypes, warnings };
 }
 
 export async function applyPlan(plan: Plan, today: string, db: Db = sql): Promise<void> {
   await db.begin(async (t) => {
+    // one run at a time: a second, overlapping run waits here and then re-checks every row it touches
+    await t`SELECT pg_advisory_xact_lock(hashtext('accurate-sync'))`;
     for (const c of plan.products) {
       const s = c.set;
       await t`UPDATE products SET
@@ -142,10 +205,12 @@ export async function applyPlan(plan: Plan, today: string, db: Db = sql): Promis
         ON CONFLICT (product_id, snapshot_date, warehouse) DO UPDATE SET qty_on_hand = EXCLUDED.qty_on_hand`;
     }
     for (const l of plan.po.insert) {
-      await t`INSERT INTO purchase_orders (product_id, qty, eta_date, status, accurate_po_id) VALUES (${l.productId}, ${l.qty}, ${l.eta}::date, 'open', ${l.lineKey})`;
+      await t`INSERT INTO purchase_orders (product_id, qty, eta_date, status, accurate_po_id)
+        SELECT ${l.productId}, ${l.qty}, ${l.eta}::date, 'open', ${l.lineKey}
+        WHERE NOT EXISTS (SELECT 1 FROM purchase_orders WHERE accurate_po_id = ${l.lineKey})`;
     }
     for (const l of plan.po.update) {
-      await t`UPDATE purchase_orders SET product_id = ${l.productId}, qty = ${l.qty}, eta_date = ${l.eta}::date, status = 'open' WHERE accurate_po_id = ${l.lineKey}`;
+      await t`UPDATE purchase_orders SET product_id = ${l.productId}, qty = ${l.qty}, eta_date = ${l.eta}::date WHERE accurate_po_id = ${l.lineKey} AND status = 'open'`;
     }
     if (plan.po.close.length) await t`UPDATE purchase_orders SET status = 'received' WHERE accurate_po_id IN ${t(plan.po.close)} AND status = 'open'`;
     for (const s of plan.sales) {
@@ -158,7 +223,7 @@ export async function applyPlan(plan: Plan, today: string, db: Db = sql): Promis
 export function summarize(plan: Plan) {
   return {
     productsChanged: plan.products.length, stockRows: plan.stock.length,
-    poNew: plan.po.insert.length, poUpdated: plan.po.update.length, poClosed: plan.po.close.length,
+    poNew: plan.po.insert.length, poUpdated: plan.po.update.length, poClosed: plan.po.close.length, unknownTypes: plan.unknownTypes.length, warnings: plan.warnings.length,
     salesRows: plan.sales.length, onlyInAccurate: plan.onlyInAccurate.length, onlyInCrm: plan.onlyInCrm.length, conflicts: plan.conflicts.length,
   };
 }

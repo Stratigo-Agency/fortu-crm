@@ -1,6 +1,6 @@
 import { configFromEnv, createAccurateClient } from "@/lib/accurate/client";
 import { sql } from "@/lib/db";
-import { applyPlan, buildPlan, fetchAccurate, summarize, type Plan } from "@/lib/accurate/sync";
+import { applyPlan, buildPlan, fetchAccurate, jakartaToday, summarize, type Plan } from "@/lib/accurate/sync";
 
 // Nightly Accurate read (Railway service cron-accurate: `node jobs/accurate-sync.js`, cron 0 18 * * * = 01:00 Jakarta).
 //   node jobs/accurate-sync.js --dry-run     print what would change, write nothing
@@ -27,17 +27,21 @@ function report(plan: Plan, dry: boolean) {
   console.log(`unmatched, in Accurate but not in the CRM (${plan.onlyInAccurate.length}): ${plan.onlyInAccurate.map((x) => x.sku).join(", ") || "-"}`);
   console.log(`unmatched, in the CRM but not in Accurate (${plan.onlyInCrm.length}): ${plan.onlyInCrm.map((x) => x.sku).join(", ") || "-"}`);
   for (const c of plan.conflicts) console.log(`  conflict ${c}`);
+  for (const u of plan.unknownTypes) console.log(`  unknown item type ${u.sku}: ${u.type} (left alone)`);
+  for (const w of plan.warnings) console.warn(`  WARNING ${w}`);
 }
 
 async function main() {
   const dry = flag("dry-run");
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date());
+  const today = jakartaToday();
   const client = createAccurateClient(configFromEnv());
-  const data = await fetchAccurate(client, { today, months: numArg("months") });
+  const data = await fetchAccurate(client, { today, months: numArg("months"), throttleMs: 100 });
   const plan = await buildPlan(data);
   if (!dry) await applyPlan(plan, today);
   report(plan, dry);
   console.log(`accurate-sync ok ${dry ? "dry-run " : ""}${JSON.stringify(summarize(plan))}`);
+  // the safe parts were applied; a part that was held back makes the run show as failed in Railway
+  if (plan.warnings.length) throw new Error(`${plan.warnings.length} part(s) held back, see WARNING lines above`);
 }
 
 main()
