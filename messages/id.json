@@ -592,6 +592,17 @@
       "katalog": "Katalog",
       "data": "Data"
     },
+    "menuHint": {
+      "target": "Target Rupiah dan unit layar per bulan.",
+      "aturan": "Batas diskon, follow-up, dan kapan deal jadi proyek.",
+      "peluang": "Persentase peluang di tiap tahap.",
+      "definisi": "Arti tiap tahap di pipeline.",
+      "tim": "Peran, status aktif, dan nomor WhatsApp sales.",
+      "katalog": "Harga MSRP dan batas diskon per produk.",
+      "data": "Ekspor deal dan kontak ke CSV.",
+      "iklan": "Kampanye Meta dan siapa pemiliknya.",
+      "whatsapp": "Nomor sales yang tersambung ke CRM."
+    },
     "title": "Pengaturan",
     "onlyOwner": "Hanya admin dan Pak Jovian yang bisa mengubah pengaturan.",
     "saveAll": "Simpan pengaturan",
@@ -630,7 +641,6 @@
     "colEmail": "Email",
     "colRole": "Peran",
     "colAccepting": "Terima chat baru",
-    "colLines": "Lini produk",
     "colWa": "No. WhatsApp",
     "colWaLabel": "Nama line",
     "company": "Perusahaan",
