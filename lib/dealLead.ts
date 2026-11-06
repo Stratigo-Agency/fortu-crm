@@ -1,7 +1,7 @@
 import { ForbiddenError } from "@/lib/authz";
 import type { SessionUser } from "@/lib/auth";
 import { sql } from "@/lib/db";
-import { emptyDeal } from "@/lib/deal";
+import { emptyDeal, leadTrace } from "@/lib/deal";
 import type { DealDetail } from "@/lib/dealTypes";
 import { LeadClosedError } from "@/lib/leads";
 
@@ -48,6 +48,7 @@ export async function leadPrefill(
     phone: l.phone_e164,
     leadId: l.id,
     sourceChannel: l.source_channel,
+    leadTrace: await leadTrace(l.id),
   };
 }
 

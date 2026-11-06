@@ -16,6 +16,9 @@ export const ALLOWED = new Set([
   "next step",
   "win rate",
   "run rate",
+  "lead",
+  "Lead",
+  "funnel",
   "Fortu",
 ]);
 

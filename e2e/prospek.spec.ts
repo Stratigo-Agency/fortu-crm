@@ -136,3 +136,25 @@ test("marking contacted moves the lead to Sudah dihubungi; not a fit takes it of
     SELECT l.status, l.disqualify_reason FROM leads l JOIN contacts c ON c.id = l.contact_id WHERE c.full_name = ${`Maria ${tag}`}`;
   expect(lost).toEqual({ status: "disqualified", disqualify_reason: "budget" });
 });
+
+test("each prospect says where it came from, and the source filter keeps only that group", async ({ page }) => {
+  const phone = `+62812${String(Math.floor(Math.random() * 1e8)).padStart(8, "0")}`;
+  const [c] = await sql<{ id: string }[]>`INSERT INTO contacts (phone_e164, full_name) VALUES (${phone}, ${`Web ${tag}`}) RETURNING id`;
+  await sql`
+    INSERT INTO leads (contact_id, owner_user_id, source_channel, status, first_message, utm_campaign)
+    VALUES (${c.id}, ${repId}, 'website_form', 'new', 'Minta penawaran', 'promo-sekolah')`;
+  await lead(repId, `Langsung ${tag}`);
+  await page.reload();
+  const web = row(page, "Web");
+  await expect(web).toContainText("Website");
+  await expect(web).toContainText("Kampanye promo-sekolah");
+  await expect(row(page, "Langsung")).toContainText("WhatsApp langsung");
+
+  await pick(page.getByRole("combobox", { name: "Sumber" }), "Iklan Meta");
+  await expect(page).toHaveURL(/sumber=meta/);
+  await expect(row(page, "Web")).toHaveCount(0);
+  await pick(page.getByRole("combobox", { name: "Sumber" }), "Website");
+  await expect(page).toHaveURL(/sumber=website/);
+  await expect(row(page, "Web")).toBeVisible();
+  await expect(row(page, "Langsung")).toHaveCount(0);
+});

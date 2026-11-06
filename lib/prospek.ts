@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import type { SourceGroup } from "@/lib/leadFunnel";
 
 // Reads for /prospek. The numbers come from the SQL views v_leads_enriched and v_prospek_stats (rule 5).
 
@@ -26,8 +27,13 @@ export type ProspekRow = {
   phone_e164: string;
   first_message: string | null;
   source_channel: string;
+  source_group: SourceGroup;
   ad_code: string | null;
+  ad_name: string | null;
   click_code: string | null;
+  utm_source: string | null;
+  utm_campaign: string | null;
+  landing_url: string | null;
   product_interest: string | null;
   received_at: Date;
   is_late: boolean;
@@ -65,6 +71,8 @@ type ListOptions = {
   tab: ProspekTab;
   q: string;
   limit: number;
+  /** only leads of one source group (Iklan Meta, Website, …) */
+  group?: SourceGroup | null;
 };
 
 /** Leads for one tab, newest first. hasMore tells whether "Muat lebih banyak" applies. */
@@ -77,13 +85,15 @@ export async function listProspects(o: ListOptions): Promise<{ rows: ProspekRow[
                ${phones.length ? sql`OR phone_e164 LIKE ANY(${phones})` : sql``})`
     : sql``;
   const owner = o.ownerId ? sql`AND owner_user_id = ${o.ownerId}` : sql``;
+  const group = o.group ? sql`AND source_group = ${o.group}` : sql``;
 
   const rows = await sql<ProspekRow[]>`
-    SELECT id, status, contact_name, phone_e164, first_message, source_channel, ad_code, click_code,
+    SELECT id, status, contact_name, phone_e164, first_message, source_channel, source_group, ad_code, ad_name,
+           click_code, utm_source, utm_campaign, landing_url,
            product_interest, received_at, is_late, owner_user_id, owner_name,
            can_edit_lead(${o.viewerId}, id) AS can_edit
       FROM v_leads_enriched
-     WHERE status = ANY(${statuses}) ${owner} ${search}
+     WHERE status = ANY(${statuses}) AND NOT is_sample ${owner} ${group} ${search}
      ORDER BY received_at DESC, id
      LIMIT ${o.limit + 1}`;
   return { rows: rows.slice(0, o.limit), hasMore: rows.length > o.limit };
@@ -108,11 +118,12 @@ const NO_STATS: ProspekStats = {
   meta_without_code: 0,
 };
 
-/** The numbers on top of /prospek, for one owner or for all sales (ownerId null). */
-export async function prospekStats(ownerId: string | null): Promise<ProspekStats> {
+/** The numbers on top of /prospek, for one owner or for all sales (ownerId null), and one source group or all. */
+export async function prospekStats(ownerId: string | null, group: SourceGroup | null = null): Promise<ProspekStats> {
   const [row] = await sql<ProspekStats[]>`
     SELECT new_count, contacted_count, open_count, received_today, median_log_delay_min, meta_without_code
       FROM v_prospek_stats
-     WHERE ${ownerId ? sql`NOT is_total AND owner_user_id = ${ownerId}` : sql`is_total`}`;
+     WHERE ${ownerId ? sql`NOT is_total AND owner_user_id = ${ownerId}` : sql`is_total`}
+       AND ${group ? sql`NOT all_groups AND source_group = ${group}` : sql`all_groups`}`;
   return row ?? NO_STATS;
 }
