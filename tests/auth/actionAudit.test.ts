@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
+import { ForbiddenError } from "@/lib/authz";
 import { sql } from "@/lib/db";
 import { saveDeal } from "@/lib/dealSave";
 import type { DealInput } from "@/lib/dealTypes";
@@ -49,13 +50,29 @@ describe("saveDeal · a prospect's contact is only taken when the deal is made f
     const rep = await createUser({ role: "sales_rep" });
     const other = await createUser({ role: "sales_rep" });
     const theirLead = await createLead(other.id);
-    const created = await saveDeal(rep, input());
+    const phone = randomPhone();
+    const created = await saveDeal(rep, input({ phone }));
     if (!created.ok) throw new Error("setup");
     const before = await row(created.id);
-    await saveDeal(rep, input({ id: created.id, phone: randomPhone(), fromLeadId: theirLead.id }));
+    await saveDeal(rep, input({ id: created.id, phone, fromLeadId: theirLead.id })); // same number: the contact must stay
     const [lead] = await sql<{ contact_id: string; status: string }[]>`SELECT contact_id, status FROM leads WHERE id = ${theirLead.id}`;
-    expect((await row(created.id)).contact_id).not.toBe(lead.contact_id);
+    expect((await row(created.id)).contact_id).toBe(before.contact_id); // unchanged by the edit
     expect(before.contact_id).not.toBe(lead.contact_id);
     expect(lead.status).not.toBe("converted");
+  });
+
+  it("a NEW deal from another rep's prospect is refused and nothing is kept", async () => {
+    const rep = await createUser({ role: "sales_rep" });
+    const other = await createUser({ role: "sales_rep" });
+    const theirLead = await createLead(other.id);
+    const name = `Deal ditolak ${randomUUID()}`;
+    await expect(saveDeal(rep, input({ name, fromLeadId: theirLead.id }))).rejects.toBeInstanceOf(ForbiddenError);
+    const [deals] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM deals WHERE name = ${name}`;
+    expect(deals.n).toBe(0);
+    const [lead] = await sql<{ status: string; deal_id: string | null }[]>`SELECT status, deal_id FROM leads WHERE id = ${theirLead.id}`;
+    expect(lead.status).not.toBe("converted");
+    expect(lead.deal_id).toBeNull();
+    const [acts] = await sql<{ n: number }[]>`SELECT count(*)::int AS n FROM activities WHERE lead_id = ${theirLead.id} AND type = 'system'`;
+    expect(acts.n).toBe(0);
   });
 });

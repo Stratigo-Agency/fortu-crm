@@ -244,6 +244,9 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
 }
 
 /** The contact of a prospect (the prospect's own number, never the form's). */
+// Reads the prospect's contact only. It does not check can_edit_lead: convertLead does, later in the same
+// transaction (UPDATE ... WHERE can_edit_lead), and a refusal there rolls the whole save back, so the new deal
+// is never kept. Don't use this result anywhere that is not followed by convertLead.
 async function contactOfLead(tx: Tx, leadId: string): Promise<string> {
   const [l] = await tx<{ contact_id: string }[]>`SELECT contact_id FROM leads WHERE id = ${leadId}`;
   if (!l) throw new ForbiddenError();
