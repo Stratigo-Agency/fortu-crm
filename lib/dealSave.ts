@@ -164,8 +164,10 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
         if (!p) throw new DealInputError("parent", "deal.parentRequired");
       }
 
-      // The owner: only sales leads, the CEO and admins hand a deal to someone else.
-      const manager = MANAGERS.includes(actor.role);
+      // The owner: only sales leads, the CEO and admins hand a deal to someone else. The role is read from the
+      // database here, not from the sign-in cookie, which can be five minutes behind a demotion.
+      const [current] = await tx<{ role: string }[]>`SELECT role::text AS role FROM users WHERE id = ${actor.id} AND is_active`;
+      const manager = !!current && MANAGERS.includes(current.role);
       const wantedOwner = manager && input.ownerId && input.ownerId !== currentOwner ? input.ownerId : null;
       if (wantedOwner) {
         const [o] = await tx`SELECT 1 FROM users WHERE id = ${wantedOwner} AND is_active AND role IN ('sales_rep', 'sales_lead')`;
