@@ -322,7 +322,7 @@ describe("traceability", () => {
     expect(pageOf("bukan url")).toBe("bukan url");
 
     // the same trace on the deal
-    expect(await leadTrace(form.id)).toMatchObject({ group: "website", channel: "website_form", landingUrl: "https://fortu.co.id/led-videowall?ref=menu" });
+    expect(await leadTrace(form.id, rep.id)).toMatchObject({ firstChat: null, group: "website", channel: "website_form", landingUrl: "https://fortu.co.id/led-videowall?ref=menu" });
   });
 
   it("leaves sample rows out of the Prospek figures, and follows the source filter", async () => {

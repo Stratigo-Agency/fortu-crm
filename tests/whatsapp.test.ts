@@ -2,6 +2,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { sql } from "@/lib/db";
 import { isPublicPath } from "@/lib/publicPaths";
+import { leadTrace } from "@/lib/deal";
+import { listProspects } from "@/lib/prospek";
 import { redactValue, type WaValue } from "@/lib/whatsapp/payload";
 import { lineGate, processWebhookEvent } from "@/lib/whatsapp/process";
 import { firstChatTexts, readMessageTexts } from "@/lib/whatsapp/texts";
@@ -186,6 +188,16 @@ describe("POST /api/v1/webhooks/whatsapp", () => {
     for (const [u, seen] of [[rep, true], [ceo, true], [admin, true], [other, false], [lead2, false]] as const) {
       expect((await firstChatTexts(u, [lead.id])).get(lead.id) ?? null).toBe(seen ? "Halo, harga IFP 75 inch berapa?" : null);
     }
+
+    // Prospek and the deal show it to the owner only (and ceo/admin); nobody finds the lead by searching the text
+    const list = async (viewerId: string, q = "") =>
+      (await listProspects({ viewerId, ownerId: rep.id, tab: "semua", q, limit: 50 })).rows.find((r) => r.id === lead.id);
+    expect((await list(rep.id))?.first_message).toBe("Halo, harga IFP 75 inch berapa?");
+    expect((await list(ceo.id))?.first_message).toBe("Halo, harga IFP 75 inch berapa?");
+    expect((await list(other.id))?.first_message).toBeNull();
+    expect(await list(other.id, "harga IFP")).toBeUndefined();
+    expect((await leadTrace(lead.id, rep.id))?.firstChat).toBe("Halo, harga IFP 75 inch berapa?");
+    expect((await leadTrace(lead.id, lead2.id))?.firstChat).toBeNull();
   });
 
   it("a retried event (no text in memory) keeps metadata only, even on a line that keeps text", async () => {

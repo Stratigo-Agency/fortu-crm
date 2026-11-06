@@ -35,6 +35,8 @@ export type LeadTrace = {
   utmCampaign: string | null;
   landingUrl: string | null;
   receivedAt: string; // ISO timestamp
+  /** the customer's first WhatsApp text; null unless kept and the viewer is the line owner, ceo or admin */
+  firstChat: string | null;
 };
 
 /** A deal as the form needs it; money as whole-Rupiah numbers, dates as YYYY-MM-DD. */

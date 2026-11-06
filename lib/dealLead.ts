@@ -48,7 +48,7 @@ export async function leadPrefill(
     phone: l.phone_e164,
     leadId: l.id,
     sourceChannel: l.source_channel,
-    leadTrace: await leadTrace(l.id),
+    leadTrace: await leadTrace(l.id, actor.id),
   };
 }
 
