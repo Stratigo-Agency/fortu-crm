@@ -45,7 +45,7 @@ test.describe("the CEO", () => {
     const settings = await page.request.get("/pengaturan");
     expect(settings.headers()["content-security-policy"]).not.toContain("facebook");
 
-    await page.getByRole("link", { name: "WhatsApp", exact: true }).click();
+    await page.getByRole("link", { name: /^WhatsApp/ }).click();
     await page.waitForURL((url) => url.pathname === "/pengaturan/whatsapp");
     await expect(page.getByRole("heading", { name: "WhatsApp", level: 1 })).toBeVisible();
     const lines = page.getByRole("region", { name: "Nomor sales" });
@@ -56,7 +56,7 @@ test.describe("the CEO", () => {
     await expect(lines.getByText("Nomor dilepas dari CRM. Isi pesan yang tersimpan dihapus.")).toBeVisible();
     // the e2e server has no Meta app: a short note for the CEO instead of the button, without setting names
     await expect(page.getByRole("note")).toHaveText("Pengaturan Meta belum lengkap. Hubungi admin.");
-    await expect(page.locator("main")).not.toContainText(/META_|docs\//);
+    await expect(page.getByRole("main")).not.toContainText(/META_|docs\//);
 
     const res = await page.request.get("/pengaturan/whatsapp");
     expect(res.headers()["content-security-policy"]).toContain("https://connect.facebook.net");
