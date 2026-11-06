@@ -12,7 +12,7 @@ test("a sales rep is refused on Stok and the export", async ({ page }) => {
 });
 
 test("the CEO sees the empty state, then the table with the risky SKU first and the filters working", async ({ browser }) => {
-  const ctx = await browser.newContext({ baseURL: "http://localhost:3100", storageState: { cookies: [], origins: [] } });
+  const ctx = await browser.newContext({ baseURL: process.env.E2E_BASE as string, storageState: { cookies: [], origins: [] } });
   const page = await ctx.newPage();
   await page.goto("/masuk?next=/stok");
   await page.getByLabel("Email").fill(CEO.email);
@@ -28,24 +28,30 @@ test("the CEO sees the empty state, then the table with the risky SKU first and 
     await sql`
       WITH a AS (INSERT INTO products (sku, name, product_line, list_price) VALUES ('E2E-THIN', 'Layar tipis', 'IFP', 1000) RETURNING id),
            b AS (INSERT INTO products (sku, name, product_line, list_price) VALUES ('E2E-FULL', 'Layar aman', 'LED', 1000) RETURNING id),
-           sa AS (INSERT INTO inventory_snapshots (product_id, snapshot_date, qty_on_hand) SELECT id, current_date, 2 FROM a),
-           sb AS (INSERT INTO inventory_snapshots (product_id, snapshot_date, qty_on_hand) SELECT id, current_date, 90 FROM b)
+           c AS (INSERT INTO products (sku, name, product_line, list_price) VALUES ('E2E-NONE', 'Layar tanpa data', 'IFP', 1000) RETURNING id),
+           sa AS (INSERT INTO inventory_snapshots (product_id, snapshot_date, qty_on_hand) SELECT id, (now() AT TIME ZONE 'Asia/Jakarta')::date, 2 FROM a),
+           sb AS (INSERT INTO inventory_snapshots (product_id, snapshot_date, qty_on_hand) SELECT id, (now() AT TIME ZONE 'Asia/Jakarta')::date - 6, 90 FROM b)
       INSERT INTO sales_monthly (product_id, period_month, qty_sold)
-      SELECT id, (date_trunc('month', now()) - interval '1 month')::date, 6 FROM a
-      UNION ALL SELECT id, (date_trunc('month', now()) - interval '1 month')::date, 1 FROM b`;
+      SELECT id, (date_trunc('month', now() AT TIME ZONE 'Asia/Jakarta') - interval '1 month')::date, 18 FROM a
+      UNION ALL SELECT id, (date_trunc('month', now() AT TIME ZONE 'Asia/Jakarta') - interval '1 month')::date, 3 FROM b`;
     await page.reload();
     // other specs leave products in this database, so only look at the rows made here
     const rows = page.getByRole("region", { name: "Stok per SKU" }).locator("tbody tr").filter({ hasText: "E2E-" });
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(3);
     await expect(rows.first()).toContainText("E2E-THIN");
     await expect(rows.first()).toContainText("Stok tipis");
     await expect(rows.first()).toContainText("0,3 bulan");
+
+    // an unknown stock is said in words; an old snapshot is marked quietly
+    await expect(rows.filter({ hasText: "E2E-NONE" })).toContainText("Stok belum diketahui");
+    await expect(rows.filter({ hasText: "E2E-FULL" })).toContainText("Data per");
+    await expect(rows.filter({ hasText: "E2E-THIN" })).not.toContainText("Data per");
 
     await page.getByRole("checkbox", { name: "Hanya yang berisiko" }).click();
     await expect(page).toHaveURL(/berisiko=1/);
     await expect(rows).toHaveCount(1);
     await page.getByRole("checkbox", { name: "Hanya yang berisiko" }).click();
-    await expect(rows).toHaveCount(2);
+    await expect(rows).toHaveCount(3);
 
     const res = await ctx.request.get("/stok/ekspor?lini=IFP");
     expect(res.status()).toBe(200);
