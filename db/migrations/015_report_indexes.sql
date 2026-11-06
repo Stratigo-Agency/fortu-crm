@@ -6,9 +6,9 @@
 -- Numbered 015 on purpose: the open pull requests for pricing and stock use 013 and 014.
 
 -- v_pipeline_board, v_deals_enriched and everything built on them: the lines of each deal.
-CREATE INDEX deal_line_items_deal_id_idx ON deal_line_items (deal_id);
+CREATE INDEX IF NOT EXISTS deal_line_items_deal_id_idx ON deal_line_items (deal_id);
 
 -- contact_effective_owner(), v_contact_activity (Kontak) and v_companies_enriched (Perusahaan): the deals of one
 -- contact or company.
-CREATE INDEX deals_contact_id_idx ON deals (contact_id);
-CREATE INDEX deals_company_id_idx ON deals (company_id);
+CREATE INDEX IF NOT EXISTS deals_contact_id_idx ON deals (contact_id);
+CREATE INDEX IF NOT EXISTS deals_company_id_idx ON deals (company_id);
