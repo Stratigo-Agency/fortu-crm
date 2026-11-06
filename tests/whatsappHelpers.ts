@@ -27,13 +27,16 @@ export function fixture(name: string, v: Vars): string {
   return JSON.stringify(JSON.parse(s));
 }
 
-export async function post(body: string, o: { signature?: string | null } = {}) {
+/** A signed POST; the processing scheduled after the response runs before this returns (unless process: false). */
+export async function post(body: string, o: { signature?: string | null; process?: boolean } = {}) {
   const headers: Record<string, string> = { "content-type": "application/json", "x-forwarded-for": ip() };
   const signature = o.signature === undefined ? signWebhook(SECRET, body) : o.signature;
   if (signature) headers["x-hub-signature-256"] = signature;
   const tasks: Promise<unknown>[] = [];
   const res = await handleWebhookPost(new Request(URL_, { method: "POST", body, headers }), {
-    schedule: (task) => tasks.push(task()),
+    schedule: (task) => {
+      if (o.process !== false) tasks.push(task());
+    },
   });
   await Promise.all(tasks);
   return res;

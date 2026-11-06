@@ -1,10 +1,11 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { sql } from "@/lib/db";
 import { isPublicPath } from "@/lib/publicPaths";
-import { lineGate } from "@/lib/whatsapp/process";
-import { readMessageTexts } from "@/lib/whatsapp/texts";
-import { handleVerify, signWebhook, verifyWebhookSignature } from "@/lib/whatsapp/webhook";
+import { redactValue, type WaValue } from "@/lib/whatsapp/payload";
+import { lineGate, processWebhookEvent } from "@/lib/whatsapp/process";
+import { firstChatTexts, readMessageTexts } from "@/lib/whatsapp/texts";
+import { handleVerify, handleWebhookPost, signWebhook, verifyWebhookSignature } from "@/lib/whatsapp/webhook";
 import { createAd, createUser } from "./fixtures";
 import { digits, fixture, ip, leadsOf, post, SECRET, setupLine, URL_, vars } from "./whatsappHelpers";
 
@@ -149,7 +150,7 @@ describe("POST /api/v1/webhooks/whatsapp", () => {
     expect(n).toBe(2);
   });
 
-  it("a line without consent, in business_app mode or unknown is not processed and keeps nothing", async () => {
+  it("a line without consent, in business_app mode or unknown is not processed and nothing is stored", async () => {
     for (const o of [{ consent: false }, { mode: "business_app" }, { active: false }]) {
       const { phoneNumberId } = await setupLine(o);
       const v = vars({ PHONE_NUMBER_ID: phoneNumberId });
@@ -157,30 +158,48 @@ describe("POST /api/v1/webhooks/whatsapp", () => {
       expect(await leadsOf(`+${v.WA_ID}`)).toHaveLength(0);
       const [{ n }] = await sql`SELECT count(*)::int AS n FROM wa_messages WHERE wa_message_id = ${v.MSG_ID}`;
       expect(n).toBe(0);
-      const [ev] = await sql`
-        SELECT payload, processed_at FROM inbound_events
+      const [{ e }] = await sql`
+        SELECT count(*)::int AS e FROM inbound_events
          WHERE provider = 'whatsapp_webhook' AND payload::text LIKE ${`%${phoneNumberId}%`}`;
-      expect(ev.processed_at).not.toBeNull();
-      expect(JSON.stringify(ev.payload)).not.toContain(v.WA_ID);
-      expect(JSON.stringify(ev.payload)).not.toContain("Sheena");
+      expect(e).toBe(0);
     }
     expect(lineGate({ id: "x", user_id: null, mode: "cloud_api", consent_at: new Date(), store_message_text: false, is_active: true })).toBeNull();
   });
 
-  it("keeps the text only when the line's setting is on, readable by the line owner, ceo and admin only", async () => {
+  it("keeps the text only when the line's setting is on, never in leads.first_message, readable by owner, ceo and admin only", async () => {
     const { rep, phoneNumberId } = await setupLine({ storeText: true });
     const v = vars({ PHONE_NUMBER_ID: phoneNumberId });
     await post(fixture("message-text", v));
     const [lead] = await leadsOf(`+${v.WA_ID}`);
-    expect(lead.first_message).toBe("Halo, harga IFP 75 inch berapa?");
+    expect(lead.first_message).toBeNull(); // every user can read and search first_message
+    const events = await sql`SELECT payload::text AS p FROM inbound_events WHERE payload::text LIKE ${`%${v.MSG_ID}%`}`;
+    for (const e of events) expect(e.p).not.toContain("harga IFP");
 
     const other = await createUser({ role: "sales_rep" });
     const lead2 = await createUser({ role: "sales_lead" });
     const ceo = await createUser({ role: "ceo" });
+    const admin = await createUser({ role: "admin" });
     expect((await readMessageTexts(rep, lead.id)).map((m) => m.body)).toEqual(["Halo, harga IFP 75 inch berapa?"]);
     expect(await readMessageTexts(ceo, lead.id)).toHaveLength(1);
     expect(await readMessageTexts(other, lead.id)).toHaveLength(0);
     expect(await readMessageTexts(lead2, lead.id)).toHaveLength(0);
+    for (const [u, seen] of [[rep, true], [ceo, true], [admin, true], [other, false], [lead2, false]] as const) {
+      expect((await firstChatTexts(u, [lead.id])).get(lead.id) ?? null).toBe(seen ? "Halo, harga IFP 75 inch berapa?" : null);
+    }
+  });
+
+  it("a retried event (no text in memory) keeps metadata only, even on a line that keeps text", async () => {
+    const { phoneNumberId } = await setupLine({ storeText: true });
+    const v = vars({ PHONE_NUMBER_ID: phoneNumberId });
+    const res = await post(fixture("message-text", v), { process: false });
+    expect(res.status).toBe(200);
+    const [ev] = await sql`SELECT id FROM inbound_events WHERE provider = 'whatsapp_webhook' AND payload::text LIKE ${`%${v.MSG_ID}%`}`;
+    expect((await processWebhookEvent(ev.id)).status).toBe("processed");
+    const [{ n }] = await sql`
+      SELECT count(*)::int AS n FROM wa_message_texts t JOIN wa_messages m ON m.id = t.message_id WHERE m.wa_message_id = ${v.MSG_ID}`;
+    expect(n).toBe(0);
+    const [contact] = await sql`SELECT full_name FROM contacts WHERE phone_e164 = ${`+${v.WA_ID}`}`;
+    expect(contact.full_name).toBeNull(); // the name was never stored either
   });
 
   it("a BSUID-only message (no phone number) makes no lead until the user is known, then joins their contact", async () => {
@@ -224,16 +243,133 @@ describe("POST /api/v1/webhooks/whatsapp", () => {
     expect(n).toBe(0);
   });
 
-  it("a rep disconnecting in the phone app (PARTNER_REMOVED) switches the line off", async () => {
-    const { lineId } = await setupLine();
+  it("a rep disconnecting in the phone app (PARTNER_REMOVED) switches the line off and clears consent and text", async () => {
+    const { lineId, phoneNumberId } = await setupLine({ storeText: true });
+    await post(fixture("message-text", vars({ PHONE_NUMBER_ID: phoneNumberId })));
     const [{ meta_waba_id }] = await sql`SELECT meta_waba_id FROM wa_lines WHERE id = ${lineId}`;
     const body = JSON.stringify({
       object: "whatsapp_business_account",
       entry: [{ id: meta_waba_id, changes: [{ field: "account_update", value: { event: "PARTNER_REMOVED" } }] }],
     });
     await post(body);
-    const [line] = await sql`SELECT mode FROM wa_lines WHERE id = ${lineId}`;
-    expect(line.mode).toBe("business_app");
+    const [line] = await sql`SELECT mode, consent_at, consent_by, store_message_text, meta_business_token_enc FROM wa_lines WHERE id = ${lineId}`;
+    expect(line).toEqual({ mode: "business_app", consent_at: null, consent_by: null, store_message_text: false, meta_business_token_enc: null });
+    const [{ n }] = await sql`SELECT count(*)::int AS n FROM wa_message_texts t JOIN wa_messages m ON m.id = t.message_id WHERE m.wa_line_id = ${lineId}`;
+    expect(n).toBe(0);
+
+    // an account_update for a WhatsApp account the CRM does not know is not stored
+    const stranger = JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [{ id: digits(15), changes: [{ field: "account_update", value: { event: "PARTNER_REMOVED" } }] }],
+    });
+    await post(stranger);
+    const [{ e }] = await sql`SELECT count(*)::int AS e FROM inbound_events WHERE external_id = ${sha256(stranger)}`;
+    expect(e).toBe(0);
   });
 });
 
+describe("what is stored (trimmed before insert)", () => {
+  it("a message keeps ids, time, type, referral ids and the ad code; no text, names or contact cards", async () => {
+    const { phoneNumberId } = await setupLine({ storeText: true });
+    const code = `Z-IFP-${digits(2)}`;
+    const v = vars({ PHONE_NUMBER_ID: phoneNumberId });
+    const body = JSON.parse(fixture("message-referral", v));
+    const value = body.entry[0].changes[0].value;
+    value.messages[0].text = { body: `Halo rahasia [${code}]` };
+    value.contacts[0].profile.username = "@sheena";
+    await post(JSON.stringify(body), { process: false });
+    const [ev] = await sql`SELECT payload FROM inbound_events WHERE provider = 'whatsapp_webhook' AND payload::text LIKE ${`%${v.MSG_ID}%`}`;
+    const p = JSON.stringify(ev.payload);
+    for (const gone of ["rahasia", "Sheena", "@sheena", "headline", "body", "profile"]) expect(p).not.toContain(gone);
+    const m = ev.payload.entry[0].changes[0].value.messages[0];
+    expect(m).toMatchObject({ id: v.MSG_ID, from: v.WA_ID, type: "text", crm_codes: { adCode: code } });
+    expect(m.referral.source_id).toBe(v.AD_ID);
+    expect(ev.payload.entry[0].changes[0].value.contacts).toEqual([{ wa_id: v.WA_ID, user_id: v.BSUID }]);
+  });
+
+  it("the phone's address book (smb_app_state_sync) and delivery statuses are not stored at all", async () => {
+    const { phoneNumberId } = await setupLine();
+    const sync = JSON.stringify({
+      object: "whatsapp_business_account",
+      entry: [{ id: digits(15), changes: [{ field: "smb_app_state_sync", value: {
+        messaging_product: "whatsapp", metadata: { phone_number_id: phoneNumberId },
+        state_sync: [{ type: "contact", contact: { full_name: "Budi Teman Lama", phone_number: "6281299998888" }, action: "add" }],
+      } }] }],
+    });
+    expect((await post(sync)).status).toBe(200);
+    const status = fixture("status", vars({ PHONE_NUMBER_ID: phoneNumberId }));
+    expect((await post(status)).status).toBe(200);
+    const [{ e }] = await sql`
+      SELECT count(*)::int AS e FROM inbound_events WHERE external_id = ANY(${[sha256(sync), sha256(status)]})`;
+    expect(e).toBe(0);
+  });
+
+  it("redactValue drops profile names, usernames and the context of history threads that are not customers", () => {
+    const value: WaValue = {
+      metadata: { display_phone_number: "6281100000001", phone_number_id: "123" },
+      contacts: [{ wa_id: "6281211112222", user_id: "ID.1", profile: { name: "Sheena", username: "@sheena" } }],
+      history: [{ threads: [
+        { id: "6281233334444", context: { wa_id: "6281233334444", user_id: "ID.2", username: "@teman" } as never,
+          messages: [{ id: "a", from: "6281233334444", timestamp: "1", type: "text", text: { body: "rahasia" } }] },
+        { id: "6281255556666", context: { wa_id: "6281255556666", user_id: "ID.3" },
+          messages: [{ id: "b", from: "6281100000001", timestamp: "1", type: "text" }] },
+      ] }],
+    };
+    const out = redactValue(value, (waId) => waId === "6281255556666");
+    expect(out.contacts).toEqual([{ wa_id: "6281211112222", user_id: "ID.1" }]);
+    const [stranger, customer] = out.history![0].threads!;
+    expect(stranger.context).toEqual({ user_id: "ID.2" });
+    expect(stranger.messages).toEqual([{ id: "a", from_user_id: undefined, timestamp: "1", type: "text", dir: "in" }].map(clean));
+    expect(customer.context).toEqual({ wa_id: "6281255556666", user_id: "ID.3" });
+    expect(customer.messages![0]).toMatchObject({ id: "b", from: "6281100000001", dir: "out" });
+    expect(JSON.stringify(out)).not.toMatch(/rahasia|Sheena|@sheena|@teman|6281233334444|display_phone_number/);
+  });
+
+  it("history direction uses the BSUID when the number is hidden (no `from`)", async () => {
+    const { phoneNumberId } = await setupLine();
+    const v = vars({ PHONE_NUMBER_ID: phoneNumberId });
+    const body = JSON.parse(fixture("history", v));
+    const thread = body.entry[0].changes[0].value.history[0].threads[0];
+    delete thread.context.wa_id;
+    thread.id = v.BSUID;
+    thread.messages[0] = { ...thread.messages[0], from: undefined, from_user_id: v.BSUID };
+    thread.messages[1] = { ...thread.messages[1], from: undefined, from_user_id: `ID.${digits(19)}` };
+    await post(JSON.stringify(body));
+    const rows = await sql`SELECT wa_message_id, direction FROM wa_messages WHERE wa_message_id LIKE ${`${v.MSG_ID}%`} ORDER BY wa_message_id`;
+    expect(rows.map((r) => r.direction)).toEqual(["in", "out"]);
+  });
+});
+
+describe("request limits", () => {
+  it("hashes the raw bytes for the signature: a body that is not valid UTF-8 still verifies", async () => {
+    const { phoneNumberId } = await setupLine();
+    const v = vars({ PHONE_NUMBER_ID: phoneNumberId });
+    const text = fixture("message-text", v).replace("Sheena Nelson", "Sheena NELSON\u00e9");
+    // a latin-1 byte inside a JSON string: decoding to text and back would change it
+    const raw = Buffer.concat([Buffer.from(text.slice(0, 20)), Buffer.from([0xe9]), Buffer.from(text.slice(20))]);
+    expect(verifyWebhookSignature(SECRET, signWebhook(SECRET, raw), raw)).toBe(true);
+    expect(verifyWebhookSignature(SECRET, signWebhook(SECRET, raw), raw.toString("utf8"))).toBe(false);
+  });
+
+  it("refuses a body over 3 MB with 413 before storing anything", async () => {
+    const body = JSON.stringify({ object: "whatsapp_business_account", pad: "x".repeat(3 * 1024 * 1024) });
+    const res = await post(body);
+    expect(res.status).toBe(413);
+  });
+
+  it("answers 429 to an address after 60 failures, even with a good signature", async () => {
+    const from = ip();
+    const body = '{"object":"whatsapp_business_account","entry":[]}';
+    const send = (signature: string) =>
+      handleWebhookPost(new Request(URL_, { method: "POST", body, headers: { "x-forwarded-for": from, "x-hub-signature-256": signature } }), { schedule: () => {} });
+    for (let i = 0; i < 60; i++) expect((await send(signWebhook("salah", body))).status).toBe(401);
+    expect((await send(signWebhook(SECRET, body))).status).toBe(429);
+    // another address is not affected
+    expect((await post(body)).status).toBe(200);
+  });
+});
+
+function clean<T extends object>(o: T): T {
+  return Object.fromEntries(Object.entries(o).filter(([, v]) => v !== undefined)) as T;
+}
+const sha256 = (s: string) => createHash("sha256").update(s).digest("hex");

@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { sql } from "@/lib/db";
 import { markContacted } from "@/lib/leads";
-import { digits, SECRET, setupLine } from "./whatsappHelpers";
+import { digits, fixture, leadsOf, post, SECRET, setupLine, vars } from "./whatsappHelpers";
 
 beforeAll(() => {
   process.env.META_APP_SECRET = SECRET;
@@ -63,5 +63,25 @@ describe("v_wa_response_times", () => {
     expect(await firstReplyAfterMs(lead)).toBe(600_000);
     await sql`UPDATE app_settings SET value = '0' WHERE key = 'wa_auto_reply_seconds'`;
     expect(await firstReplyAfterMs(lead)).toBe(2_000);
+  });
+});
+
+describe("first response from webhooks", () => {
+  it("a reply whose echo arrives before the customer's message still counts, and an auto-reply does not", async () => {
+    const { phoneNumberId } = await setupLine();
+    const v = vars({ PHONE_NUMBER_ID: phoneNumberId, TS: String(Math.floor(Date.now() / 1000) - 900) });
+    const auto = vars({ ...v, MSG_ID: `wamid.${randomUUID()}`, TS: String(Number(v.TS) + 2) });
+    const reply = vars({ ...v, MSG_ID: `wamid.${randomUUID()}`, TS: String(Number(v.TS) + 300) });
+    // Meta delivers the echoes first
+    await post(fixture("echo", reply));
+    await post(fixture("echo", auto));
+    await post(fixture("message-text", v));
+    const [lead] = await leadsOf(`+${v.WA_ID}`);
+    const replyAt = new Date(Number(reply.TS) * 1000).toISOString();
+    expect(lead.first_response_at?.toISOString()).toBe(replyAt);
+    const [r] = await sql`SELECT first_reply_at FROM v_wa_lead_first_reply WHERE lead_id = ${lead.id}`;
+    expect(r.first_reply_at.toISOString()).toBe(replyAt);
+    const out = await sql`SELECT lead_id FROM wa_messages WHERE wa_message_id = ${reply.MSG_ID}`;
+    expect(out).toEqual([{ lead_id: lead.id }]);
   });
 });

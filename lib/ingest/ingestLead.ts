@@ -1,6 +1,6 @@
 import type postgres from "postgres";
 import { sql } from "@/lib/db";
-import { parseCodes } from "./codes";
+import { type Codes, parseCodes } from "./codes";
 import { InvalidActorError, InvalidTimeError, MissingActorError, UnknownLineError } from "./errors";
 import {
   type CaptureMethod,
@@ -29,8 +29,8 @@ export type LeadInput = {
   captureMethod: CaptureMethod;
   waLineId?: string; // quick-add: the rep's own line (defaults to the logging rep's line)
   firstMessage?: string; // scanned for [F-IFP-01] and #W7K2 codes
-  /** false: the codes in firstMessage are read but its text is not kept (WhatsApp lines without text storage). */
-  storeFirstMessage?: boolean;
+  /** Attribution codes already read from a text that is not passed (WhatsApp webhook: the text is never kept here). */
+  codes?: Codes;
   /** Click-to-WhatsApp referral: Meta's ad id (referral.source_id) and click id. Wins over an ad code. */
   metaAdId?: string;
   ctwaClid?: string;
@@ -127,7 +127,7 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
        FOR UPDATE`;
 
     // 5. Attribution codes in the first message.
-    const codes = parseCodes(input.firstMessage);
+    const codes = input.codes ?? parseCodes(input.firstMessage);
     const metaAdId = clean(input.metaAdId);
     const [referredAd] = metaAdId
       ? await tx<{ id: string; name: string }[]>`SELECT id, name FROM ads WHERE meta_ad_id = ${metaAdId}`
@@ -206,7 +206,7 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
       VALUES (${contact.id}, ${decision.ownerId}, ${line?.id ?? null}, ${input.sourceChannel},
               ${input.captureMethod}, ${input.productInterest ?? null}, ${ad?.id ?? null}, ${ctwaClid},
               ${utm.source}, ${utm.medium}, ${utm.campaign}, ${utm.content},
-              ${input.storeFirstMessage === false ? null : clean(input.firstMessage)}, ${eventId}, COALESCE(${receivedAt}::timestamptz, now()))
+              ${clean(input.firstMessage)}, ${eventId}, COALESCE(${receivedAt}::timestamptz, now()))
       RETURNING id`;
     await recordOwnership(tx, lead.id, decision, actorId ?? undefined);
     if (click) await matchClick(tx, click.id, lead.id);
