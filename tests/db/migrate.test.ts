@@ -1,4 +1,5 @@
 import { execFile } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -11,6 +12,7 @@ import { runSeeds } from "../../scripts/seed.mjs";
 const url = process.env.DATABASE_URL_TEST as string;
 const sql = postgres(url, { max: 1, onnotice: () => {} });
 const run = promisify(execFile);
+const SEED_SKUS = [...readFileSync("db/seeds/seed_products.sql", "utf8").matchAll(/^\s*\('([^']+)',/gm)].map((m) => m[1]);
 
 afterAll(() => sql.end());
 
@@ -74,7 +76,8 @@ describe("seeds", () => {
   it("loads 32 products and can run twice", async () => {
     for (let i = 0; i < 2; i++) {
       await runSeeds({ url, log: () => {} });
-      const [{ count }] = await sql`select count(*)::int as count from products where name not like 'Produk uji %'`; // other tests add their own
+      // only the seed's own SKUs: other test files add products too, and the file order is not fixed
+      const [{ count }] = await sql`select count(*)::int as count from products where sku = any(${SEED_SKUS})`;
       expect(count).toBe(32);
     }
   });
