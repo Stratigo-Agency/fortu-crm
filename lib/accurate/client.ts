@@ -29,7 +29,7 @@ export const ACCOUNT_HOST = "https://account.accurate.id";
 const READ_PATH = /^\/?(?:accurate\/)?(?:api\/)?[a-z][a-z-]*\/(?:list|detail|list-stock|get-stock)\.do$/;
 
 /** Reads the config from env; throws a plain message naming the missing variables. */
-export function configFromEnv(env: NodeJS.ProcessEnv = process.env): AccurateConfig {
+export function configFromEnv(env: Record<string, string | undefined> = process.env): AccurateConfig {
   const token = env.ACCURATE_API_TOKEN;
   const signatureSecret = env.ACCURATE_SIGNATURE_SECRET;
   if (!token || !signatureSecret) throw new AccurateApiError("ACCURATE_API_TOKEN and ACCURATE_SIGNATURE_SECRET must be set");
