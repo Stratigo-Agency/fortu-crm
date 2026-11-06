@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { ACTIVITY_TYPES, type ActivityType, type ContactDetail } from "@/lib/contactTypes";
 import { t } from "@/lib/copy";
+import { DatePicker } from "../ui/DatePicker";
 import { Suggest } from "../ui/Suggest";
 import { lookupCompanies } from "../deal/actions";
 import { PanelFrameDirty } from "../deal/PanelFrameDirty";
@@ -194,7 +195,7 @@ export function ContactForm({ contact }: { contact: ContactDetail }) {
                 <div className="grid gap-3 md:grid-cols-[200px_1fr]">
                   <div>
                     <label htmlFor="a-date" className={label}>{t("kontak.date")}</label>
-                    <input id="a-date" type="date" max={today} value={date} onChange={(e) => setDate(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void log(); } }} className={field} />
+                    <DatePicker id="a-date" max={today} value={date} onChange={setDate} required />
                   </div>
                   <div>
                     <label htmlFor="a-note" className={label}>{t("deal.notes")}</label>

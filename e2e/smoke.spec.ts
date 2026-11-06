@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 import { AD, REP } from "./global-setup";
-import { pick } from "./select";
+import { pick, pickDate } from "./select";
 
 // The pilot flow, start to finish, as a rep does it: a chat comes in, becomes a deal with a product,
 // moves on the board, runs late, is lost. Then what a rep may not do, and the report.
@@ -91,7 +91,7 @@ test.describe.serial("Pilot flow", () => {
     await pick(page.getByRole("combobox", { name: "Produk" }), new RegExp(SKU));
     await page.getByLabel("Unit", { exact: true }).fill("3");
     await expect(page.getByLabel("Harga/unit")).toHaveValue("30.000.000");
-    await page.getByLabel("Perkiraan close").fill(isoDay(14));
+    await pickDate(page.getByLabel("Perkiraan close"), isoDay(14));
     await page.getByRole("button", { name: "Simpan" }).click();
     await expect(page.getByText("Deal dibuat")).toBeVisible();
     await expect.poll(() => pathname(page)).toMatch(/^\/deal\/[0-9a-f-]{36}$/);
@@ -128,7 +128,7 @@ test.describe.serial("Pilot flow", () => {
     await page.setViewportSize(DESKTOP);
     await page.goto(`/deal/${dealId}`);
     await page.getByLabel("Yang harus dilakukan").fill("Telepon lagi");
-    await page.getByLabel("Tanggal", { exact: true }).fill(isoDay(-2));
+    await pickDate(page.getByLabel("Tanggal", { exact: true }), isoDay(-2));
     await page.getByRole("button", { name: "Simpan" }).click();
     await expect(page.getByText("Deal disimpan")).toBeVisible();
 

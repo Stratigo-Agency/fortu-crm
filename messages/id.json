@@ -357,6 +357,13 @@
     "traceCampaign": "Kampanye {name}",
     "tracePage": "Halaman {page}"
   },
+  "datePicker": {
+    "placeholder": "Pilih tanggal",
+    "today": "Hari ini",
+    "clear": "Kosongkan",
+    "prevMonth": "Bulan sebelumnya",
+    "nextMonth": "Bulan berikutnya"
+  },
   "quickAdd": {
     "title": "Prospek baru",
     "phone": "Nomor WhatsApp",

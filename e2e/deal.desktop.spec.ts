@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, type Page, test } from "@playwright/test";
 import postgres from "postgres";
 import { REP } from "./global-setup";
-import { pick } from "./select";
+import { pick, pickDate } from "./select";
 
 const sql = postgres(process.env.DATABASE_URL_E2E as string, { max: 1 });
 test.afterAll(() => sql.end());
@@ -109,7 +109,7 @@ test.describe.serial("Deal panel", () => {
     await expect(column(page, "Chat masuk")).toBeVisible();
 
     // fill the date and save: the deal moves to Quotation
-    await panel.getByLabel("Perkiraan close").fill(new Date(Date.now() + 20 * 86_400_000).toISOString().slice(0, 10));
+    await pickDate(panel.getByLabel("Perkiraan close"), new Date(Date.now() + 20 * 86_400_000).toISOString().slice(0, 10));
     await panel.getByRole("button", { name: "Simpan" }).click();
     await expect(panel.getByText("Deal disimpan")).toBeVisible();
     const [d] = await sql`SELECT s.key FROM deals d JOIN pipeline_stages s ON s.id = d.stage_id WHERE d.name LIKE ${`${leadName}%`}`;

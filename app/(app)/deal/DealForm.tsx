@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { t } from "@/lib/copy";
+import { DatePicker } from "../ui/DatePicker";
 import { Select } from "../ui/Select";
 import { Suggest } from "../ui/Suggest";
 import type { DealDetail, DealKind, DealSettings, HistoryItem, LeadTrace, ProductOption } from "@/lib/dealTypes";
@@ -407,13 +408,11 @@ export function DealForm({ deal, products, owners, settings, canReassign, canApp
                 <LeadSource deal={deal} />
               </div>
               <Field id="close" label={t("deal.closeDate")} error={errors.expectedCloseDate}>
-                <input
+                <DatePicker
                   id="close"
-                  type="date"
                   value={form.expectedCloseDate}
-                  onChange={(e) => set("expectedCloseDate", e.target.value)}
-                  aria-invalid={!!errors.expectedCloseDate || undefined}
-                  className={`${field} ${errors.expectedCloseDate ? bad : ""}`}
+                  onChange={(v) => set("expectedCloseDate", v)}
+                  invalid={!!errors.expectedCloseDate}
                 />
               </Field>
               <Field id="kind" label={t("deal.type")}>
@@ -557,23 +556,15 @@ export function DealForm({ deal, products, owners, settings, canReassign, canApp
               </Field>
               <div className="grid gap-4 md:grid-cols-2">
                 <Field id="nextStepDate" label={t("deal.nextStepDate")} error={errors.nextStepDate}>
-                  <input
+                  <DatePicker
                     id="nextStepDate"
-                    type="date"
                     value={form.nextStepDate}
-                    onChange={(e) => set("nextStepDate", e.target.value)}
-                    aria-invalid={!!errors.nextStepDate || undefined}
-                    className={`${field} ${errors.nextStepDate ? bad : ""}`}
+                    onChange={(v) => set("nextStepDate", v)}
+                    invalid={!!errors.nextStepDate}
                   />
                 </Field>
                 <Field id="demoDate" label={t("deal.demoDate")} hint={t("deal.demoHint")}>
-                  <input
-                    id="demoDate"
-                    type="date"
-                    value={form.demoDate}
-                    onChange={(e) => set("demoDate", e.target.value)}
-                    className={field}
-                  />
+                  <DatePicker id="demoDate" value={form.demoDate} onChange={(v) => set("demoDate", v)} />
                 </Field>
               </div>
             </Section>
@@ -583,7 +574,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, canApp
           {form.stageKey === "done" && (
             <Section title={t("stage.done")}>
               <Field id="paid" label={t("deal.paidDate")}>
-                <input id="paid" type="date" value={form.paidDate} onChange={(e) => set("paidDate", e.target.value)} className={field} />
+                <DatePicker id="paid" value={form.paidDate} onChange={(v) => set("paidDate", v)} />
               </Field>
             </Section>
           )}
