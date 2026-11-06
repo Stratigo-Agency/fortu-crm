@@ -7,6 +7,7 @@ import { listCompanies, parseCompanySort } from "@/lib/companies";
 import { COMPANY_SORTS, type CompanyRow } from "@/lib/contactTypes";
 import { t } from "@/lib/copy";
 import { chatDate, rupiahShort } from "@/lib/format";
+import { industryLabel } from "@/lib/industry";
 import { perusahaanHref } from "@/lib/perusahaanHref";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { UrlSelect } from "../UrlControls";
@@ -118,7 +119,7 @@ function Row({ c, href }: { c: CompanyRow; href: string }) {
           {c.name}
         </Link>
       </td>
-      <td className="px-3 py-2.5">{c.industry ? t(`industry.${c.industry as "hotel"}`) : "—"}</td>
+      <td className="px-3 py-2.5">{industryLabel(c.industry)}</td>
       <td className="px-3 py-2.5">{c.city ?? "—"}</td>
       <td className="whitespace-nowrap px-3 py-2.5">{c.owner_name ?? "—"}</td>
       <td className="tabular px-3 py-2.5 text-right">{c.contact_count}</td>

@@ -78,7 +78,7 @@ BEGIN
     PERFORM set_config('app.user_id', v_rep::text, true);
 
     INSERT INTO companies (name, industry, city, owner_user_id, is_sample)
-    VALUES (r.company, CASE WHEN r.n % 3 = 0 THEN 'education' WHEN r.n % 3 = 1 THEN 'corporate' ELSE 'retail' END,
+    VALUES (r.company, CASE WHEN r.n % 3 = 0 THEN 'education' WHEN r.n % 3 = 1 THEN 'corporate' ELSE 'retail_fnb' END,
             (ARRAY['Jakarta','Bandung','Surabaya','Medan','Semarang'])[1 + r.n % 5], v_rep, true)
     RETURNING id INTO v_company;
 
