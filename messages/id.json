@@ -37,7 +37,8 @@
     "estimate": "Perkiraan pipeline",
     "openDeals": "{n} deal berjalan",
     "late": "Next step terlambat",
-    "lateHint": "deal"
+    "lateHint": "deal",
+    "leadsWhen": "Lead bulan ini"
   },
   "cari": {
     "title": "Cari",
@@ -181,6 +182,14 @@
     "tender": "Tender",
     "whatsapp_direct": "WhatsApp langsung",
     "other": "Lainnya"
+  },
+  "sourceGroup": {
+    "meta": "Iklan Meta",
+    "website": "Website",
+    "offline": "Offline",
+    "wa_direct": "WhatsApp langsung",
+    "other": "Lainnya",
+    "total": "Semua sumber"
   },
   "productLine": {
     "IFP": "IFP",
@@ -662,5 +671,42 @@
     },
     "codePlaceholder": "F-IFP-01",
     "colLeads7": "Chat 7 hari"
+  },
+  "funnel": {
+    "title": "Lead dan funnel",
+    "note": "Lead yang masuk {when}, diikuti sampai sekarang",
+    "statLeads": "Lead masuk {when}",
+    "statUnhandled": "Belum ditangani",
+    "statConversion": "Lead jadi Done deal",
+    "statConversionHint": "{done} dari {leads} lead",
+    "col": {
+      "group": "Sumber",
+      "leads": "Lead masuk",
+      "handled": "Ditangani",
+      "deal": "Jadi deal",
+      "quotation": "Quotation",
+      "negotiation": "Negotiation",
+      "po": "PO",
+      "done": "Done deal",
+      "lost": "Lost"
+    },
+    "step": {
+      "handled": "Lead masuk → Ditangani",
+      "deal": "Ditangani → Jadi deal",
+      "quotation": "Jadi deal → Quotation",
+      "negotiation": "Quotation → Negotiation",
+      "po": "Negotiation → PO",
+      "done": "PO → Done deal"
+    },
+    "bottleneck": "Paling banyak berhenti di {step}: {pct} lanjut",
+    "insufficient": "Data belum cukup untuk melihat titik macet. Perlu minimal {n} lead per langkah.",
+    "none": "Belum ada lead yang berhenti di tengah jalan.",
+    "noLeads": "Belum ada lead masuk {when}.",
+    "allSources": "Semua sumber",
+    "bySource": "Per sumber",
+    "typically": "biasanya {n} hari",
+    "weakest": "Titik macet",
+    "stepsLabel": "Langkah funnel semua sumber",
+    "leadsCount": "{n} lead"
   }
 }
