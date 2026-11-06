@@ -156,7 +156,8 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
 
       const companyId = await findOrCreateCompany(tx, input.companyName, actor.id);
       // A deal made from a prospect keeps the prospect's contact, whatever number is in the form.
-      const contactId = input.fromLeadId
+      // Only a NEW deal may take a prospect's contact: convertLead then checks can_edit_lead. An edit ignores fromLeadId.
+      const contactId = isNew && input.fromLeadId
         ? await contactOfLead(tx, input.fromLeadId)
         : await findOrCreateContact(tx, input.phone, input.contactName, companyId);
       if (input.parentDealId) {

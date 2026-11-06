@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { sql } from "@/lib/db";
 import { saveDeal } from "@/lib/dealSave";
 import type { DealInput } from "@/lib/dealTypes";
-import { createUser, randomPhone } from "../fixtures";
+import { createLead, createUser, randomPhone } from "../fixtures";
 
 // Gaps found in the T22 permission audit (docs/permission-audit.md). Each test failed before its fix.
 
@@ -41,5 +41,21 @@ describe("saveDeal · the role comes from the database, not the sign-in cookie",
     if (!created.ok) throw new Error("setup");
     await saveDeal(lead, input({ id: created.id, ownerId: other.id }));
     expect((await row(created.id)).owner_user_id).toBe(other.id);
+  });
+});
+
+describe("saveDeal · a prospect's contact is only taken when the deal is made from that prospect", () => {
+  it("editing a deal ignores fromLeadId: the contact of someone else's prospect is not attached", async () => {
+    const rep = await createUser({ role: "sales_rep" });
+    const other = await createUser({ role: "sales_rep" });
+    const theirLead = await createLead(other.id);
+    const created = await saveDeal(rep, input());
+    if (!created.ok) throw new Error("setup");
+    const before = await row(created.id);
+    await saveDeal(rep, input({ id: created.id, phone: randomPhone(), fromLeadId: theirLead.id }));
+    const [lead] = await sql<{ contact_id: string; status: string }[]>`SELECT contact_id, status FROM leads WHERE id = ${theirLead.id}`;
+    expect((await row(created.id)).contact_id).not.toBe(lead.contact_id);
+    expect(before.contact_id).not.toBe(lead.contact_id);
+    expect(lead.status).not.toBe("converted");
   });
 });
