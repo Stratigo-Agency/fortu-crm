@@ -2,10 +2,16 @@ import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { InvalidPhoneError } from "@/lib/ingest/errors";
 import { ingestLead } from "@/lib/ingest/ingestLead";
+import { clientIp, createRateLimiter } from "@/lib/webform/rateLimit";
 import { verifySignature } from "@/lib/webform/signature";
 import { toLeadInput, webFormSchema } from "@/lib/webform/schema";
 
 const MAX_BODY_BYTES = 32 * 1024;
+
+// 60 requests a minute per IP and 300 a minute in all, checked before anything is read or signed. The real
+// caller (the fortu.co.id backend) sends a few a minute. In memory, so per instance (see lib/webform/rateLimit.ts).
+const perIp = createRateLimiter(60, 60_000);
+const overall = createRateLimiter(300, 60_000, 1);
 
 /** The body as text, or null when it is larger than `max` bytes (checked before and while reading). */
 async function readCapped(request: Request, max: number): Promise<string | null> {
@@ -30,13 +36,17 @@ async function readCapped(request: Request, max: number): Promise<string | null>
 
 /**
  * POST /api/v1/ingest/web-form: a lead from the fortu.co.id form, sent by its FastAPI backend.
- * 200 { leadId, deduped } (also for a repeated submission_id) · 400 bad body · 401 bad signature or old timestamp.
+ * 200 { leadId, deduped } (also for a repeated submission_id) · 400 bad body · 401 bad signature or old timestamp · 429 too many.
  * The body is never logged (it holds a customer's phone number).
  */
 export async function POST(request: Request) {
   const requestId = randomUUID();
   const reply = (status: number, json: Record<string, unknown>) =>
     NextResponse.json({ ...json, requestId }, { status, headers: { "cache-control": "no-store" } });
+
+  if (!perIp.hit(clientIp(request.headers)) || !overall.hit("all")) {
+    return NextResponse.json({ error: "rate_limited", requestId }, { status: 429, headers: { "cache-control": "no-store", "retry-after": "60" } });
+  }
 
   const secret = process.env.WEBFORM_HMAC_SECRET;
   if (!secret) {

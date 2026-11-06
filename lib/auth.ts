@@ -2,6 +2,7 @@ import type { Profile } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { pgError, sql } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password.mjs";
+import { clientIp, createRateLimiter } from "@/lib/webform/rateLimit";
 
 export type Role = "admin" | "ceo" | "sales_lead" | "sales_rep" | "marketing";
 
@@ -87,19 +88,40 @@ export async function refreshToken(
 let dummyHash: Promise<string> | undefined;
 const getDummyHash = () => (dummyHash ??= hashPassword("tidak-ada-user"));
 
+// Wrong-password limits, in memory like the other limiters (lib/webform/rateLimit.ts): 10 misses per email and
+// 30 per address in 15 minutes. Only misses count, so signing in right never uses them up. While an email
+// is over its limit even the right password is refused, which also stops guessing across many addresses.
+const MISS_WINDOW_MS = 15 * 60_000;
+export const missesPerEmail = createRateLimiter(10, MISS_WINDOW_MS);
+export const missesPerIp = createRateLimiter(30, MISS_WINDOW_MS);
+
 /**
  * Email + password sign-in. Returns the user id, or null for an unknown email,
- * an inactive user, a user with no password, or a wrong password.
+ * an inactive user, a user with no password, a wrong password, or too many misses in a row.
+ * `headers` are the request's, to tell visitors apart by address.
  */
 export async function authorizeCredentials(
   email: unknown,
   password: unknown,
+  headers?: Pick<Headers, "get">,
 ): Promise<{ id: string } | null> {
   if (typeof email !== "string" || typeof password !== "string" || !email || !password) return null;
+  const emailKey = email.trim().toLowerCase().slice(0, 200);
+  const ipKey = headers ? clientIp(headers) : "unknown";
+  if (!missesPerEmail.allows(emailKey) || !missesPerIp.allows(ipKey)) return null;
+  const user = await checkPassword(email, password);
+  if (!user) {
+    missesPerEmail.hit(emailKey);
+    missesPerIp.hit(ipKey);
+    return null;
+  }
+  await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
+  return { id: user.id };
+}
+
+async function checkPassword(email: string, password: string): Promise<{ id: string } | null> {
   const [user] = await sql<{ id: string; password_hash: string | null }[]>`
     SELECT id, password_hash FROM users WHERE lower(email) = lower(${email.trim()}) AND is_active`;
   const ok = await verifyPassword(password, user?.password_hash ?? (await getDummyHash()));
-  if (!user || !user.password_hash || !ok) return null;
-  await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
-  return { id: user.id };
+  return user && user.password_hash && ok ? { id: user.id } : null;
 }
