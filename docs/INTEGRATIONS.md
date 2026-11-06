@@ -105,13 +105,13 @@ Moving a line = fill `wa_lines.meta_phone_number_id`, flip `mode`, subscribe the
 | Webhook field (`entry[].changes[].value`) | Goes to |
 | --- | --- |
 | `metadata.phone_number_id` | `wa_lines` lookup → `waLineId`, owner |
-| `contacts[0].wa_id`, `contacts[0].profile.name` | `phone`, `name` |
+| `contacts[0].wa_id`, `contacts[0].profile.name` | `phone`, `name` (the name in memory only, never in `inbound_events`) |
 | `messages[0].id` | `external.id` (idempotency) |
 | `messages[0].timestamp` | `receivedAt` |
-| `messages[0].text.body` | `firstMessage` |
+| `messages[0].text.body` | `codes` only (attribution); the text goes to `wa_message_texts` when the line keeps text, never `leads.first_message` |
 | `messages[0].referral.source_id`, `.source_type = ad`, `.ctwa_clid`, `.headline` | `adId`, `leads.ctwa_clid`, activity note |
 
-The POST handler verifies the signature, writes `inbound_events`, returns 200; processing runs right after in the same request. A retry job picks up rows with `processed_at` null. With Coexistence, Meta also sends echoes of replies typed in the phone app; if confirmed, `first_response_at` fills itself and the 15-minute SLA becomes measurable.
+The POST handler verifies the signature over the raw bytes, trims the payload (ids, times, types, referral ids, codes; nothing for lines without consent), writes `inbound_events`, returns 200; processing runs right after in the same request. A retry job picks up rows with `processed_at` null; both claim a row with `claimed_at` first. With Coexistence, Meta also sends echoes of replies sent from the phone app; the first reply comes from `wa_messages` (`v_wa_lead_first_reply`), ignoring outgoing messages within `wa_auto_reply_seconds` of the customer's message (likely greeting/away messages, which Meta does not mark).
 
 Built in T19 (docs/whatsapp-coexistence.md):
 - Lines are connected in Pengaturan › WhatsApp with Embedded Signup (Coexistence); the server swaps the code for a token, subscribes the app to the WABA and requests the contacts and history sync. A line is processed only in mode `coexistence` / `cloud_api` **with consent recorded** (`wa_lines.consent_at`, `consent_by`).

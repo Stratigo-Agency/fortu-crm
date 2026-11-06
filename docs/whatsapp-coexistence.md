@@ -12,15 +12,19 @@ Sales tetap memakai aplikasi **WhatsApp Business** di HP seperti biasa. Setelah 
   dicatat manual lagi. Chat dari iklan Click-to-WhatsApp otomatis tercatat iklannya.
 - **Balasan sales dari HP** dicatat waktunya. Dari situ CRM menghitung berapa cepat tiap sales membalas chat
   pertama (Laporan › Kecepatan balas chat) dan memberi tanda "Chat belum dibalas > 2 jam" di Perlu perhatian.
-  Tanda itu hanya terlihat oleh sales pemilik chat.
+  Tanda itu hanya terlihat oleh sales pemilik chat. Yang dihitung adalah pesan balasan sungguhan, bukan tombol
+  "Sudah dihubungi" (lihat *Waktu balas* di bawah).
 
 Yang dicatat CRM untuk setiap pesan: arah (masuk / keluar), jam, jenis (teks, gambar, …), nomor id pesan, dan
 nomor sales. **Isi pesan tidak disimpan**, kecuali admin menyalakan "Simpan isi pesan" untuk nomor itu. Kalau
-dinyalakan, isi pesan hanya bisa dibaca oleh sales pemilik nomor, CEO, dan admin. Isi pesan tidak pernah ditulis ke
-log server.
+dinyalakan, isi pesan hanya bisa dibaca oleh sales pemilik nomor, CEO, dan admin: di Prospek dan di deal, sales lain
+melihat kolom pesan kosong, dan pencarian tidak menemukan isi pesan. Isi pesan tidak pernah ditulis ke log server
+atau ke catatan mentah webhook. Mematikan "Simpan isi pesan" langsung menghapus semua isi pesan nomor itu.
 
-Riwayat chat lama (sampai 180 hari) dan daftar kontak HP ikut dikirim Meta saat penyambungan. CRM menyimpan
-catatan waktunya saja dan **tidak** membuat prospek dari riwayat lama.
+Riwayat chat lama (sampai 180 hari) ikut dikirim Meta saat penyambungan. CRM menyimpan catatan waktunya saja dan
+**tidak** membuat prospek dari riwayat lama. Untuk orang yang belum ada di CRM, nomor HP-nya pun tidak disimpan.
+Daftar kontak HP juga dikirim Meta, tapi CRM **tidak menyimpannya sama sekali**: CRM tidak membutuhkannya, karena
+kontak dicocokkan dari chat yang masuk.
 
 ## Yang dilihat Pak Rudi (sales) dan yang berubah di aplikasinya
 
@@ -58,8 +62,9 @@ Teks yang ditandatangani sales (cetak, tanda tangan, simpan di HR):
 >    prospek. Chat baru dari calon pembeli otomatis menjadi prospek atas nama saya.
 > 2. Isi pesan hanya disimpan jika perusahaan menyalakannya untuk nomor ini, dan hanya bisa dibaca oleh saya,
 >    CEO, dan admin CRM.
-> 3. Riwayat chat sampai 180 hari dan daftar kontak di aplikasi ikut dikirim ke CRM saat penyambungan. Saya boleh
->    menolak berbagi riwayat chat pada langkah "Confirm history".
+> 3. Riwayat chat sampai 180 hari ikut dikirim ke CRM saat penyambungan; CRM hanya mencatat waktunya. Daftar
+>    kontak di aplikasi ikut dikirim Meta tetapi tidak disimpan CRM. Saya boleh menolak berbagi riwayat chat pada
+>    langkah "Confirm history".
 > 4. Beberapa fitur aplikasi berubah (broadcast list, pesan sementara, sekali lihat, lokasi terkini, perangkat
 >    tertaut), seperti dijelaskan kepada saya.
 > 5. Saya boleh mencabut persetujuan ini kapan saja dengan memberi tahu admin, atau dengan memutus sambungan di
@@ -85,8 +90,16 @@ Kode dari Meta hanya berlaku 30 detik; CRM langsung memakainya. Kalau muncul "Ko
 ulangi dari awal. Setelah berhasil, nomor muncul di daftar dengan mode "Tersambung ke CRM".
 
 **Memutus sambungan** (sales sendiri bisa): di aplikasi WhatsApp Business › **Settings › Account › Business
-Platform › Disconnect Account**. CRM menerima kabar `PARTNER_REMOVED` dan berhenti memproses nomor itu. Admin juga
-bisa menekan **Cabut izin** di Pengaturan › WhatsApp.
+Platform › Disconnect Account**. CRM menerima kabar `PARTNER_REMOVED`, berhenti memproses nomor itu, menghapus izin,
+mematikan "Simpan isi pesan" dan menghapus isi pesan yang tersimpan.
+
+**Cabut izin** di Pengaturan › WhatsApp (admin, CEO): CRM dulu meminta Meta berhenti mengirim webhook untuk akun
+WhatsApp sales itu (`DELETE /<WABA_ID>/subscribed_apps`), lalu nomor kembali ke mode "Aplikasi saja", izin dan
+token dihapus, "Simpan isi pesan" mati, dan isi pesan yang tersimpan dihapus. Kalau Meta tidak bisa dihubungi, nomor
+tetap dilepas di CRM dan webhook yang masih datang untuk nomor itu dibuang tanpa disimpan.
+
+**Menyambungkan ulang** butuh persetujuan baru (centang dan nama lagi). "Simpan isi pesan" mulai dari mati, dan isi
+pesan dari sambungan lama dihapus.
 
 ## Yang harus disiapkan admin di Meta (sekali)
 
@@ -148,9 +161,42 @@ Alasan menunda / no-go kalau terjadi:
 - **Versi Embedded Signup**: tombol memakai `featureType: whatsapp_business_app_onboarding` dan
   `sessionInfoVersion: 3` seperti di dokumentasi Coexistence; dokumentasi juga menyebut v4/v5 (di v5 Coexistence
   aktif tanpa `featureType`). Cek konfigurasi yang dibuat di Meta saat uji pertama.
-- **Nomor dengan username**: pengguna yang memakai username bisa datang tanpa nomor HP (hanya BSUID). CRM mencatat
-  pesannya tapi baru membuat prospek setelah nomornya diketahui. Seberapa sering ini terjadi di Indonesia belum tahu.
+- **Nomor dengan username**: lihat *Risiko: nomor tersembunyi* di bawah.
 - **Nomor luar negeri**: CRM hanya menyimpan nomor +62; chat dari nomor luar negeri dicatat waktunya saja.
+
+## Risiko: nomor tersembunyi (username / BSUID)
+
+Meta sedang memperkenalkan **username** WhatsApp. Pengguna yang memakai username bisa menyembunyikan nomor HP-nya;
+webhook lalu hanya membawa **BSUID** (`from_user_id` / `user_id`, id pengguna khusus untuk akun bisnis kita), tanpa
+`from` / `wa_id`. Akibatnya untuk CRM:
+
+- **Tidak ada prospek** dari chat itu, karena prospek dan kontak di CRM dikenali dari nomor +62. Pesannya tetap
+  dicatat (waktu, arah, BSUID) dan catatan event di `inbound_events` berisi `no_phone`.
+- Begitu orang yang sama pernah terlihat dengan nomornya (misalnya ia menulis lagi tanpa menyembunyikan nomor),
+  CRM menyimpan pasangan BSUID ↔ kontak (`wa_contacts`). Sejak itu chat dengan BSUID saja ikut masuk ke kontak
+  dan prospeknya, dan pesan-pesan lama dengan BSUID itu dihubungkan ke kontaknya (sehingga balasan sales yang
+  terlanjur tercatat ikut terhitung).
+- Yang **tidak** dilakukan: membuat prospek mundur dari pesan BSUID-saja yang lebih lama, termasuk iklan
+  (referral) pesan itu. Prospek dibuat saat nomor pertama kali terlihat, dengan waktu dan iklan pesan itu. Ini
+  sengaja sederhana; kalau ternyata sering terjadi, langkah berikutnya adalah menyimpan referral di `wa_messages`
+  dan membuat prospek dari pesan BSUID pertama.
+- Pengguna dengan username yang tidak pernah memperlihatkan nomornya tidak akan pernah jadi prospek otomatis.
+  Sales tetap bisa mencatatnya lewat Tambah cepat kalau nomornya diberikan di chat.
+- Seberapa sering ini terjadi di Indonesia belum diketahui. Pantau catatan `no_phone` selama uji 2 minggu.
+
+## Waktu balas
+
+Waktu balas pertama sebuah prospek = pesan **keluar** pertama di nomor itu ke kontak itu, sesudah pesan pembeli
+yang membuat prospek (`v_wa_lead_first_reply`, dari `wa_messages`). Urutan webhook tidak berpengaruh: kalau echo
+balasan datang lebih dulu dari pesan pembeli, balasan itu tetap terhitung begitu prospeknya dibuat. Tombol "Sudah
+dihubungi" di Prospek tidak dihitung sebagai balasan. Pesan yang dihapus, diedit, atau reaksi juga tidak.
+
+**Risiko pesan otomatis**: aplikasi WhatsApp Business bisa mengirim *pesan sambutan* dan *pesan di luar jam kerja*
+secara otomatis. Echo-nya (`smb_message_echoes`) **tidak** punya tanda pembeda dari pesan yang diketik sales
+(dicek di referensi webhook Meta, 6 Nov 2026: hanya `from`, `to`, `id`, `timestamp`, `type`). Karena itu CRM
+menganggap pesan keluar dalam **5 detik** sesudah pesan pembeli sebagai pesan otomatis dan tidak menghitungnya.
+Angka ini diatur di `app_settings.wa_auto_reply_seconds`. Pesan otomatis yang datang lebih lambat dari itu tetap
+terhitung sebagai balasan; kalau sales memakai pesan sambutan, cek angkanya pada uji pertama.
 
 ## Sumber (dibaca 6 Nov 2026)
 
@@ -168,13 +214,24 @@ Alasan menunda / no-go kalau terjadi:
 
 ## Untuk developer
 
-- Route: `app/api/v1/webhooks/whatsapp/route.ts` (GET verifikasi, POST tanda tangan `X-Hub-Signature-256` lalu
-  `inbound_events`, jawab 200, proses sesudahnya). Logika di `lib/whatsapp/*`.
-- Hanya `wa_lines` dengan mode `coexistence` atau `cloud_api` **dan** `consent_at` terisi yang diproses.
+- Route: `app/api/v1/webhooks/whatsapp/route.ts` (GET verifikasi, POST tanda tangan `X-Hub-Signature-256` atas
+  byte mentah body, lalu `inbound_events`, jawab 200, proses sesudahnya). Logika di `lib/whatsapp/*`. Body > 3 MB
+  ditolak (413); 60 kegagalan tanda tangan / verify token per menit dari satu alamat → 429.
+- Hanya `wa_lines` dengan mode `coexistence` atau `cloud_api` **dan** `consent_at` terisi yang diproses. Bagian
+  webhook untuk nomor lain dibuang **sebelum** disimpan.
 - Prospek: chat dari kontak yang belum punya prospek di nomor itu dalam 30 hari, atau chat dari iklan (referral
   `source_id` → `ads.meta_ad_id`, atau kode iklan di teks). Selalu lewat `ingestLead()`; id pesan yang sama dua kali
   tetap satu prospek.
 - Tabel: `wa_messages` (metadata), `wa_message_texts` (isi, hanya jika `store_message_text`), `wa_contacts`
   (BSUID ↔ kontak). View `v_wa_response_times`. Migrasi 017.
-- Payload di `inbound_events` diredaksi setelah diproses: tanpa teks, caption, atau lokasi.
-- Ulang otomatis: `jobs/retry-inbound.ts` (setiap 5 menit, event > 2 menit, maksimal 5 kali).
+- Payload di `inbound_events` dipangkas **sebelum** disimpan (`prepareEvent`): hanya id, waktu, jenis, id
+  referral iklan, dan kode iklan yang sudah dibaca dari teks (`crm_codes`). Tanpa teks, caption, nama profil,
+  username, kartu kontak, status kirim, atau daftar kontak HP (`smb_app_state_sync` dibuang seluruhnya). Hash body
+  (`external_id`) menahan kiriman ganda. Teks (hanya untuk nomor yang menyimpan isi) dan nama profil dibawa di
+  memori ke proses langsung sesudah respons; tidak pernah ke `leads.first_message`, yang bisa dibaca semua user.
+- Event yang gagal terus (poison) tetap hanya berisi payload yang sudah dipangkas; `error` hanya nama error.
+- Klaim: proses langsung dan job ulang sama-sama mengambil event dengan `UPDATE … SET claimed_at = now() WHERE
+  processed_at IS NULL AND (claimed_at IS NULL OR claimed_at < now() - 5 menit) RETURNING`, jadi satu event tidak
+  diproses dua kali bersamaan.
+- Ulang otomatis: `jobs/retry-inbound.ts` (setiap 5 menit, event > 2 menit, maksimal 5 kali). Event yang diulang
+  dari database tidak punya teks dan nama di memori: pesannya dicatat sebagai metadata saja.
