@@ -36,9 +36,10 @@ test.describe.serial("Tambah cepat on a phone", () => {
     await page.getByLabel("Nama (boleh dikosongkan)").fill("Andi Wijaya");
     await page.getByLabel("Pesan pertama").fill(MESSAGE);
 
-    // the code is read while typing: the ad card shows and the product chip is set
+    // the code is read while typing: the ad chip (name and code) shows, the source follows it, the product chip is set
     await expect(page.getByText(`Dari iklan: ${AD.name}`)).toBeVisible();
-    await expect(page.getByText("Sumber dan produk sudah terisi.")).toBeVisible();
+    await expect(page.getByText(`Kode ${AD.code}`)).toBeVisible();
+    await expect(page.getByText("Sumber: Iklan Meta / WA. Produk ikut iklan.")).toBeVisible();
     await expect(page.getByRole("radio", { name: "IFP" })).toBeChecked();
     await expect(page.getByLabel("Sumber chat")).toHaveCount(0);
 

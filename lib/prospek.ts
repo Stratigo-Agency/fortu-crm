@@ -94,7 +94,7 @@ export async function listProspects(o: ListOptions): Promise<{ rows: ProspekRow[
            product_interest, received_at, is_late, owner_user_id, owner_name,
            can_edit_lead(${o.viewerId}, id) AS can_edit
       FROM v_leads_enriched
-     WHERE status = ANY(${statuses}) AND NOT is_sample ${owner} ${group} ${search}
+     WHERE status = ANY(${statuses}) AND (NOT is_sample OR show_sample_data()) ${owner} ${group} ${search}
      ORDER BY received_at DESC, id
      LIMIT ${o.limit + 1}`;
   const page = rows.slice(0, o.limit);

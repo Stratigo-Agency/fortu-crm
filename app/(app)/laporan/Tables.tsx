@@ -3,17 +3,24 @@ import { setSalesFilter } from "@/app/(app)/actions";
 import { ApproveDiscountButton } from "@/app/(app)/deal/ApproveDiscountButton";
 import { t } from "@/lib/copy";
 import { rupiahShort } from "@/lib/format";
+import type { ReportPeriod } from "@/lib/reportPeriod";
 import type { AttentionRow, RepRow } from "@/lib/reports";
 
-const num = "tabular px-3 py-3 text-right";
+const num = "tabular whitespace-nowrap px-3 py-3 text-right";
 
 function Chip({ n, late }: { n: number; late?: boolean }) {
   if (n === 0) return <span>0</span>;
   return <span className={`inline-block min-w-6 rounded-full px-2 py-0.5 text-center ${late ? "bg-late-bg text-late" : "bg-paper text-ink"}`}>{n}</span>;
 }
 
-/** Kinerja sales. A name sets the sales filter (only when the viewer may pick another person). */
-export function RepTable({ reps, canPick }: { reps: RepRow[]; canPick: boolean }) {
+/** Kinerja sales, for the selected period. A name sets the sales filter (only when the viewer may pick another person). */
+export function RepTable({ reps, canPick, period }: { reps: RepRow[]; canPick: boolean; period: ReportPeriod }) {
+  const when = t(`laporan.periodNow.${period}`);
+  const heads = [
+    t("laporan.colOpen"), t("laporan.colPipeline"), t("laporan.colEstimate"),
+    t("laporan.colDonePeriod", { when }), t("laporan.colTargetPeriod", { when }), t("laporan.colAttainment"),
+    t("laporan.colUnits"), t("laporan.colWinRate"), t("laporan.colLate"), t("laporan.colStale"),
+  ];
   return (
     <section className="rounded-lg bg-white p-5 shadow-card" aria-label={t("laporan.byRep")}>
       <div className="flex items-baseline justify-between gap-3">
@@ -27,8 +34,8 @@ export function RepTable({ reps, canPick }: { reps: RepRow[]; canPick: boolean }
             <thead>
               <tr className="border-b border-line text-sm text-faint">
                 <th className="px-3 py-2 text-left font-semibold">{t("laporan.colSales")}</th>
-                {(["colOpen", "colPipeline", "colEstimate", "colDone", "colTarget", "colAttainment", "colUnits", "colWinRate", "colLate", "colStale"] as const).map((k) => (
-                  <th key={k} className="px-3 py-2 text-right font-semibold">{t(`laporan.${k}`)}</th>
+                {heads.map((h) => (
+                  <th key={h} className="px-3 py-2 text-right font-semibold">{h}</th>
                 ))}
               </tr>
             </thead>

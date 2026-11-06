@@ -2,7 +2,7 @@ import { sql } from "@/lib/db";
 import type { ReportPeriod } from "@/lib/reportPeriod";
 
 // Lead dan funnel: how many leads came in, from which source group, and where they stop.
-// Every number comes from the SQL function lead_funnel() (migration 016, rule 5);
+// Every number comes from the SQL function lead_funnel() (migrations 016 and 018, rule 5);
 // this file only picks rows and renames columns.
 
 export const SOURCE_GROUPS = ["meta", "website", "offline", "wa_direct", "other"] as const;
@@ -27,8 +27,10 @@ export type FunnelStepRow = {
   stopped: number;
   /** did not pass yet but still moving ('masih berjalan') */
   running: number;
-  /** passed / (passed + stopped), whole percent; null when nobody passed or stopped */
+  /** passed / entered: the share of the leads that reached the step before, whole percent; null when none entered */
   pct: number | null;
+  /** passed / (passed + stopped): only judges the bottleneck, so leads still running don't count against a step */
+  finishedPct: number | null;
   /** median days a deal stayed in the stage of this step (completed stays only); null for handled and done */
   medianDays: number | null;
   /** enough leads stopped here to judge the step (app_settings.funnel_min_entering) */
@@ -52,10 +54,10 @@ export type FunnelRow = {
   notBuyer: number;
   /** chats from a contact that already had an open deal: not in the funnel, only counted */
   reentry: number;
-  /** conversion into each step (passed / (passed + stopped)), whole percent */
+  /** share of each step (passed / entered), whole percent */
   pct: Record<FunnelStep, number | null>;
   pctLeadToDone: number | null;
-  /** the weakest steps (ties name all of them) and their conversion */
+  /** the weakest steps (ties name all of them) and their finished share (passed / (passed + stopped)) */
   bottleneck: { steps: FunnelStep[]; pct: number } | null;
   /** found = a real bottleneck, insufficient = too few leads stopped per step, none = nobody stopped */
   status: "found" | "insufficient" | "none";
@@ -76,7 +78,7 @@ export type LeadFunnel = {
 
 type StepJson = {
   step: FunnelStep; entered: number; passed: number; stopped: number; running: number; pct: number | null;
-  median_days: number | string | null; enough: boolean; is_bottleneck: boolean;
+  finished_pct: number | null; median_days: number | string | null; enough: boolean; is_bottleneck: boolean;
 };
 
 type Wide = {
@@ -94,6 +96,7 @@ function toStep(s: StepJson): FunnelStepRow {
     stopped: s.stopped,
     running: s.running,
     pct: s.pct,
+    finishedPct: s.finished_pct,
     medianDays: s.median_days === null ? null : Number(s.median_days),
     enoughData: s.enough,
     isBottleneck: s.is_bottleneck,

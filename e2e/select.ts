@@ -22,3 +22,21 @@ export async function pickValue(trigger: Locator, value: string) {
   await list.locator(`[role="option"][data-value="${value}"]`).click();
   await expect(list).toHaveCount(0);
 }
+
+/** Picks a day ("YYYY-MM-DD") in our own DatePicker: opens it, steps to the month, clicks the day. */
+export async function pickDate(trigger: Locator, day: string) {
+  const page = trigger.page();
+  await trigger.click();
+  const grid = page.getByRole("grid").last();
+  await expect(grid).toBeVisible();
+  const target = day.slice(0, 7);
+  for (let i = 0; i < 240; i++) {
+    const month = (await grid.getAttribute("data-month")) ?? "";
+    if (month === target) break;
+    await page.getByRole("button", { name: month < target ? "Bulan berikutnya" : "Bulan sebelumnya" }).last().click();
+    await expect(grid).not.toHaveAttribute("data-month", month);
+  }
+  await grid.locator(`[data-day="${day}"]`).click();
+  await expect(page.getByRole("grid")).toHaveCount(0);
+  await expect(trigger).toHaveAttribute("data-value", day);
+}

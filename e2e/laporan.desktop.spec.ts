@@ -18,6 +18,19 @@ test("a sales rep sees only their own row and numbers in Laporan", async ({ page
   await expect(page.getByRole("region", { name: "Pipeline per tahap" })).toBeVisible();
 });
 
+test("a sales rep's sidebar filter shows their own name, locked, where pages show only their numbers", async ({ page }) => {
+  const filter = page.getByLabel("Lihat data").locator("visible=true");
+  for (const path of ["/laporan", "/beranda"]) {
+    await page.goto(path);
+    await expect(filter).toHaveText(REP.name);
+    await expect(filter).toBeDisabled();
+  }
+  // Pipeline is view all: there the filter works
+  await page.goto("/pipeline");
+  await expect(filter).toBeEnabled();
+  await expect(filter).toHaveText("Semua sales");
+});
+
 test("Laporan shows the rest of the panels, and the period select changes the key figures", async ({ page }) => {
   await page.goto("/laporan");
   for (const name of ["Perkiraan per bulan close", "Dari iklan ke CRM", "Demo dan alasan lost", "Permintaan per SKU", "Sumber prospek"]) {

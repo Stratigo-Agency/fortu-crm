@@ -13,7 +13,7 @@ export type ProductInterest = "IFP" | "DSS" | "LED";
 
 /** What a code in the first message stands for, shown to the rep as "Dari iklan: …". */
 export type CodeInfo =
-  | { kind: "ad"; adName: string; productLine: ProductInterest; sourceChannel: "meta_ctwa" }
+  | { kind: "ad"; adName: string; code: string; productLine: ProductInterest; sourceChannel: "meta_ctwa" }
   | { kind: "link"; sourceChannel: SourceChannel };
 
 /**
@@ -25,7 +25,8 @@ export async function describeCodes(codes: Codes): Promise<CodeInfo | null> {
     const [ad] = await sql<{ name: string }[]>`
       SELECT name FROM ads WHERE upper(prefill_code) = ${codes.adCode.toUpperCase()}`;
     const line = codes.adCode.split("-")[1] as ProductInterest;
-    if (ad) return { kind: "ad", adName: ad.name, productLine: line, sourceChannel: "meta_ctwa" };
+    // only the ad's name and its code go back to the browser: nothing about any customer
+    if (ad) return { kind: "ad", adName: ad.name, code: codes.adCode.toUpperCase(), productLine: line, sourceChannel: "meta_ctwa" };
   }
   if (codes.clickCode) {
     const [click] = await sql<{ source_channel: SourceChannel }[]>`

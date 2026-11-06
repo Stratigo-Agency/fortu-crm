@@ -8,6 +8,7 @@ import { getLeadFunnel } from "@/lib/leadFunnel";
 import { getReport } from "@/lib/reports";
 import { canOpenStock } from "@/lib/shell";
 import { getSalesFilter } from "@/lib/salesFilter";
+import { ownNumbersOwner } from "@/lib/salesScope";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { FunnelSection } from "./Funnel";
 import { Kpis } from "./Kpis";
@@ -33,7 +34,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
   const period = parsePeriod((await searchParams).periode);
   // A sales rep sees only their own numbers: the owner is set here, whatever the top-bar filter says.
   const isRep = user.role === "sales_rep";
-  const ownerId = isRep ? user.id : await getSalesFilter();
+  const ownerId = ownNumbersOwner(user, await getSalesFilter());
   const [report, funnel, waRows, myUnanswered] = await Promise.all([
     getReport(ownerId, period),
     getLeadFunnel(ownerId, period),
@@ -68,7 +69,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
         <div className="md:col-span-2 xl:col-span-1"><CloseChart buckets={report.closeForecast} /></div>
       </div>
       <div className="mt-4">
-        <RepTable reps={report.reps} canPick={!isRep} />
+        <RepTable reps={report.reps} canPick={!isRep} period={period} />
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Attention rows={report.attention.rows} total={report.attention.total} canApprove={user.role === "ceo" || user.role === "admin"} unansweredChats={myUnanswered} />

@@ -357,6 +357,13 @@
     "traceCampaign": "Kampanye {name}",
     "tracePage": "Halaman {page}"
   },
+  "datePicker": {
+    "placeholder": "Pilih tanggal",
+    "today": "Hari ini",
+    "clear": "Kosongkan",
+    "prevMonth": "Bulan sebelumnya",
+    "nextMonth": "Bulan berikutnya"
+  },
   "quickAdd": {
     "title": "Prospek baru",
     "phone": "Nomor WhatsApp",
@@ -366,7 +373,9 @@
     "name": "Nama",
     "message": "Pesan pertama",
     "fromAd": "Dari iklan: {ad}",
-    "fromAdHint": "Sumber dan produk sudah terisi.",
+    "fromAdHint": "Sumber: {source}. Produk ikut iklan.",
+    "fromLinkHint": "Sumber: {source}.",
+    "adCode": "Kode {code}",
     "fromLink": "Dari link website",
     "interest": "Tertarik produk",
     "receivedAt": "Chat masuk",
@@ -496,7 +505,8 @@
     "colPipeline": "Pipeline",
     "colEstimate": "Perkiraan",
     "colDone": "Done bulan ini",
-    "colTarget": "Target",
+    "colDonePeriod": "Done {when}",
+    "colTargetPeriod": "Target {when}",
     "colAttainment": "Capaian",
     "colUnits": "Unit layar",
     "colWinRate": "Win rate 90 hari",
@@ -729,7 +739,7 @@
       "po": "Negotiation → PO",
       "done": "PO → Done deal"
     },
-    "bottleneck": "Paling banyak berhenti di {step}: {pct} lanjut",
+    "bottleneck": "Paling banyak berhenti di {step}: {pct} lanjut dari lead yang sudah selesai di tahap ini",
     "and": "dan",
     "insufficient": "Ada lead yang berhenti, tapi datanya belum cukup untuk menyebut titik macet. Perlu minimal {n} lead berhenti di satu langkah.",
     "none": "Belum ada lead yang berhenti di tengah jalan.",
@@ -744,7 +754,8 @@
     "typically": "biasanya {n} hari di tahap ini",
     "weakest": "Titik macet",
     "stepsLabel": "Langkah funnel semua sumber",
-    "leadsCount": "{n} lead"
+    "leadsCount": "{n} lead",
+    "shareOf": "{n} dari {of} lead dari langkah sebelumnya"
   },
   "stok": {
     "title": "Stok & Permintaan",

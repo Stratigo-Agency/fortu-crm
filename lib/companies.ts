@@ -3,6 +3,7 @@ import { assertCanEditCompany, ForbiddenError } from "@/lib/authz";
 import { pgError, sql } from "@/lib/db";
 import { COMPANY_SORTS, type CompanyDetail, type CompanyRow, type CompanySort, INDUSTRIES } from "@/lib/contactTypes";
 import { t } from "@/lib/copy";
+import { industryAliases, industryFormValue } from "@/lib/industry";
 import { likePattern } from "@/lib/search";
 
 type Actor = Pick<SessionUser, "id" | "role">;
@@ -36,7 +37,7 @@ export async function listCompanies(o: ListOptions): Promise<{ rows: CompanyRow[
   const owner = o.ownerId ? sql`AND owner_user_id = ${o.ownerId}` : sql``;
   // people type the label (Pendidikan), the database holds the key (education)
   const keys = INDUSTRIES.filter((k) => t(`industry.${k}`).toLowerCase().includes(q.toLowerCase()));
-  const byIndustry = keys.length ? sql` OR industry = ANY(${keys})` : sql``;
+  const byIndustry = keys.length ? sql` OR lower(industry) = ANY(${[...keys, ...industryAliases(keys)]})` : sql``;
   const search = q ? sql`AND (name ILIKE ${likePattern(q)}${byIndustry} OR city ILIKE ${likePattern(q)})` : sql``;
   const order =
     o.sort === "pipeline" ? sql`pipeline DESC`
@@ -66,7 +67,7 @@ export async function getCompany(id: string, viewerId: string): Promise<CompanyD
   return {
     id: c.id,
     name: c.name,
-    industry: c.industry ?? "",
+    industry: industryFormValue(c.industry),
     city: c.city ?? "",
     website: c.website ?? "",
     ownerName: c.owner_name,

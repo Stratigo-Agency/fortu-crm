@@ -113,6 +113,30 @@ describe("Laporan numbers match the database", () => {
     expect(all.some((r) => r.userId === rep.id)).toBe(true);
   });
 
+  it("Kinerja sales follows the period: Done and target over the quarter and the year", async () => {
+    const rep = await createUser();
+    // this month and two months ago (same year; same quarter only when this month is the quarter's last)
+    await sql`INSERT INTO sales_targets (user_id, period_month, target_amount) VALUES
+              (${rep.id}, date_trunc('month', jakarta_today()::timestamp)::date, 100000000),
+              (${rep.id}, (date_trunc('month', jakarta_today()::timestamp) - interval '2 months')::date, 50000000)`;
+    await mk(rep.id, { stage: "done", qty: 1, unitPrice: 25_000_000 });
+    const earlier = await mk(rep.id, { stage: "done", qty: 2, unitPrice: 10_000_000 });
+    await sql`UPDATE deals SET closed_on = (date_trunc('month', jakarta_today()::timestamp) - interval '2 months')::date + 3 WHERE id = ${earlier}`;
+
+    const [{ same_q, same_y }] = await sql<{ same_q: boolean; same_y: boolean }[]>`
+      SELECT date_trunc('quarter', jakarta_today()::timestamp) = date_trunc('quarter', jakarta_today()::timestamp - interval '2 months') AS same_q,
+             date_trunc('year', jakarta_today()::timestamp) = date_trunc('year', jakarta_today()::timestamp - interval '2 months') AS same_y`;
+    const row = async (p: "month" | "quarter" | "year") => (await getReport(rep.id, p)).reps[0];
+
+    expect(await row("month")).toMatchObject({ won: "25000000", target: "100000000", attainmentPct: 25, units: 1 });
+    expect(await row("quarter")).toMatchObject(
+      same_q ? { won: "45000000", target: "150000000", attainmentPct: 30, units: 3 } : { won: "25000000", target: "100000000", units: 1 },
+    );
+    expect(await row("year")).toMatchObject(
+      same_y ? { won: "45000000", target: "150000000", attainmentPct: 30, units: 3 } : { won: "25000000", target: "100000000", units: 1 },
+    );
+  });
+
   it("the total is the sum over everyone", async () => {
     const a = await createUser();
     const b = await createUser();

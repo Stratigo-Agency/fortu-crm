@@ -34,6 +34,8 @@ const MIGRATIONS = [
   "015_report_indexes.sql",
   "016_lead_funnel.sql",
   "017_whatsapp_coexistence.sql",
+  "018_funnel_share.sql",
+  "019_sample_data_flag.sql",
 ];
 
 describe("migrations", () => {
@@ -78,7 +80,7 @@ describe("seeds", () => {
   it("loads 32 products and can run twice", async () => {
     for (let i = 0; i < 2; i++) {
       await runSeeds({ url, log: () => {} });
-      // only the seed's own SKUs: other test files add products too, and the file order is not fixed
+      // only the seed's own SKUs: other test files (fixtures, Accurate sync) add products with other names
       const [{ count }] = await sql`select count(*)::int as count from products where sku = any(${SEED_SKUS})`;
       expect(count).toBe(32);
     }

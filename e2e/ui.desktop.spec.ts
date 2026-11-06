@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test } from "@playwright/test";
 import postgres from "postgres";
 import { REP } from "./global-setup";
-import { pick } from "./select";
+import { pick, pickDate } from "./select";
 
 const sql = postgres(process.env.DATABASE_URL_E2E as string, { max: 1 });
 test.afterAll(() => sql.end());
@@ -62,7 +62,7 @@ test.describe("the deal flow", () => {
     await page.getByRole("button", { name: "Produk", exact: true }).click();
     await pick(page.getByRole("combobox", { name: "Produk" }), /UI-01/);
     await expect(products).toContainText("sudah");
-    await page.getByLabel("Perkiraan close").fill("2030-01-15");
+    await pickDate(page.getByLabel("Perkiraan close"), "2027-01-15");
     await expect(page.getByText("Siap pindah ke Quotation")).toBeVisible();
   });
 });
