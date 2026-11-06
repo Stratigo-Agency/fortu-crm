@@ -190,3 +190,17 @@ test.describe.serial("Pilot flow", () => {
     await expect(page.locator("p", { hasText: /^Done deal bulan ini$/ })).toBeVisible();
   });
 });
+
+test.describe("Signed out", () => {
+  test.use({ storageState: { cookies: [], origins: [] } });
+
+  test("the health check answers without a login, and pages send you to Masuk", async ({ page }) => {
+    const health = await page.request.get("/api/health");
+    expect(health.status()).toBe(200);
+    expect(await health.json()).toMatchObject({ status: "ok", db: "ok" });
+
+    await page.goto("/pipeline");
+    await expect.poll(() => pathname(page)).toBe("/masuk");
+    expect(new URL(page.url()).searchParams.get("next")).toBe("/pipeline");
+  });
+});
