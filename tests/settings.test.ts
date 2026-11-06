@@ -158,23 +158,23 @@ describe("Tim sales", () => {
     return form({
       ...Object.fromEntries(people.flatMap((p) => [
         [`role:${p.id}`, p.role], ...(p.isActive ? [[`active:${p.id}`, "on"]] : []), ...(p.acceptingLeads ? [[`accepting:${p.id}`, "on"]] : []),
-        [`lines:${p.id}`, p.productLines], [`wa:${p.id}`, p.waPhone], [`walabel:${p.id}`, p.waLabel],
+        [`wa:${p.id}`, p.waPhone], [`walabel:${p.id}`, p.waLabel],
       ])),
       ...extra,
     });
   }
 
-  it("changes role, active, accepting leads, product lines and the WhatsApp line", async () => {
+  it("changes role, active, accepting leads and the WhatsApp line", async () => {
     const admin = await createUser({ role: "admin" });
     const rep = await createUser({ fullName: "Rep Tim" });
     const f = await allFields({
-      [`role:${rep.id}`]: "sales_lead", [`lines:${rep.id}`]: ["IFP", "LED"], [`wa:${rep.id}`]: "0812 5555 0101", [`walabel:${rep.id}`]: "No_RepTim",
+      [`role:${rep.id}`]: "sales_lead", [`wa:${rep.id}`]: "0812 5555 0101", [`walabel:${rep.id}`]: "No_RepTim",
     });
     f.delete(`accepting:${rep.id}`);
     await saveTeam(admin, f);
     const m = (await getTeam()).find((p) => p.id === rep.id)!;
     expect(m).toMatchObject({ role: "sales_lead", isActive: true, acceptingLeads: false, waPhone: "+6281255550101", waLabel: "No_RepTim" });
-    expect([...m.productLines].sort()).toEqual(["IFP", "LED"]);
+    expect("productLines" in m).toBe(false);
 
     // deactivate; the WhatsApp number is updated, not duplicated
     const g = await allFields({ [`wa:${rep.id}`]: "0812 5555 0202" });
@@ -264,7 +264,7 @@ describe("a form that is older than the data", () => {
     const early = await createUser({ fullName: "Sudah Ada" });
     const people = await getTeam();
     const f = form(Object.fromEntries(people.filter((p) => p.id !== early.id).flatMap((p) => [
-      [`role:${p.id}`, p.role], ...(p.isActive ? [[`active:${p.id}`, "on"]] : []), [`lines:${p.id}`, p.productLines], [`wa:${p.id}`, p.waPhone],
+      [`role:${p.id}`, p.role], ...(p.isActive ? [[`active:${p.id}`, "on"]] : []), [`wa:${p.id}`, p.waPhone],
     ])));
     // `early` is not on the form, like someone added while the page was open
     await saveTeam(admin, f);
