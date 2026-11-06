@@ -43,9 +43,10 @@ async function alerts(dealId: string, kind?: string) {
 }
 
 describe("stale deals", () => {
-  it("a Rp150 jt deal in Negotiation for 8 days: the owner on day 1, the CEO on day 2, nobody twice", async () => {
+  it("a Rp150 jt deal in Negotiation for 8 days: the owner hears once, the CEO and the sales leads never", async () => {
     const owner = await createUser();
-    const ceo = await createUser({ role: "ceo" });
+    await createUser({ role: "ceo" });
+    await createUser({ role: "sales_lead" });
     const id = await deal(owner.id, { amount: 150_000_000, stage: "negotiation", idleDays: 8 });
 
     await runSweep();
@@ -55,14 +56,11 @@ describe("stale deals", () => {
     await runSweep();
     expect((await alerts(id, "stale_deal")).map((a) => a.user_id)).toEqual([owner.id]);
 
-    // the next day the CEO hears, once; the owner is not told again
+    // the next day nobody else is told, and the owner is not told again
     await yesterday(id);
     await runSweep();
-    // (other test files add CEOs at the same time, so count the two people of this test)
-    const count = async (uid: string) => (await alerts(id, "stale_deal")).filter((a) => a.user_id === uid).length;
-    expect([await count(owner.id), await count(ceo.id)]).toEqual([1, 1]);
     await runSweep();
-    expect([await count(owner.id), await count(ceo.id)]).toEqual([1, 1]);
+    expect((await alerts(id)).map((a) => a.user_id)).toEqual([owner.id]);
   });
 
   it("a deal below the high-value line, or not stale yet, makes no stale alert", async () => {
@@ -114,122 +112,84 @@ describe("overdue next step", () => {
   });
 });
 
-describe("high value, won and discount", () => {
-  it("a Rp100 jt deal tells the CEO and the sales leads once, and again when it is re-priced", async () => {
-    const owner = await createUser();
-    const ceo = await createUser({ role: "ceo" });
-    const lead = await createUser({ role: "sales_lead" });
-    const id = await deal(owner.id, { amount: 120_000_000, stage: "quotation" });
-    await runSweep();
-    await runSweep();
-    const first = await alerts(id, "high_value_lead");
-    expect(first.map((a) => a.user_id)).toEqual(expect.arrayContaining([ceo.id, lead.id]));
-    expect(first.map((a) => a.user_id)).not.toContain(owner.id);
-    const n = first.length;
-    expect(first[0].payload).toMatchObject({ kind: "high_value_lead", deal: { id, name: "Uji deal", amount: 120_000_000, stage: "Quotation" } });
-    expect(first[0].payload.deal.url).toMatch(/\/deal\//);
-    expect(first[0].payload.owner.id).toBe(owner.id);
+describe("nothing about other people's deals", () => {
+  // Pak Jovian asked not to be alerted about deals (big, stuck, won or discounted): the CEO, the sales
+  // leads and the admins get nothing from the sweeper, whatever the deal looks like.
+  async function bosses() {
+    return [await createUser({ role: "ceo" }), await createUser({ role: "sales_lead" }), await createUser({ role: "admin" })].map((u) => u.id);
+  }
+  async function toBosses(dealId: string, ids: string[]) {
+    const [{ n }] = await sql<{ n: number }[]>`
+      SELECT count(*)::int AS n FROM notifications WHERE deal_id = ${dealId} AND user_id = ANY(${ids}::uuid[])`;
+    return n;
+  }
 
-    await sql`UPDATE deal_line_items SET unit_price = 150000000 WHERE deal_id = ${id}`; // re-priced
-    await yesterday(id);
+  it("a new big deal tells nobody", async () => {
+    const owner = await createUser();
+    const ids = await bosses();
+    const id = await deal(owner.id, { amount: 300_000_000, stage: "quotation" });
     await runSweep();
-    expect((await alerts(id, "high_value_lead")).length).toBe(n * 2);
+    await sql`UPDATE deal_line_items SET unit_price = 400000000 WHERE deal_id = ${id}`; // re-priced
+    await runSweep();
+    expect(await alerts(id)).toHaveLength(0);
+    expect(await toBosses(id, ids)).toBe(0);
   });
 
-  it("a big deal nobody has touched for weeks is not announced as new", async () => {
+  it("a deal paid today tells nobody, not even its owner", async () => {
     const owner = await createUser();
-    const id = await deal(owner.id, { amount: 300_000_000, stage: "quotation", idleDays: 10 });
+    const ids = await bosses();
+    const id = await deal(owner.id, { amount: 140_000_000, stage: "done" });
     await runSweep();
-    expect(await alerts(id, "high_value_lead")).toHaveLength(0);
+    expect(await alerts(id)).toHaveLength(0);
+    expect(await toBosses(id, ids)).toBe(0);
   });
 
-  it("a deal under the line makes no high-value alert", async () => {
+  it("a discount above the limit tells nobody (Laporan lists it for approval)", async () => {
     const owner = await createUser();
-    const id = await deal(owner.id, { amount: 50_000_000, stage: "quotation" });
-    await runSweep();
-    expect(await alerts(id, "high_value_lead")).toHaveLength(0);
-  });
-
-  it("a deal paid today tells the CEO, the sales leads and the owner", async () => {
-    const owner = await createUser();
-    const ceo = await createUser({ role: "ceo" });
-    const lead = await createUser({ role: "sales_lead" });
-    const other = await createUser(); // another rep: not told
-    const id = await deal(owner.id, { amount: 40_000_000, stage: "done" });
-    await runSweep();
-    const ids = (await alerts(id, "won")).map((a) => a.user_id);
-    expect(ids).toEqual(expect.arrayContaining([owner.id, ceo.id, lead.id]));
-    expect(ids).not.toContain(other.id);
-    await runSweep();
-    expect(await alerts(id, "won")).toHaveLength(ids.length);
-  });
-
-  it("a discount above the limit asks the CEO once", async () => {
-    const owner = await createUser();
-    const ceo = await createUser({ role: "ceo" });
+    const ids = await bosses();
     const id = await deal(owner.id, { amount: 10_000_000, stage: "quotation" });
     await sql`UPDATE products SET list_price = 20000000 WHERE id = (SELECT product_id FROM deal_line_items WHERE deal_id = ${id})`; // 50% off MSRP
+    const [{ needs }] = await sql<{ needs: boolean }[]>`SELECT needs_discount_approval AS needs FROM v_deals_enriched WHERE id = ${id}`;
+    expect(needs).toBe(true);
+    await runSweep();
+    expect(await alerts(id)).toHaveLength(0);
+    expect(await toBosses(id, ids)).toBe(0);
+  });
+
+  it("a big stale deal tells only its owner, even after days", async () => {
+    const owner = await createUser();
+    const ids = await bosses();
+    const id = await deal(owner.id, { amount: 500_000_000, stage: "po", idleDays: 30, nextStepDays: -4 });
     await runSweep();
     await yesterday(id);
     await runSweep();
-    const a = await alerts(id, "discount_approval");
-    expect(a.map((x) => x.user_id)).toContain(ceo.id);
-    expect(a.filter((x) => x.user_id === ceo.id)).toHaveLength(1);
-    expect(a.map((x) => x.user_id)).not.toContain(owner.id);
-
-    // re-priced (still over the limit): asked again, once more
-    await sql`UPDATE deal_line_items SET unit_price = 12000000 WHERE deal_id = ${id}`;
-    await runSweep();
-    expect((await alerts(id, "discount_approval")).filter((x) => x.user_id === ceo.id)).toHaveLength(2);
+    expect(new Set((await alerts(id)).map((a) => a.user_id))).toEqual(new Set([owner.id]));
+    expect(await toBosses(id, ids)).toBe(0);
   });
 
-  it("an inactive owner is not notified; the sales leads and the CEO hear instead", async () => {
+  it("a deal whose owner is gone tells nobody (not the CEO, not the sales leads)", async () => {
     const owner = await createUser({ isActive: false });
-    const ceo = await createUser({ role: "ceo" });
-    const lead = await createUser({ role: "sales_lead" });
-    const id = await deal(owner.id, { amount: 30_000_000, stage: "quotation", nextStepDays: -3 });
+    const ids = await bosses();
+    const overdue = await deal(owner.id, { amount: 30_000_000, stage: "quotation", nextStepDays: -3 });
+    const stale = await deal(owner.id, { amount: 150_000_000, stage: "negotiation", idleDays: 8 });
     await runSweep();
-    const ids = (await alerts(id, "next_step_overdue")).map((a) => a.user_id);
-    expect(ids).not.toContain(owner.id);
-    expect(ids).toEqual(expect.arrayContaining([ceo.id, lead.id]));
+    expect(await alerts(overdue)).toHaveLength(0);
+    expect(await alerts(stale)).toHaveLength(0);
+    expect((await toBosses(overdue, ids)) + (await toBosses(stale, ids))).toBe(0);
   });
 
-  it("a big stale deal whose owner is gone goes straight to the CEO, once", async () => {
-    const owner = await createUser({ isActive: false });
+  it("the CEO's own deal still reminds the CEO, as its owner", async () => {
     const ceo = await createUser({ role: "ceo" });
-    const id = await deal(owner.id, { amount: 150_000_000, stage: "negotiation", idleDays: 8 });
+    const id = await deal(ceo.id, { amount: 30_000_000, stage: "quotation", nextStepDays: -1 });
     await runSweep();
-    await runSweep();
-    const stale = (await alerts(id, "stale_deal")).filter((a) => a.user_id === ceo.id);
-    expect(stale).toHaveLength(1);
-    expect((await alerts(id, "stale_deal")).map((a) => a.user_id)).not.toContain(owner.id);
-  });
-
-  it("a deal that went Done after hours or was paid in the past is still announced once, and an old one is not", async () => {
-    const owner = await createUser();
-    const ceo = await createUser({ role: "ceo" });
-    const lateNight = await deal(owner.id, { amount: 40_000_000, stage: "done" });
-    await sql`UPDATE deals SET closed_on = jakarta_today() - 3 WHERE id = ${lateNight}`; // payment date in the past
-    await sql.begin(async (tx) => {
-      await tx`SET LOCAL session_replication_role = replica`;
-      await tx`UPDATE deals SET stage_entered_at = now() - interval '30 hours' WHERE id = ${lateNight}`; // since yesterday evening
-    });
-    const old = await deal(owner.id, { amount: 40_000_000, stage: "done" });
-    await sql.begin(async (tx) => {
-      await tx`SET LOCAL session_replication_role = replica`;
-      await tx`UPDATE deals SET stage_entered_at = now() - interval '5 days' WHERE id = ${old}`;
-    });
-    await runSweep();
-    await yesterday(lateNight);
-    await runSweep();
-    expect((await alerts(lateNight, "won")).filter((a) => a.user_id === ceo.id)).toHaveLength(1);
-    expect(await alerts(old, "won")).toHaveLength(0);
+    expect((await alerts(id, "next_step_overdue")).map((a) => a.user_id)).toEqual([ceo.id]);
   });
 });
 
 describe("what the bell says", () => {
   it("builds the title and detail from the payload", () => {
     const p = { deal: { name: "Hotel Arunika", amount: 312_000_000, stage: "Negotiation", next_step: "Kirim revisi" }, owner: { name: "Dimas" } };
+    // an old row from before the change still reads well
     expect(notificationText("high_value_lead", p)).toEqual({ title: "Deal besar: Hotel Arunika", detail: "Rp312 jt · Dimas" });
     expect(notificationText("stale_deal", p)).toEqual({ title: "Hotel Arunika belum bergerak", detail: "Masih di Negotiation · Rp312 jt" });
     expect(notificationText("next_step_overdue", p)).toEqual({ title: "Next step terlambat: Hotel Arunika", detail: "Kirim revisi" });

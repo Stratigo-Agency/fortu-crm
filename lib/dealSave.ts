@@ -156,7 +156,8 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
 
       const companyId = await findOrCreateCompany(tx, input.companyName, actor.id);
       // A deal made from a prospect keeps the prospect's contact, whatever number is in the form.
-      const contactId = input.fromLeadId
+      // Only a NEW deal may take a prospect's contact: convertLead then checks can_edit_lead. An edit ignores fromLeadId.
+      const contactId = isNew && input.fromLeadId
         ? await contactOfLead(tx, input.fromLeadId)
         : await findOrCreateContact(tx, input.phone, input.contactName, companyId);
       if (input.parentDealId) {
@@ -164,8 +165,10 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
         if (!p) throw new DealInputError("parent", "deal.parentRequired");
       }
 
-      // The owner: only sales leads, the CEO and admins hand a deal to someone else.
-      const manager = MANAGERS.includes(actor.role);
+      // The owner: only sales leads, the CEO and admins hand a deal to someone else. The role is read from the
+      // database here, not from the sign-in cookie, which can be five minutes behind a demotion.
+      const [current] = await tx<{ role: string }[]>`SELECT role::text AS role FROM users WHERE id = ${actor.id} AND is_active`;
+      const manager = !!current && MANAGERS.includes(current.role);
       const wantedOwner = manager && input.ownerId && input.ownerId !== currentOwner ? input.ownerId : null;
       if (wantedOwner) {
         const [o] = await tx`SELECT 1 FROM users WHERE id = ${wantedOwner} AND is_active AND role IN ('sales_rep', 'sales_lead')`;
@@ -241,6 +244,9 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
 }
 
 /** The contact of a prospect (the prospect's own number, never the form's). */
+// Reads the prospect's contact only. It does not check can_edit_lead: convertLead does, later in the same
+// transaction (UPDATE ... WHERE can_edit_lead), and a refusal there rolls the whole save back, so the new deal
+// is never kept. Don't use this result anywhere that is not followed by convertLead.
 async function contactOfLead(tx: Tx, leadId: string): Promise<string> {
   const [l] = await tx<{ contact_id: string }[]>`SELECT contact_id FROM leads WHERE id = ${leadId}`;
   if (!l) throw new ForbiddenError();

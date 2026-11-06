@@ -8,7 +8,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Email + password for people whose work address has no Google account yet.
     Credentials({
       credentials: { email: {}, password: {} },
-      authorize: ({ email, password }) => authorizeCredentials(email, password),
+      authorize: ({ email, password }, request) => authorizeCredentials(email, password, request.headers),
     }),
     Google,
   ],
