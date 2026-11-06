@@ -1,5 +1,5 @@
 import type { NextConfig } from "next";
-import { securityHeaders } from "./lib/securityHeaders";
+import { META_SDK_PAGE, metaSdkPageHeaders, securityHeaders } from "./lib/securityHeaders";
 
 const nextConfig: NextConfig = {
   // Railway runs `node .next/standalone/server.js` (see railway.json).
@@ -8,8 +8,10 @@ const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
   async headers() {
-    const headers = securityHeaders({ dev: process.env.NODE_ENV === "development", production: process.env.NODE_ENV === "production" });
-    return [{ source: "/:path*", headers }];
+    const dev = process.env.NODE_ENV === "development";
+    const headers = securityHeaders({ dev, production: process.env.NODE_ENV === "production" });
+    // Pengaturan › WhatsApp loads Meta's SDK; every other page keeps the strict policy.
+    return [{ source: "/:path*", headers }, { source: META_SDK_PAGE, headers: metaSdkPageHeaders({ dev }) }];
   },
   cacheComponents: true,
   partialPrefetching: true,
