@@ -71,6 +71,13 @@ export function dayMonth(d: Date | string, now: Date = new Date()): string {
   return shortDate(dayOf(d), jakartaDay(now));
 }
 
+/** "21 Nov, 14.05" (Jakarta), or "21 Nov 2025, 14.05" outside this year. When a lead came in. */
+export function dayMonthTime(d: Date | string, now: Date = new Date()): string {
+  const at = typeof d === "string" ? new Date(d) : d;
+  const time = new Intl.DateTimeFormat("id-ID", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: TZ }).format(at);
+  return `${dayMonth(at, now)}, ${time}`;
+}
+
 /** "10%" from a probability like "0.100" (pipeline_stages.probability). */
 export function percent(p: number | string): string {
   return `${Math.round(toNumber(p) * 100)}%`;

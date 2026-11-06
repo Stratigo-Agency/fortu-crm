@@ -4,12 +4,14 @@ import { body, PageHeader, PageSkeleton, primaryButton, searchField, searchIcon,
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
-import { relTime } from "@/lib/format";
+import { dayMonthTime, relTime } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
+import { parseSourceGroup, SOURCE_GROUPS, type SourceGroup } from "@/lib/leadFunnel";
 import { listProspects, PAGE_SIZE, parseLimit, parseTab, type ProspekRow, type ProspekTab, prospekStats } from "@/lib/prospek";
 import { prospekHref } from "@/lib/prospekHref";
 import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
 import { LeadActions } from "./LeadActions";
+import { SourceFilter } from "./SourceFilter";
 
 const COLS = "md:grid-cols-[1.2fr_2.2fr_1.5fr_0.6fr_0.9fr_0.7fr_1.4fr]";
 
@@ -29,12 +31,13 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
   const tab = parseTab(params.tab);
   const q = (typeof params.q === "string" ? params.q : "").trim().slice(0, 100);
   const limit = parseLimit(params.limit);
+  const sumber = parseSourceGroup(params.sumber);
   const ownerId = await getSalesFilter();
 
   // Only sales leads, the CEO and admins hand leads to someone else.
   const canReassign = user.role === "sales_lead" || user.role === "ceo" || user.role === "admin";
   const [{ rows, hasMore }, stats, owners] = await Promise.all([
-    listProspects({ viewerId: user.id, ownerId, tab, q, limit }),
+    listProspects({ viewerId: user.id, ownerId, tab, q, limit, group: sumber }),
     prospekStats(ownerId),
     canReassign ? salesOptions() : Promise.resolve([]),
   ]);
@@ -63,12 +66,22 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
 
       <div className="flex flex-wrap items-center gap-2 py-3">
         <nav aria-label={t("prospek.tabsLabel")} className={segmentGroup}>
-          <TabLink tab="baru" current={tab} q={q} label={`${t("prospek.tabNew")} · ${stats.new_count}`} />
-          <TabLink tab="dihubungi" current={tab} q={q} label={`${t("prospek.tabContacted")} · ${stats.contacted_count}`} />
-          <TabLink tab="semua" current={tab} q={q} label={t("common.all")} />
+          <TabLink tab="baru" current={tab} q={q} sumber={sumber} label={`${t("prospek.tabNew")} · ${stats.new_count}`} />
+          <TabLink tab="dihubungi" current={tab} q={q} sumber={sumber} label={`${t("prospek.tabContacted")} · ${stats.contacted_count}`} />
+          <TabLink tab="semua" current={tab} q={q} sumber={sumber} label={t("common.all")} />
         </nav>
+        <SourceFilter
+          value={sumber ?? ""}
+          label={t("prospek.sourceFilter")}
+          options={[
+            { value: "", label: t("sourceGroup.total") },
+            ...SOURCE_GROUPS.map((g) => ({ value: g, label: t(`sourceGroup.${g}`) })),
+          ]}
+          hrefs={Object.fromEntries(["", ...SOURCE_GROUPS].map((g) => [g, prospekHref({ tab, q, sumber: (g || null) as SourceGroup | null })]))}
+        />
         <form action="/prospek" method="get" role="search" className="min-w-0 basis-full md:w-80 md:basis-auto">
           {tab !== "baru" && <input type="hidden" name="tab" value={tab} />}
+          {sumber && <input type="hidden" name="sumber" value={sumber} />}
           <div className="relative">
             <Search size={15} strokeWidth={1.8} aria-hidden="true" className={searchIcon} />
             <input
@@ -109,7 +122,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
       {hasMore && (
         <div className="mt-4 text-center">
           <Link
-            href={prospekHref({ tab, q, limit: limit + PAGE_SIZE })}
+            href={prospekHref({ tab, q, sumber, limit: limit + PAGE_SIZE })}
             scroll={false}
             className={secondaryButton}
           >
@@ -122,11 +135,11 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
   );
 }
 
-function TabLink({ tab, current, q, label }: { tab: ProspekTab; current: ProspekTab; q: string; label: string }) {
+function TabLink({ tab, current, q, sumber, label }: { tab: ProspekTab; current: ProspekTab; q: string; sumber: SourceGroup | null; label: string }) {
   const active = tab === current;
   return (
     <Link
-      href={prospekHref({ tab, q })}
+      href={prospekHref({ tab, q, sumber })}
       aria-current={active ? "page" : undefined}
       className={segment(active)}
     >
@@ -152,12 +165,7 @@ function Row({
         {row.contact_name && <p className="tabular text-sm text-slate">{formatPhone(row.phone_e164)}</p>}
       </div>
       <p className="line-clamp-2 min-w-0 text-ink">{row.first_message}</p>
-      <div className="flex flex-wrap items-center gap-2">
-        <span>{t(`sourceChannel.${row.source_channel as "meta_ctwa"}`)}</span>
-        {code && (
-          <span className="rounded-md border border-line bg-paper px-1.5 py-0.5 font-mono text-xs text-slate">{code}</span>
-        )}
-      </div>
+      <SourceTrace row={row} code={code} />
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 md:contents">
         <span>{row.product_interest ? t(`productLine.${row.product_interest as "IFP"}`) : "—"}</span>
         <span>
@@ -165,6 +173,7 @@ function Row({
           <span className={`inline-block first-letter:uppercase ${row.is_late ? "rounded-full bg-late-bg px-2 py-0.5 text-late" : ""}`}>
             {relTime(row.received_at)}
           </span>
+          <span className="tabular block text-sm text-faint">{dayMonthTime(row.received_at)}</span>
         </span>
         <span>{row.owner_name ?? <span className="text-slate">{t("prospek.unowned")}</span>}</span>
       </div>
@@ -198,4 +207,39 @@ function Row({
       </div>
     </li>
   );
+}
+
+/** Where a prospect came from: the source group, the exact channel, and the ad, campaign or page behind it. */
+function SourceTrace({ row, code }: { row: ProspekRow; code: string | null }) {
+  const detail = row.ad_name
+    ? t("prospek.traceAd", { name: row.ad_name })
+    : row.utm_campaign
+      ? t("prospek.traceCampaign", { name: row.utm_campaign })
+      : row.landing_url
+        ? t("prospek.tracePage", { page: pageOf(row.landing_url) })
+        : null;
+  const group = t(`sourceGroup.${row.source_group}`);
+  const channel = t(`sourceChannel.${row.source_channel as "meta_ctwa"}`);
+  return (
+    <div className="min-w-0">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-medium text-ink">{group}</span>
+        {code && (
+          <span className="rounded-md border border-line bg-paper px-1.5 py-0.5 font-mono text-xs text-slate">{code}</span>
+        )}
+      </p>
+      {channel !== group && <p className="text-sm text-slate">{channel}</p>}
+      {detail && <p className="break-words text-sm text-slate">{detail}</p>}
+    </div>
+  );
+}
+
+/** "fortu.co.id/ifp" from a full URL; anything that isn't a URL as it is. */
+function pageOf(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.host.replace(/^www\./, "")}${u.pathname === "/" ? "" : u.pathname}`;
+  } catch {
+    return url;
+  }
 }

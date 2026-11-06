@@ -1,5 +1,5 @@
 import { sql } from "@/lib/db";
-import type { DealDetail, DealKind, DealLine, DealSettings, HistoryItem, ProductOption } from "@/lib/dealTypes";
+import type { DealDetail, DealKind, LeadTrace, DealLine, DealSettings, HistoryItem, ProductOption } from "@/lib/dealTypes";
 import { normalizePhone } from "@/lib/ingest/phone";
 import type { StageKey } from "@/lib/pipelineTypes";
 
@@ -64,6 +64,7 @@ export async function getDeal(id: string, viewerId: string): Promise<DealDetail 
     phone: d.phone_e164,
     leadId: d.lead_id,
     sourceChannel: d.source_channel,
+    leadTrace: d.lead_id ? await leadTrace(d.lead_id) : null,
     expectedCloseDate: d.expected_close_date ?? "",
     nextStep: d.next_step ?? "",
     nextStepDate: d.next_step_date ?? "",
@@ -91,6 +92,27 @@ export async function getDeal(id: string, viewerId: string): Promise<DealDetail 
     discountApprovedBy: d.discount_approved_by,
     canEdit: d.can_edit,
     history,
+  };
+}
+
+/** Where a lead came from: source group, channel, ad or campaign, and when it came in (v_leads_enriched). */
+export async function leadTrace(leadId: string): Promise<LeadTrace | null> {
+  const [l] = await sql<
+    { source_group: string; source_channel: string; ad_name: string | null; ad_code: string | null; click_code: string | null;
+      utm_campaign: string | null; landing_url: string | null; received_at: Date }[]
+  >`
+    SELECT source_group, source_channel::text AS source_channel, ad_name, ad_code, click_code, utm_campaign, landing_url, received_at
+      FROM v_leads_enriched WHERE id = ${leadId}`;
+  if (!l) return null;
+  return {
+    group: l.source_group,
+    channel: l.source_channel,
+    adName: l.ad_name,
+    adCode: l.ad_code,
+    clickCode: l.click_code,
+    utmCampaign: l.utm_campaign,
+    landingUrl: l.landing_url,
+    receivedAt: l.received_at.toISOString(),
   };
 }
 
@@ -204,6 +226,7 @@ export function emptyDeal(ownerId: string, ownerName: string | null, nextStepTex
     phone: "",
     leadId: null,
     sourceChannel: null,
+    leadTrace: null,
     expectedCloseDate: "",
     nextStep: nextStepText,
     nextStepDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(inTwoDays),

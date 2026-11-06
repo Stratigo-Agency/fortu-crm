@@ -311,7 +311,10 @@
     "viewOnly": "Hanya lihat. Deal ini milik {name}.",
     "missingProducts": "Tambahkan minimal 1 produk dengan unit dan harga.",
     "linesInvalid": "Isi unit dan harga di setiap produk.",
-    "saveFailed": "Belum tersimpan. Coba lagi sebentar."
+    "saveFailed": "Belum tersimpan. Coba lagi sebentar.",
+    "leadSource": "Asal lead",
+    "leadReceived": "Masuk {date}",
+    "noLead": "Tidak dari prospek"
   },
   "prospek": {
     "title": "Prospek",
@@ -342,7 +345,11 @@
     "notFitTitle": "Kenapa tidak cocok?",
     "reassignTo": "Alihkan ke",
     "alreadyHandled": "Prospek ini sudah diproses.",
-    "tabsLabel": "Status prospek"
+    "tabsLabel": "Status prospek",
+    "sourceFilter": "Sumber",
+    "traceAd": "Iklan {name}",
+    "traceCampaign": "Kampanye {name}",
+    "tracePage": "Halaman {page}"
   },
   "quickAdd": {
     "title": "Prospek baru",

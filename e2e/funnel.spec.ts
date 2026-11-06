@@ -10,4 +10,8 @@ test("Laporan fits a 390 px phone without horizontal scroll", async ({ page }) =
     client: document.documentElement.clientWidth,
   }));
   expect(scroll).toBeLessThanOrEqual(client);
+  await page.goto("/prospek?tab=semua");
+  await expect(page.getByRole("combobox", { name: "Sumber" })).toBeVisible();
+  const p = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(p).toBeLessThanOrEqual(0);
 });

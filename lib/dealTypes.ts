@@ -25,6 +25,18 @@ export type HistoryItem = {
   stageKey: StageKey | null;
 };
 
+/** Where the deal's lead came from (v_leads_enriched), shown read-only on the deal. */
+export type LeadTrace = {
+  group: string; // source group key: meta, website, offline, wa_direct, other
+  channel: string; // source_channel
+  adName: string | null;
+  adCode: string | null;
+  clickCode: string | null;
+  utmCampaign: string | null;
+  landingUrl: string | null;
+  receivedAt: string; // ISO timestamp
+};
+
 /** A deal as the form needs it; money as whole-Rupiah numbers, dates as YYYY-MM-DD. */
 export type DealDetail = {
   id: string | null; // null = a new deal
@@ -39,6 +51,7 @@ export type DealDetail = {
   phone: string; // +62…, or "" for a new deal
   leadId: string | null;
   sourceChannel: string | null;
+  leadTrace: LeadTrace | null;
   expectedCloseDate: string;
   nextStep: string;
   nextStepDate: string;

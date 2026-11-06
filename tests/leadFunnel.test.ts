@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { sql } from "@/lib/db";
-import { getLeadFunnel, leadFunnelRange } from "@/lib/leadFunnel";
-import { addLineItem, createDeal, createLead, createUser } from "./fixtures";
+import { getLeadFunnel, leadFunnelRange, parseSourceGroup } from "@/lib/leadFunnel";
+import { listProspects } from "@/lib/prospek";
+import { addLineItem, createAd, createDeal, createLead, createUser, freeAdCode } from "./fixtures";
 
 // Lead dan funnel (migration 016): every figure is checked against numbers counted by hand.
 // Each test uses its own month in 2019 (or its own rep), so the shared test database doesn't interfere.
@@ -170,5 +171,41 @@ describe("getLeadFunnel", () => {
     expect(f.groups.find((g) => g.group === "website")?.leads).toBe(1);
     const year = await getLeadFunnel(rep.id, "year");
     expect(year.total.leads).toBeGreaterThanOrEqual(2);
+  });
+});
+
+describe("traceability", () => {
+  it("maps every channel to a source group, and unknown values to other", async () => {
+    const rows = await sql<{ c: string; g: string }[]>`
+      SELECT c::text AS c, source_group(c) AS g FROM unnest(enum_range(NULL::source_channel)) c`;
+    const map = Object.fromEntries(rows.map((r) => [r.c, r.g]));
+    expect(map).toMatchObject({
+      meta_ctwa: "meta", meta_leadform: "meta", instagram_dm: "meta",
+      website_form: "website", website_wa_link: "website", google_ads: "website",
+      walk_in: "offline", event: "offline", referral: "offline", partner_si: "offline", tender: "offline", repeat_order: "offline",
+      whatsapp_direct: "wa_direct", other: "other",
+    });
+    expect(parseSourceGroup("meta")).toBe("meta");
+    expect(parseSourceGroup(["website"])).toBe("website");
+    expect(parseSourceGroup("bogus")).toBeNull();
+  });
+
+  it("shows the ad, the UTM campaign and the source group on each prospect, and filters by group", async () => {
+    const rep = await createUser();
+    const ad = await createAd(await freeAdCode("Q"), "IFP Sekolah Jakarta");
+    const fromAd = await createLead(rep.id, { source: "meta_ctwa", adId: ad.id, name: "Dari iklan" });
+    const fromWeb = await createLead(rep.id, { source: "website_form", name: "Dari web" });
+    await sql`UPDATE leads SET utm_campaign = 'promo-sekolah', utm_source = 'google' WHERE id = ${fromWeb.id}`;
+    const sample = await createLead(rep.id, { source: "meta_ctwa", name: "Contoh" });
+    await sql`UPDATE leads SET is_sample = true WHERE id = ${sample.id}`;
+
+    const all = await listProspects({ viewerId: rep.id, ownerId: rep.id, tab: "semua", q: "", limit: 50 });
+    expect(all.rows.map((r) => r.id).sort()).toEqual([fromAd.id, fromWeb.id].sort());
+    const ad1 = all.rows.find((r) => r.id === fromAd.id);
+    expect(ad1).toMatchObject({ source_group: "meta", ad_name: "IFP Sekolah Jakarta" });
+    expect(all.rows.find((r) => r.id === fromWeb.id)).toMatchObject({ source_group: "website", utm_campaign: "promo-sekolah", utm_source: "google" });
+
+    const meta = await listProspects({ viewerId: rep.id, ownerId: rep.id, tab: "semua", q: "", limit: 50, group: "meta" });
+    expect(meta.rows.map((r) => r.id)).toEqual([fromAd.id]);
   });
 });

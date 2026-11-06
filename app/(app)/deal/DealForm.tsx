@@ -5,9 +5,9 @@ import { useEffect, useMemo, useState } from "react";
 import { t } from "@/lib/copy";
 import { Select } from "../ui/Select";
 import { Suggest } from "../ui/Suggest";
-import type { DealDetail, DealKind, DealSettings, HistoryItem, ProductOption } from "@/lib/dealTypes";
+import type { DealDetail, DealKind, DealSettings, HistoryItem, LeadTrace, ProductOption } from "@/lib/dealTypes";
 import { DEAL_KINDS } from "@/lib/dealTypes";
-import { dayMonth, relTime, rupiah } from "@/lib/format";
+import { dayMonth, dayMonthTime, relTime, rupiah } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { NOT_FIT_REASONS } from "@/lib/leadReasons";
 import { STAGE_KEYS, type StageKey, type StageRule } from "@/lib/pipelineTypes";
@@ -387,15 +387,12 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                   )}
                 </div>
               </Field>
-              <Field id="source" label={t("deal.source")}>
-                <input
-                  id="source"
-                  disabled
-                  value={deal.sourceChannel ? t(`sourceChannel.${deal.sourceChannel as "meta_ctwa"}`) : "—"}
-                  readOnly
-                  className={field}
-                />
-              </Field>
+              <div role="group" aria-labelledby="lead-source">
+                <p id="lead-source" className={label}>
+                  {t("deal.leadSource")}
+                </p>
+                <LeadSource deal={deal} />
+              </div>
               <Field id="close" label={t("deal.closeDate")} error={errors.expectedCloseDate}>
                 <input
                   id="close"
@@ -663,6 +660,39 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
 function waNumber(phone: string): string {
   const d = digits(phone);
   return d.startsWith("0") ? `62${d.slice(1)}` : d;
+}
+
+/** Asal lead: the source group, channel, ad or campaign and when the lead came in. Read-only. */
+function LeadSource({ deal }: { deal: DealDetail }) {
+  const tr: LeadTrace | null = deal.leadTrace;
+  if (!tr) {
+    return (
+      <p className="py-2 text-slate">
+        {deal.sourceChannel ? t(`sourceChannel.${deal.sourceChannel as "meta_ctwa"}`) : t("deal.noLead")}
+      </p>
+    );
+  }
+  const group = t(`sourceGroup.${tr.group as "meta"}`);
+  const channel = t(`sourceChannel.${tr.channel as "meta_ctwa"}`);
+  const code = tr.adCode ?? (tr.clickCode ? `#${tr.clickCode}` : null);
+  const detail = tr.adName
+    ? t("prospek.traceAd", { name: tr.adName })
+    : tr.utmCampaign
+      ? t("prospek.traceCampaign", { name: tr.utmCampaign })
+      : tr.landingUrl
+        ? t("prospek.tracePage", { page: tr.landingUrl.replace(/^https?:\/\/(www\.)?/, "") })
+        : null;
+  return (
+    <div className="min-w-0 rounded-sm bg-paper px-3 py-2.5">
+      <p className="flex flex-wrap items-center gap-x-2 gap-y-1">
+        <span className="font-medium text-ink">{group}</span>
+        {channel !== group && <span className="text-slate">{channel}</span>}
+        {code && <span className="rounded-md border border-line bg-white px-1.5 py-0.5 font-mono text-xs text-slate">{code}</span>}
+      </p>
+      {detail && <p className="mt-0.5 break-words text-sm text-slate">{detail}</p>}
+      <p className="tabular mt-0.5 text-sm text-faint">{t("deal.leadReceived", { date: dayMonthTime(tr.receivedAt) })}</p>
+    </div>
+  );
 }
 
 function Section({ title, action, children }: { title: string; action?: React.ReactNode; children: React.ReactNode }) {
