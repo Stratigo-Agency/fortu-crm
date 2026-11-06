@@ -26,7 +26,36 @@ export type AccurateConfig = {
 };
 
 export const ACCOUNT_HOST = "https://account.accurate.id";
-const READ_PATH = /^\/?(?:accurate\/)?(?:api\/)?[a-z][a-z-]*\/(?:list|detail|list-stock|get-stock)\.do$/;
+
+/** Exactly the endpoints the sync uses; nothing else can be called. */
+export const ALLOWED_PATHS: ReadonlySet<string> = new Set([
+  "/api/item/list.do",
+  "/api/item/list-stock.do",
+  "/api/item/get-stock.do",
+  "/api/warehouse/list.do",
+  "/api/purchase-order/list.do",
+  "/api/purchase-order/detail.do",
+  "/api/sales-invoice/list.do",
+  "/api/sales-invoice/detail.do",
+]);
+/** Query parameter names the sync uses. Anything else is refused. */
+export const ALLOWED_PARAMS: ReadonlySet<string> = new Set([
+  "id", "no", "fields", "warehouseName", "sp.page", "sp.pageSize", "filter.transDate.op", "filter.transDate.val",
+]);
+
+/** The database host must be https://<name>.accurate.id (no port, credentials or path). Returns the origin. */
+export function assertAccurateHost(raw: string): string {
+  let u: URL;
+  try {
+    u = new URL(raw);
+  } catch {
+    throw new AccurateApiError("Accurate host is not a valid URL");
+  }
+  const okPath = u.pathname === "/" || u.pathname === "";
+  if (u.protocol !== "https:" || !u.hostname.endsWith(".accurate.id") || u.port || u.username || u.password || !okPath || u.search || u.hash)
+    throw new AccurateApiError("Accurate host must be https://<name>.accurate.id");
+  return u.origin;
+}
 
 /** Reads the config from env; throws a plain message naming the missing variables. */
 export function configFromEnv(env: Record<string, string | undefined> = process.env): AccurateConfig {
@@ -55,6 +84,7 @@ type Params = Record<string, string | number | boolean | undefined | string[]>;
 export type Page<T> = { s?: boolean; d?: T[]; sp?: { page?: number; pageCount?: number; rowCount?: number } };
 
 function query(params: Params): string {
+  for (const k of Object.keys(params)) if (!ALLOWED_PARAMS.has(k)) throw new AccurateApiError(`Refusing parameter ${k}`);
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined) continue;
@@ -70,7 +100,7 @@ export function createAccurateClient(cfg: AccurateConfig) {
   const sleep = cfg.sleep ?? ((ms: number) => new Promise<void>((r) => setTimeout(r, ms)));
   const now = cfg.now ?? (() => new Date());
   const maxRetries = cfg.maxRetries ?? 4;
-  let host = cfg.host?.replace(/\/+$/, "");
+  let host = cfg.host ? assertAccurateHost(cfg.host) : undefined;
   let session = cfg.databaseId;
   let resolved = false;
 
@@ -85,7 +115,14 @@ export function createAccurateClient(cfg: AccurateConfig) {
       };
       if (withSession && session) headers["X-Session-ID"] = session;
       // method is fixed: this client cannot write.
-      const res = await doFetch(`${base}${path}${query(params)}`, { method: "GET", headers, redirect: "follow" });
+      // redirect: "error" so the token and signature never travel to another host.
+      let res: Response;
+      try {
+        res = await doFetch(`${base}${path}${query(params)}`, { method: "GET", headers, redirect: "error" });
+      } catch (e) {
+        throw new AccurateApiError(`Accurate request failed${e instanceof Error && e.message ? `: ${e.message}` : ""}`);
+      }
+      if (res.status >= 300 && res.status < 400) throw new AccurateApiError(`Accurate answered with a redirect (${res.status}); refusing to follow it`, res.status);
       if ((res.status === 429 || res.status >= 500) && attempt < maxRetries) {
         const retryAfter = Number(res.headers.get("retry-after"));
         await sleep(retryAfter > 0 ? retryAfter * 1000 : 2000 * 2 ** attempt);
@@ -112,29 +149,39 @@ export function createAccurateClient(cfg: AccurateConfig) {
     if (host && session) return;
     const body = (await request(ACCOUNT_HOST, "/api/api-token.do", {}, false)) as { d?: { database?: { host?: string; id?: number | string } } };
     const db = body.d?.database;
-    host ??= db?.host?.replace(/\/+$/, "");
+    if (!host && db?.host) host = assertAccurateHost(db.host);
     session ??= db?.id !== undefined ? String(db.id) : undefined;
     if (!host) throw new AccurateApiError("Accurate did not return a host; set ACCURATE_HOST");
   }
 
   /** One GET against the database host, e.g. get("/api/item/list.do", { "sp.page": 1 }). */
   async function get<T = unknown>(path: string, params: Params = {}): Promise<T> {
-    if (!READ_PATH.test(path)) throw new AccurateApiError(`Refusing ${path}: only read endpoints are allowed`);
+    if (!ALLOWED_PATHS.has(path)) throw new AccurateApiError(`Refusing ${path}: only the read endpoints the sync uses are allowed`);
+    query(params); // validates the keys before anything is sent
     await resolve();
-    const p = path.startsWith("/") ? path : `/${path}`;
-    const full = /^\/(?:accurate\/)?api\//.test(p) ? p.replace(/^\/accurate/, "") : `/api${p}`;
-    return (await request(`${host}/accurate`, full, params, true)) as T;
+    return (await request(`${host}/accurate`, path, params, true)) as T;
   }
 
-  /** Follows sp.page until pageCount; returns every row. */
+  /**
+   * Follows sp.page until pageCount and returns every row. Fails instead of returning a partial list:
+   * rows without `sp`, an empty page before the last one, or a total that differs from sp.rowCount.
+   */
   async function listAll<T = Record<string, unknown>>(path: string, params: Params = {}, pageSize = 100): Promise<T[]> {
     const out: T[] = [];
-    for (let page = 1; ; page++) {
+    for (let page = 1; page <= 2000; page++) {
       const r = await get<Page<T>>(path, { ...params, "sp.page": page, "sp.pageSize": pageSize });
-      out.push(...(r.d ?? []));
+      if (!Array.isArray(r.d)) throw new AccurateApiError(`${path}: page ${page} has no row list`);
+      if (r.d.length > 0 && !r.sp) throw new AccurateApiError(`${path}: page ${page} has rows but no paging info (sp)`);
+      out.push(...r.d);
       const pages = r.sp?.pageCount ?? 1;
-      if (page >= pages || !(r.d?.length)) return out;
+      if (page < pages && r.d.length === 0) throw new AccurateApiError(`${path}: page ${page} of ${pages} is empty`);
+      if (page >= pages) {
+        const total = r.sp?.rowCount;
+        if (typeof total === "number" && total !== out.length) throw new AccurateApiError(`${path}: got ${out.length} rows, Accurate says ${total}`);
+        return out;
+      }
     }
+    throw new AccurateApiError(`${path}: too many pages`);
   }
 
   return { get, listAll };
