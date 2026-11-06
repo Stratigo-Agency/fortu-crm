@@ -13,7 +13,7 @@ Stage names follow migration 004 (Chat masuk … Done deal). If this file and a 
 | WhatsApp Cloud API / Coexistence | `GET` + `POST /api/v1/webhooks/whatsapp` | verify token (GET); `X-Hub-Signature-256` with the Meta app secret (POST) | inbound_events → leads (`cloud_api_webhook`), activities | later (T19) |
 | Meta Marketing API | Railway cron `insights-sync`, 02:00 WIB | system-user token, `ads_read` | ad_campaigns, ad_sets, ads, ad_insights_daily | T13 |
 | Stale deals, reminders | Railway cron `sweeper`, hourly 08:00–20:00 WIB | internal | notifications | T16 |
-| Accurate.id | Railway cron `accurate-sync`, nightly | Accurate API token | products, inventory_snapshots, purchase_orders, sales_monthly | T20 |
+| Accurate.id | Railway cron `cron-accurate`, 01:00 WIB, read-only | Accurate API token | products, inventory_snapshots, purchase_orders, sales_monthly | T20 |
 
 Screens read Postgres in Server Components. Only outside systems get HTTP routes, all under `/api/v1/` (plus `/go/wa`).
 
