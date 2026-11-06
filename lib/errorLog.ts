@@ -1,6 +1,8 @@
 // What the server writes to the Railway log when a request fails. One JSON line, so a log search or alert can
-// match on `"event":"request_error"`. It holds no personal data: no message (an error message can quote a
-// phone number or a name), no query string, no headers, no body. The `digest` is the code that the error page
+// match on `"event":"request_error"`. Our own line holds no message (an error message can quote a phone number
+// or a name), no query string, no headers, no body. It is not the only thing in the log: Next.js itself still
+// prints the original error (with its message) to stderr, so keep error messages generic and never put a
+// phone number, name or email into one. The `digest` is the code that the error page
 // shows to the person, so a report ("Kode: 123") can be matched to its line.
 
 export type RequestErrorLine = {

@@ -78,12 +78,23 @@ In memory, per `web` instance (one instance today; with two the limits double). 
 
 | Where | Limit | Over the limit |
 | --- | --- | --- |
-| `POST /api/v1/ingest/web-form` | 60 / min per IP, 300 / min in all, checked before the body is read | 429 `rate_limited`, `Retry-After: 60` |
+| `POST /api/v1/ingest/web-form` | 60 / min per IP (checked before the body is read); 300 / min in all, counted only for requests with a valid signature | 429 `rate_limited`, `Retry-After: 60` |
 | `GET` and `HEAD /go/wa` | 20 / min per IP, 600 / min in all | 429, `Retry-After: 60` |
-| Password sign-in | 10 wrong passwords per email and 30 per IP in 15 min (only misses count) | sign-in refused like a wrong password, even with the right one, until the window passes |
+| Password sign-in | 10 wrong passwords per email **and** IP, 30 per IP, in 15 min (only misses count). Per email alone it only slows (each try waits 0,8 s from 10 misses) and refuses at 50. With no address header: 20 per email | sign-in refused like a wrong password, even with the right one, until the window passes. A colleague typing wrong passwords for your email can't lock you out from your own IP |
 | `/api/health` | none (Railway's healthcheck) | – |
 
 The IP is the **last** `x-forwarded-for` entry (the one Railway's proxy adds). The web-form caller is the fortu.co.id backend, so all its requests share one IP: its normal traffic is a few a minute.
+
+**The FastAPI caller should retry on 429**, waiting the number of seconds in `Retry-After` (`docs/fastapi_forwarder.py` does). Reusing the same `submission_id` makes the retry safe.
+
+#### Check the client address (once, after the first deploy)
+We assume Railway puts the visitor's address last in `x-forwarded-for`. That has not been seen on the real service yet. After the first deploy, make one real request and look at the log:
+
+```
+curl -s -o /dev/null -w "%{http_code}\n" "https://<your-web-domain>/go/wa?line=tidak-ada"
+```
+
+Then open Railway → `web` → Logs. If the line `rate limit: request without x-forwarded-for or x-real-ip; all such requests share one 'unknown' address` appears, the header is not what we assume: tell the developer before relying on the limits. If it does not appear, the address is being read. (Password sign-in does not lump unknown addresses together: it limits per email, 20 in 15 min.) If the address were wrong in the other direction (always Railway's own), all visitors would share one bucket: the web-form and `/go/wa` limits would then hit everyone, so also check that two requests from different networks (your laptop and your phone on mobile data) do not count against each other: send 21 `/go/wa` requests from the laptop and confirm the phone still gets 404, not 429.
 
 ### Headers and cookies
 `next.config.ts` sends on every response: `Content-Security-Policy`, `X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` (camera, microphone, geolocation, payment off) and, in production, `Strict-Transport-Security: max-age=31536000`. `X-Powered-By` is off.
@@ -99,7 +110,7 @@ No paid monitoring. A failed request writes one line to the `web` log:
 {"event":"request_error","name":"Error","digest":"2689830951","method":"GET","path":"/pipeline","routePath":"/pipeline","routeType":"render","at":"…"}
 ```
 
-It holds no message, query string, headers or body (they can quote a customer's phone number). The same `digest` is shown to the person on the error page as "Kode: …", so a report matches a line. Search it in Railway → `web` → Logs with `request_error`.
+Our line holds no message, query string, headers or body (they can quote a customer's phone number). It is not the only output, though: Next.js itself still prints the original error, with its message, to stderr, so a message that quotes data could reach the Railway log. Keep error messages generic (never put a phone number, name or email in `throw new Error(...)`). The same `digest` is shown to the person on the error page as "Kode: …", so a report matches a line. Search it in Railway → `web` → Logs with `request_error`.
 
 Railway alerts on a failed or crashed deployment, not on a log text. Set that up once: Project → Settings → Notifications (email, or a webhook to a chat), tick *Deploy failed* and *Deploy crashed*, and do the same for `cron-insights` and `cron-sweeper` (a failed run shows as failed). In the first weeks, open `web` Logs once a day with the filter `request_error` and `failed`. If errors turn out to be frequent, add Sentry then (it needs its own account and DSN).
 
@@ -117,11 +128,11 @@ EXPLAIN ANALYZE on a throwaway database with demo data x10 (3.000 deals, 6.000 p
 Kontak stays at about 200 ms: it has to work out "chat terakhir" for every contact before sorting, and no index changes that. It is fine at 8.000 contacts; revisit above about 50.000. The number 015 is on purpose: the open pull requests use 013 and 014 (the migration runner applies files it has not seen, in name order, so they still apply later).
 
 ### Restore drill
-**Rehearsed here (local Postgres 16, `pg_dump -Fc` and `pg_restore` into a temporary database, 6 November 2026):** data as above, 4,9 MB dump. Dump 0,43 s, restore 0,61 s, no errors. Row counts equal in the source and the restored copy: users 11, contacts 8.000, leads 20.000, deals 3.000, deal_line_items 6.000, activities 40.000, schema_migrations 14. The real database is smaller than this, so expect seconds. Network time to Railway is extra.
+**Only the local drill has been run. Railway's own backup restore is NOT yet rehearsed; do it with the steps below before relying on it.** **Rehearsed here (local Postgres 16, `pg_dump -Fc` and `pg_restore` into a temporary database, 6 November 2026):** data as above, 4,9 MB dump. Dump 0,43 s, restore 0,61 s, no errors. Row counts equal in the source and the restored copy: users 11, contacts 8.000, leads 20.000, deals 3.000, deal_line_items 6.000, activities 40.000, schema_migrations 14. The real database is smaller than this, so expect seconds. Network time to Railway is extra.
 
 ```bash
 docker exec fortu-pg psql -U postgres -c "CREATE DATABASE fortu_restore"
-docker exec fortu-pg pg_dump -U postgres -Fc -f /tmp/drill.dump <source database>
+docker exec fortu-pg pg_dump -U postgres -d <source database> -Fc -f /tmp/drill.dump
 time docker exec fortu-pg pg_restore -U postgres --no-owner --exit-on-error -d fortu_restore /tmp/drill.dump
 # compare: select count(*) from users / contacts / leads / deals ... in both databases
 docker exec fortu-pg psql -U postgres -c "DROP DATABASE fortu_restore"
@@ -129,10 +140,11 @@ docker exec fortu-pg psql -U postgres -c "DROP DATABASE fortu_restore"
 
 **To rehearse on Railway (needs the dashboard, so it cannot be done from the repo). About 20 minutes, do it once before the review and note the times here:**
 
+0. Once: `mkdir -p ~/fortu-backups`. The `pg_dump` and `pg_restore` on your computer must be the same major version as the Railway Postgres or newer (`pg_dump --version`; an older one refuses to dump a newer server).
 1. Write down the time. Dashboard → `Postgres` → **Backups** → confirm last night's daily backup is listed (time and size).
 2. Do **not** restore over the live database. Add a second Postgres: project canvas → **New** → **Database** → **PostgreSQL**; name it `postgres-drill`.
 3. On `Postgres` → Backups, a backup can be restored in place only. So take the file route instead: on your computer, `railway run -s Postgres bash -c 'pg_dump "$DATABASE_PUBLIC_URL" -Fc -f ~/fortu-backups/drill.dump'` (this is a fresh dump of now; it proves the same path, and Railway's own backup is checked in step 1).
-4. Restore it into the drill database: `railway run -s postgres-drill bash -c 'time pg_restore --no-owner --exit-on-error -d "$DATABASE_PUBLIC_URL" ~/fortu-backups/drill.dump'`. Write down the time.
+4. Restore it into the drill database: `railway run -s postgres-drill bash -c 'time pg_restore --no-owner --exit-on-error -d "$DATABASE_PUBLIC_URL" ~/fortu-backups/drill.dump'`. Write down the time. If it stops on an ownership or extension error that is only about roles Railway manages, run it again without `--exit-on-error` and read the messages: errors about `OWNER`, `GRANT` or `ROLE` are noise, anything about a table or data is not.
 5. Compare counts on both: `railway run -s <service> bash -c 'psql "$DATABASE_PUBLIC_URL" -tAc "select (select count(*) from users), (select count(*) from contacts), (select count(*) from leads), (select count(*) from deals)"'`. They must match (a few more in the source if someone worked in between).
 6. Optional, to prove the app works on it: set `DATABASE_URL` of a temporary `web` copy (or your laptop's `.env.local`) to the drill database and sign in.
 7. Delete `postgres-drill` and `~/fortu-backups/drill.dump`.

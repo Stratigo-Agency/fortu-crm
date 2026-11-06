@@ -5,7 +5,7 @@ in code (`assertCanEdit*`) **and** repeated in the `UPDATE`'s `WHERE` (`can_edit
 Columns: **Role from DB** = the role is read from `users` for this write (the sign-in cookie can be up to 5 minutes behind,
 `ROLE_RECHECK_MS`); **WHERE repeats** = the write's own SQL repeats the check.
 
-## main (this branch)
+## Entry points on this branch
 
 | Entry point | Who may | Check in code | Role from DB | WHERE repeats |
 | --- | --- | --- | --- | --- |
