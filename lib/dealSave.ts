@@ -197,6 +197,8 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
         dealId = input.id as string;
       }
 
+      // An approved discount covers the prices it was approved for: any change to the lines ends it.
+      const linesChanged = !isNew && (await linesDiffer(tx, dealId, input));
       await replaceLines(tx, dealId, input);
 
       // Stage and the rest of the fields in one UPDATE: the trigger checks the stage rules with the lines in place.
@@ -208,6 +210,8 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
           next_step = ${input.nextStep || null}, next_step_date = ${input.nextStepDate || null}::date,
           est_amount = ${input.estAmount}, expected_close_date = ${input.expectedCloseDate || null}::date,
           demo_date = ${input.demoDate || null}::date,
+          discount_approved_by = CASE WHEN ${linesChanged} THEN NULL ELSE discount_approved_by END,
+          discount_approved_at = CASE WHEN ${linesChanged} THEN NULL ELSE discount_approved_at END,
           stage_id = (SELECT id FROM pipeline_stages WHERE key = ${input.stageKey}),
           lost_reason = ${lostReason}::lost_reason, competitor = ${competitor}, lost_note = ${lostNote},
           -- a stage change picks today as the close date unless one was typed; staying put keeps the old one
@@ -251,6 +255,16 @@ async function contactOfLead(tx: Tx, leadId: string): Promise<string> {
   const [l] = await tx<{ contact_id: string }[]>`SELECT contact_id FROM leads WHERE id = ${leadId}`;
   if (!l) throw new ForbiddenError();
   return l.contact_id;
+}
+
+/** True when the input's lines are not the same products, quantities and prices as the saved ones. */
+async function linesDiffer(tx: Tx, dealId: string, input: DealInput): Promise<boolean> {
+  const saved = await tx<{ product_id: string; qty: number; unit_price: string }[]>`
+    SELECT product_id, qty, unit_price::text FROM deal_line_items WHERE deal_id = ${dealId}`;
+  const key = (product: string, qty: number, price: number | string) => `${product}:${qty}:${Number(price)}`;
+  const before = saved.map((l) => key(l.product_id, l.qty, l.unit_price)).sort();
+  const after = input.lines.map((l) => key(l.productId, l.qty, l.unitPrice)).sort();
+  return before.length !== after.length || before.some((k, i) => k !== after[i]);
 }
 
 /** Replaces all product lines of a deal with the input's (the database recomputes deals.amount). */

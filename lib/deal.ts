@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { linesFingerprint } from "@/lib/linesFingerprint";
 import type { DealDetail, DealKind, DealLine, DealSettings, HistoryItem, ProductOption } from "@/lib/dealTypes";
 import { normalizePhone } from "@/lib/ingest/phone";
 import type { StageKey } from "@/lib/pipelineTypes";
@@ -20,7 +21,7 @@ export async function getDeal(id: string, viewerId: string): Promise<DealDetail 
       demo_date: string | null; closed_on: string | null; lost_reason: string | null; competitor: string | null;
       lost_note: string | null; est_amount: string; amount: string; weighted_amount: string; screen_units: string;
       days_in_stage: number; is_project: boolean; needs_discount_approval: boolean;
-      discount_approved_by: string | null; can_edit: boolean;
+      discount_approved_by: string | null; discount_approved_by_name: string | null; can_edit: boolean; lines_fp: string;
     }[]
   >`
     SELECT e.id, e.name, e.deal_type, e.parent_deal_id, e.stage_key, e.owner_user_id,
@@ -31,12 +32,13 @@ export async function getDeal(id: string, viewerId: string): Promise<DealDetail 
            to_char(e.demo_date, 'YYYY-MM-DD') AS demo_date, to_char(e.closed_on, 'YYYY-MM-DD') AS closed_on,
            e.lost_reason::text AS lost_reason, e.competitor, e.lost_note, e.est_amount::text AS est_amount,
            e.amount::text AS amount, e.weighted_amount::text AS weighted_amount, e.screen_units::text AS screen_units,
-           e.days_in_stage, e.is_project, e.needs_discount_approval, e.discount_approved_by,
-           can_edit_deal(${viewerId}, e.id) AS can_edit
+           e.days_in_stage, e.is_project, e.needs_discount_approval, e.discount_approved_by, ua.full_name AS discount_approved_by_name,
+           can_edit_deal(${viewerId}, e.id) AS can_edit, ${linesFingerprint("e.id")} AS lines_fp
       FROM v_deals_enriched e
       JOIN contacts c ON c.id = e.contact_id
       LEFT JOIN companies co ON co.id = e.company_id
       LEFT JOIN users u ON u.id = e.owner_user_id
+      LEFT JOIN users ua ON ua.id = e.discount_approved_by
       LEFT JOIN leads l ON l.id = e.lead_id
      WHERE e.id = ${id}`;
   if (!d) return null;
@@ -89,7 +91,9 @@ export async function getDeal(id: string, viewerId: string): Promise<DealDetail 
     isProject: d.is_project,
     needsDiscountApproval: d.needs_discount_approval,
     discountApprovedBy: d.discount_approved_by,
+    discountApprovedByName: d.discount_approved_by_name,
     canEdit: d.can_edit,
+    linesFingerprint: d.lines_fp,
     history,
   };
 }
@@ -221,7 +225,9 @@ export function emptyDeal(ownerId: string, ownerName: string | null, nextStepTex
     isProject: false,
     needsDiscountApproval: false,
     discountApprovedBy: null,
+    discountApprovedByName: null,
     canEdit: true,
+    linesFingerprint: "",
     history: [],
   };
 }
