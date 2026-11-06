@@ -83,6 +83,14 @@ Every night at 01:00 Jakarta it reads from Accurate Online and fills `products` 
 4. Scopes the token needs: `item_view`, `purchase_order_view`, `sales_invoice_view` (and the warehouse list). Nothing else.
 5. Check: Deployments → the run ends with `accurate-sync ok {"productsChanged":…}`. A failure exits with 1.
 
+Things to know about the numbers:
+- **Snapshot date.** The run is at 01:00 Jakarta, so the snapshot dated that day is the stock at the close of the day before. The date is the Jakarta date (17:00-24:00 UTC is already the next day).
+- **PO quantity.** If a PO line shows what is still open (`remainingQuantity`, `outstandingQuantity`, `unprocessedQuantity` or `quantityRemaining`), the CRM uses that. We have not confirmed against a live database that Accurate sends one of these; when none is present the full ordered quantity is used, so a partly received PO line counts its whole quantity until the PO is closed.
+- **Closing PO lines.** A saved open line is closed only when Accurate lists its PO with a closed status (Diproses, Ditutup, ...) or, for a PO listed open, the line is no longer in its detail. POs older than the 12-month window or missing from the list are never closed. Nothing closes if the list is empty or has no open PO, and at most 25% of the open lines (minimum 5) close per run; the run says so in a `WARNING` line and exits 1 so Railway shows it. Lines the CRM marked received or cancelled are not reopened.
+- **Held back parts.** If all stock quantities come back 0 although Accurate has stock items, the stock part is skipped (today's earlier snapshot stays). Items with an item type the CRM does not know are left alone and listed in the log. A skipped stock part makes the run exit 1 after the safe parts were applied.
+- **Sales invoices.** Void or draft invoices are not filtered out: we have not found a documented status field to filter on, so they are counted. Each invoice is one detail call (up to 5000 per run; the run stops above that), paused 100 ms between calls.
+- **Safety.** The client calls only the listed GET endpoints with known parameters, does not follow redirects, and accepts only an `https://<name>.accurate.id` host (from `ACCURATE_HOST` or the token lookup). Two overlapping runs are serialised with a Postgres advisory lock.
+
 Rules the job follows:
 - Match on `products.sku` = Accurate "Kode Barang". Products are never created or deleted; `is_active` is never changed.
 - A name or `list_price` already in the CRM is never overwritten. A price from Accurate fills only an empty (or Rp0) CRM price, and only when Accurate's is above 0. The first export had Rp0 everywhere, so today this writes no price.
