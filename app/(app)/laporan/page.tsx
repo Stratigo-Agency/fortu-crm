@@ -6,6 +6,7 @@ import { dayMonth } from "@/lib/format";
 import { parsePeriod } from "@/lib/reportPeriod";
 import { getLeadFunnel } from "@/lib/leadFunnel";
 import { getReport } from "@/lib/reports";
+import { canOpenStock } from "@/lib/shell";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { FunnelSection } from "./Funnel";
@@ -63,12 +64,12 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
         <RepTable reps={report.reps} canPick={!isRep} />
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Attention rows={report.attention.rows} total={report.attention.total} />
+        <Attention rows={report.attention.rows} total={report.attention.total} canApprove={user.role === "ceo" || user.role === "admin"} />
         <AdsToCrmCard ads={report.adsToCrm} />
         <div className="md:col-span-2 xl:col-span-1"><DemoLostCard demo={report.demo} reasons={report.lostReasons} /></div>
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        <SkuTable rows={report.skus} />
+        <SkuTable rows={report.skus} canOpenStock={canOpenStock(user)} />
         <SourcesTable rows={report.sources} />
       </div>
       </div>

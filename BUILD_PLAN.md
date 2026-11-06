@@ -95,7 +95,7 @@ Build and test on your laptop; deploy to Railway at T12.
 - **T13 · Meta insights sync.** `jobs/insights-sync.ts` as a Railway cron (`0 19 * * *` UTC = 02:00 WIB), re-pulling the last 3 days (`docs/INTEGRATIONS.md` · Meta insights sync); `/pengaturan/iklan` maps campaigns → owners, ad sets → product lines, ads → `prefill_code`. *Done when* `ad_insights_daily` matches Ads Manager for 24–30 Okt.
 - **T14 · Laporan lengkap.** Run rate, Perkiraan per bulan close (Lewat / 3 months / Setelahnya / Kosong), Dari iklan ke CRM (`v_ad_leakage_daily`), Permintaan per SKU (`v_sku_demand`), Sumber prospek (`v_sources_90d`), Demo dan alasan lost (`v_demo_effect_90d`, `v_lost_reasons_90d`).
 - **T15 · Harga dan diskon.** Load MSRP per SKU (from Pak Jovian), per-SKU max discount, "Setujui diskon" for ceo/admin writing `discount_approved_by/at`, in-app notice to Pak Jovian when a deal needs approval. *Done when* a line at 18% off shows the orange note and the tag, and approval clears both.
-- **T16 · Sweeper and reminders.** `jobs/sweeper.ts` hourly 08:00–20:00 WIB: overdue next steps (to the owner), stale deals, deals ≥ `high_value_amount` stuck (to the CEO), deduped per (kind, deal, day); bell + email via Hostinger SMTP.
+- **T16 · Sweeper and reminders.** `jobs/sweeper.ts` hourly 08:00–20:00 WIB: overdue next steps and stale deals ≥ `high_value_amount`, to the owner only (no alerts to the CEO about other people's deals, MAR-151), deduped per (kind, deal, day); bell + email via Hostinger SMTP.
 - **T17 · Pilot fixes.** Two days for what the reps hit in week one.
 
 ## Week 3 · Attribution and integrations (Wed 18 – Tue 24 Nov)

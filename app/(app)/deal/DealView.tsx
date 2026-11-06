@@ -68,6 +68,7 @@ export async function DealView({ id, variant, query = {} }: Props) {
         owners={owners}
         settings={settings}
         canReassign={canReassign}
+        canApproveDiscount={user.role === "ceo" || user.role === "admin"}
         fromLeadId={fromLeadId}
         wantedStage={wantedStage}
         missingRule={missingRule}

@@ -16,7 +16,8 @@
     "menu": "Menu",
     "main": "Navigasi",
     "shortcutMac": "⌘K",
-    "shortcutOther": "Ctrl K"
+    "shortcutOther": "Ctrl K",
+    "stok": "Stok"
   },
   "beranda": {
     "greeting": {
@@ -80,8 +81,8 @@
       "subjectMany": "{n} deal perlu perhatian",
       "subjectOne": "{deal} · {reason}",
       "reason": {
-        "high_value_lead": "deal bernilai besar",
-        "stale_deal": "belum ada gerakan"
+        "stale_deal": "belum ada gerakan",
+        "next_step_overdue": "next step terlambat"
       }
     }
   },
@@ -276,6 +277,10 @@
     "discountOver": "Di atas batas {max}%, perlu persetujuan Pak Jovian.",
     "discountApproved": "Diskon disetujui {name}",
     "approveDiscount": "Setujui diskon",
+    "approveDiscountFor": "Setujui diskon {deal}",
+    "approveForbidden": "Hanya Pak Jovian yang bisa menyetujui diskon.",
+    "approveChanged": "Harga baru saja diubah. Cek lagi sebelum menyetujui.",
+    "approveFailed": "Belum tersetujui. Coba lagi sebentar.",
     "noMsrp": "MSRP belum diatur",
     "project": "Deal proyek: libatkan Sales Manager dan cek stok.",
     "nextStep": "Next step",
@@ -553,7 +558,8 @@
     "colDeals": "Deal",
     "colSource": "Sumber",
     "colRate": "Win rate",
-    "colSku": "SKU"
+    "colSku": "SKU",
+    "skuOpenStock": "Buka Stok"
   },
   "pengaturan": {
     "nav": {
@@ -643,11 +649,17 @@
     "email": "Email",
     "password": "Password",
     "signIn": "Masuk",
-    "wrongCredentials": "Email atau password salah."
+    "wrongCredentials": "Email atau password salah.",
+    "stockOnly": "Stok hanya untuk admin, CEO, dan sales lead."
   },
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",
-    "offline": "Koneksi terputus. Perubahan belum tersimpan."
+    "offline": "Koneksi terputus. Perubahan belum tersimpan.",
+    "pageTitle": "Halaman ini belum bisa dibuka",
+    "pageHint": "Ada yang tidak beres di sisi kami. Coba muat ulang.",
+    "retry": "Muat ulang",
+    "toHome": "Ke Beranda",
+    "reference": "Kode: {digest}"
   },
   "iklan": {
     "title": "Iklan",
@@ -722,5 +734,36 @@
     "weakest": "Titik macet",
     "stepsLabel": "Langkah funnel semua sumber",
     "leadsCount": "{n} lead"
+  },
+  "stok": {
+    "title": "Stok & Permintaan",
+    "subtitle": "Stok per {date}",
+    "subtitleNone": "Belum ada data stok",
+    "statSkus": "SKU",
+    "statAtRisk": "Berisiko",
+    "statAtPo": "Unit di tahap PO",
+    "lineLabel": "Lini produk",
+    "lineAll": "Semua lini",
+    "onlyRisk": "Hanya yang berisiko",
+    "export": "Ekspor CSV",
+    "tableLabel": "Stok per SKU",
+    "colSku": "SKU",
+    "colSold": "Terjual/bulan",
+    "colPipeline": "Unit di pipeline",
+    "colForecast": "Perkiraan",
+    "colAtPo": "Di tahap PO",
+    "colStock": "Stok",
+    "colOpenPo": "PO terbuka",
+    "colCover": "Bulan cakupan",
+    "coverValue": "{n} bulan",
+    "flagShort": "Stok tipis",
+    "flagPo": "PO melebihi stok",
+    "coverHint": "Cakupan = (stok + PO terbuka) ÷ kebutuhan per bulan: yang terbesar antara terjual/bulan dan perkiraan ÷ 3. Stok dihitung dari data terbaru tiap gudang.",
+    "emptyTitle": "Belum ada data stok dari Accurate",
+    "emptyBody": "Tabel terisi setelah Accurate tersambung.",
+    "noMatch": "Tidak ada SKU yang cocok dengan filter ini.",
+    "noStock": "Stok belum diketahui",
+    "stale": "Data per {date}",
+    "flagPoNoStock": "Ada PO, stok belum diketahui"
   }
 }

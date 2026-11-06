@@ -19,3 +19,8 @@ export function canOpenSettings(user: Pick<SessionUser, "role">): boolean {
 }
 
 export { initials } from "@/lib/shellInitials";
+
+/** Stok & Permintaan: operations' view of stock against what sales is about to close (admin, ceo, sales_lead). */
+export function canOpenStock(user: Pick<SessionUser, "role">): boolean {
+  return user.role === "admin" || user.role === "ceo" || user.role === "sales_lead";
+}

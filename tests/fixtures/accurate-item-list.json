@@ -1,0 +1,7 @@
+{"s":true,"d":[
+ {"id":"{{IDA}}","no":"{{A}}","name":"Smartboard 65 Accurate","itemType":"INVENTORY","unit1Name":"UNIT","barcode":"BC-A","unitPrice":0,"suspended":false,"itemCategory":{"name":"IFP"}},
+ {"id":"{{IDB}}","no":"{{B}}","name":"Smartboard 75 Accurate","itemType":"INVENTORY","unit1Name":"UNIT","barcode":null,"unitPrice":45000000,"suspended":false,"itemCategory":{"name":"IFP"}},
+ {"id":"{{IDN}}","no":"{{NEW}}","name":"Only in Accurate","itemType":"INVENTORY","unit1Name":"UNIT","barcode":null,"unitPrice":0,"suspended":false},
+ {"id":"{{IDS}}","no":"{{SVC}}","name":"Instalasi","itemType":"SERVICE","unit1Name":"PCS","unitPrice":0,"suspended":false},
+ {"id":"{{IDG}}","no":"{{GRP}}","name":"Paket","itemType":"GROUP","unitPrice":0}
+],"sp":{"page":1,"pageSize":100,"pageCount":1,"rowCount":5}}
