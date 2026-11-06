@@ -1,0 +1,45 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "{{WABA_ID}}",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "6281100000001", "phone_number_id": "{{PHONE_NUMBER_ID}}" },
+            "history": [
+              {
+                "metadata": { "phase": 0, "chunk_order": 1, "progress": 55 },
+                "threads": [
+                  {
+                    "id": "{{WA_ID}}",
+                    "context": { "wa_id": "{{WA_ID}}", "user_id": "{{BSUID}}" },
+                    "messages": [
+                      {
+                        "from": "{{WA_ID}}",
+                        "id": "{{MSG_ID}}",
+                        "timestamp": "{{TS}}",
+                        "type": "text",
+                        "text": { "body": "Pak, kemarin jadi kirim penawaran?" },
+                        "history_context": { "status": "READ" }
+                      },
+                      {
+                        "from": "6281100000001",
+                        "id": "{{MSG_ID}}-2",
+                        "timestamp": "{{TS}}",
+                        "type": "media_placeholder",
+                        "history_context": { "status": "PLAYED" }
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          "field": "history"
+        }
+      ]
+    }
+  ]
+}

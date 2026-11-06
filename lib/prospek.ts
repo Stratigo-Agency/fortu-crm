@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import type { SourceGroup } from "@/lib/leadFunnel";
+import { firstChatTexts } from "@/lib/whatsapp/texts";
 
 // Reads for /prospek. The numbers come from the SQL views v_leads_enriched and v_prospek_stats (rule 5).
 
@@ -96,7 +97,13 @@ export async function listProspects(o: ListOptions): Promise<{ rows: ProspekRow[
      WHERE status = ANY(${statuses}) AND (NOT is_sample OR show_sample_data()) ${owner} ${group} ${search}
      ORDER BY received_at DESC, id
      LIMIT ${o.limit + 1}`;
-  return { rows: rows.slice(0, o.limit), hasMore: rows.length > o.limit };
+  const page = rows.slice(0, o.limit);
+  // A webhook lead's text is kept apart (wa_message_texts) and shown only to the line owner, ceo and admin.
+  const texts = await firstChatTexts({ id: o.viewerId }, page.filter((r) => !r.first_message).map((r) => r.id));
+  return {
+    rows: texts.size ? page.map((r) => ({ ...r, first_message: r.first_message ?? texts.get(r.id) ?? null })) : page,
+    hasMore: rows.length > o.limit,
+  };
 }
 
 export type ProspekStats = {

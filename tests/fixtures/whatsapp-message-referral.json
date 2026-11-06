@@ -1,0 +1,38 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "{{WABA_ID}}",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "6281100000001", "phone_number_id": "{{PHONE_NUMBER_ID}}" },
+            "contacts": [{ "profile": { "name": "Budi" }, "wa_id": "{{WA_ID}}", "user_id": "{{BSUID}}" }],
+            "messages": [
+              {
+                "from": "{{WA_ID}}",
+                "from_user_id": "{{BSUID}}",
+                "id": "{{MSG_ID}}",
+                "timestamp": "{{TS}}",
+                "type": "text",
+                "text": { "body": "Saya mau tanya tentang smartboard" },
+                "referral": {
+                  "source_url": "https://fb.me/abc123",
+                  "source_id": "{{AD_ID}}",
+                  "source_type": "ad",
+                  "headline": "Smartboard untuk sekolah",
+                  "body": "Diskon akhir tahun",
+                  "media_type": "image",
+                  "image_url": "https://example.invalid/ad.jpg",
+                  "ctwa_clid": "ARAkLkA8rmlFeiCktEJQ-QTwRiyYHAFDLMNDBH0CD3qpjd0HR4irJ6LEkR7JwFF4XvnO2E4Nx0-eM-GABDLOPaOdRMv-_zfUQ2a"
+                }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}

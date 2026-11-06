@@ -569,7 +569,18 @@
     "colSource": "Sumber",
     "colRate": "Win rate",
     "colSku": "SKU",
-    "skuOpenStock": "Buka Stok"
+    "skuOpenStock": "Buka Stok",
+    "waTitle": "Kecepatan balas chat",
+    "waPeriod": "30 hari",
+    "waMedian": "Median balasan pertama",
+    "waMinutes": "{n} menit",
+    "waWithin15": "Dibalas ≤ 15 menit",
+    "waWithin1h": "Dibalas ≤ 1 jam",
+    "waUnanswered": "Belum dibalas > 2 jam",
+    "waEmpty": "Belum ada chat dari nomor yang tersambung.",
+    "waColChats": "Chat",
+    "attentionWa": "Chat belum dibalas > 2 jam",
+    "attentionWaCount": "{n} chat"
   },
   "pengaturan": {
     "nav": {
@@ -776,5 +787,53 @@
     "noStock": "Stok belum diketahui",
     "stale": "Data per {date}",
     "flagPoNoStock": "Ada PO, stok belum diketahui"
+  },
+  "whatsapp": {
+    "title": "WhatsApp",
+    "linkFromSettings": "WhatsApp",
+    "linesTitle": "Nomor sales",
+    "noLines": "Belum ada nomor yang tersambung.",
+    "colOwner": "Sales",
+    "colNumber": "Nomor",
+    "colMode": "Mode",
+    "colConsent": "Izin",
+    "colLastEvent": "Pesan terakhir masuk",
+    "colText": "Isi pesan",
+    "mode": {
+      "business_app": "Aplikasi saja",
+      "coexistence": "Tersambung ke CRM",
+      "cloud_api": "Cloud API"
+    },
+    "consentBy": "{name}, {date}",
+    "noConsent": "Belum ada izin",
+    "never": "Belum ada",
+    "storeText": "Simpan isi pesan",
+    "saveText": "Simpan",
+    "revoke": "Cabut izin",
+    "revoked": "Izin dicabut. Nomor dilepas dari CRM dan isi pesan yang tersimpan dihapus.",
+    "connectTitle": "Sambungkan nomor",
+    "owner": "Pemilik nomor",
+    "ownerPick": "Pilih sales",
+    "consentName": "Nama sales yang memberi izin",
+    "consentCheck": "Sales sudah setuju secara tertulis chat-nya dicatat di CRM.",
+    "connect": "Sambungkan nomor",
+    "connecting": "Menyambungkan…",
+    "connected": "Nomor tersambung. Riwayat chat dan kontak sedang dikirim Meta.",
+    "connectedNoSync": "Nomor tersambung, tapi riwayat chat belum diminta. Hubungi admin dalam 24 jam.",
+    "cancelled": "Penyambungan dibatalkan.",
+    "sdkFailed": "Halaman Meta tidak bisa dibuka. Coba muat ulang halaman ini.",
+    "notConfigured": "Pengaturan Meta belum lengkap. Hubungi admin.",
+    "err": {
+      "env": "Pengaturan Meta belum lengkap. Hubungi admin.",
+      "consent": "Centang izin dan tulis nama sales yang memberi izin.",
+      "owner": "Pilih sales pemilik nomor.",
+      "code": "Kode dari Meta sudah kedaluwarsa. Ulangi penyambungan.",
+      "waba": "Akun WhatsApp dari Meta tidak terbaca. Ulangi penyambungan.",
+      "phone": "Nomor dari Meta bukan nomor Indonesia yang bisa dicatat.",
+      "taken": "Nomor ini sudah tersambung ke sales lain.",
+      "meta": "Meta menolak penyambungan. Coba lagi sebentar lagi."
+    },
+    "revokedMetaDown": "Izin dicabut dan isi pesan dihapus. Meta belum bisa dihubungi, tapi pesan dari nomor ini tidak dicatat lagi.",
+    "revokeHint": "Nomor dilepas dari CRM. Isi pesan yang tersimpan dihapus."
   }
 }

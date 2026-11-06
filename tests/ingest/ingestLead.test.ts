@@ -101,6 +101,22 @@ describe("ingestLead · attribution", () => {
     expect(c.matched_lead_id).toBe(r.leadId);
   });
 
+  it("a Click-to-WhatsApp referral picks the ad by Meta's id over a code, keeps the click id, and takes codes read elsewhere", async () => {
+    const ad = await createAd(await freeAdCode("Q"));
+    const other = await createAd(await freeAdCode("Q"));
+    const [{ meta_ad_id: metaAdId, prefill_code: code }] = await sql<{ meta_ad_id: string; prefill_code: string }[]>`
+      SELECT meta_ad_id, (SELECT prefill_code FROM ads WHERE id = ${other.id}) AS prefill_code FROM ads WHERE id = ${ad.id}`;
+    const r = await ingestLead({
+      phone: randomPhone(), sourceChannel: "meta_ctwa", captureMethod: "cloud_api_webhook",
+      codes: { adCode: code }, metaAdId, ctwaClid: "ARAk-uji",
+    });
+    expect(r.adId).toBe(ad.id);
+    const [lead] = await sql`SELECT ad_id, ctwa_clid, first_message FROM leads WHERE id = ${r.leadId}`;
+    expect(lead).toEqual({ ad_id: ad.id, ctwa_clid: "ARAk-uji", first_message: null });
+    const [act] = await sql`SELECT metadata FROM activities WHERE lead_id = ${r.leadId}`;
+    expect(act.metadata).toMatchObject({ metaAdId, code: null });
+  });
+
   it("ignores codes that match nothing", async () => {
     const r = await ingestLead(webForm(randomPhone(), { firstMessage: "[Q-LED-99] #ZZZZ" }));
     expect(r.adId).toBeUndefined();

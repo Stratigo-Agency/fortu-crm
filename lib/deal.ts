@@ -2,6 +2,7 @@ import { sql } from "@/lib/db";
 import { linesFingerprint } from "@/lib/linesFingerprint";
 import type { DealDetail, DealKind, LeadTrace, DealLine, DealSettings, HistoryItem, ProductOption } from "@/lib/dealTypes";
 import { normalizePhone } from "@/lib/ingest/phone";
+import { firstChatTexts } from "@/lib/whatsapp/texts";
 import type { StageKey } from "@/lib/pipelineTypes";
 
 // Reads for the deal panel and page. Money comes out of the database views (rule 5):
@@ -66,7 +67,7 @@ export async function getDeal(id: string, viewerId: string): Promise<DealDetail 
     phone: d.phone_e164,
     leadId: d.lead_id,
     sourceChannel: d.source_channel,
-    leadTrace: d.lead_id ? await leadTrace(d.lead_id) : null,
+    leadTrace: d.lead_id ? await leadTrace(d.lead_id, viewerId) : null,
     expectedCloseDate: d.expected_close_date ?? "",
     nextStep: d.next_step ?? "",
     nextStepDate: d.next_step_date ?? "",
@@ -100,7 +101,8 @@ export async function getDeal(id: string, viewerId: string): Promise<DealDetail 
 }
 
 /** Where a lead came from: source group, channel, ad or campaign, and when it came in (v_leads_enriched). */
-export async function leadTrace(leadId: string): Promise<LeadTrace | null> {
+/** Where a lead came from. firstChat: the customer's first WhatsApp text, only for a viewer allowed to read it. */
+export async function leadTrace(leadId: string, viewerId: string): Promise<LeadTrace | null> {
   const [l] = await sql<
     { source_group: string; source_channel: string; ad_name: string | null; ad_code: string | null; click_code: string | null;
       utm_campaign: string | null; landing_url: string | null; received_at: Date }[]
@@ -108,7 +110,9 @@ export async function leadTrace(leadId: string): Promise<LeadTrace | null> {
     SELECT source_group, source_channel::text AS source_channel, ad_name, ad_code, click_code, utm_campaign, landing_url, received_at
       FROM v_leads_enriched WHERE id = ${leadId}`;
   if (!l) return null;
+  const texts = await firstChatTexts({ id: viewerId }, [leadId]);
   return {
+    firstChat: texts.get(leadId) ?? null,
     group: l.source_group,
     channel: l.source_channel,
     adName: l.ad_name,

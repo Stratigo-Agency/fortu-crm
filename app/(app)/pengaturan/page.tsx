@@ -58,7 +58,15 @@ async function Settings({ searchParams }: { searchParams: PageProps<"/pengaturan
     <>
       <PageHeader
         title={t("pengaturan.title")}
-        actions={owner ? <Link href="/pengaturan/iklan" className={secondaryButton}>{t("iklan.linkFromSettings")}</Link> : undefined}
+        actions={
+          owner ? (
+            <>
+              <Link href="/pengaturan/iklan" className={secondaryButton}>{t("iklan.linkFromSettings")}</Link>
+              {/* a full page load: only that page's security policy lets Meta's signup script run */}
+              <a href="/pengaturan/whatsapp" className={secondaryButton}>{t("whatsapp.linkFromSettings")}</a>
+            </>
+          ) : undefined
+        }
       />
       <div className="flex flex-col gap-4 px-4 py-5 md:px-6">
         {owner && (

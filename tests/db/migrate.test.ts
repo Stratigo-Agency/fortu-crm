@@ -10,9 +10,9 @@ import { runMigrations } from "../../scripts/migrate.mjs";
 import { runSeeds } from "../../scripts/seed.mjs";
 
 const url = process.env.DATABASE_URL_TEST as string;
-const SEED_SKUS = [...readFileSync("db/seeds/seed_products.sql", "utf8").matchAll(/^  \('([^']+)'/gm)].map((m) => m[1]);
 const sql = postgres(url, { max: 1, onnotice: () => {} });
 const run = promisify(execFile);
+const SEED_SKUS = [...readFileSync("db/seeds/seed_products.sql", "utf8").matchAll(/^\s*\('([^']+)',/gm)].map((m) => m[1]);
 
 afterAll(() => sql.end());
 
@@ -33,6 +33,7 @@ const MIGRATIONS = [
   "014_stock_cover.sql",
   "015_report_indexes.sql",
   "016_lead_funnel.sql",
+  "017_whatsapp_coexistence.sql",
   "018_funnel_share.sql",
   "019_sample_data_flag.sql",
 ];
