@@ -689,10 +689,12 @@
     "coverValue": "{n} bulan",
     "flagShort": "Stok tipis",
     "flagPo": "PO melebihi stok",
-    "coverHint": "Cakupan = (stok + PO terbuka) ÷ kebutuhan per bulan: yang terbesar antara terjual/bulan dan perkiraan ÷ 3.",
+    "coverHint": "Cakupan = (stok + PO terbuka) ÷ kebutuhan per bulan: yang terbesar antara terjual/bulan dan perkiraan ÷ 3. Stok dihitung dari data terbaru tiap gudang.",
     "emptyTitle": "Belum ada data stok dari Accurate",
     "emptyBody": "Tabel terisi setelah Accurate tersambung.",
     "noMatch": "Tidak ada SKU yang cocok dengan filter ini.",
-    "noStock": "Stok belum tercatat"
+    "noStock": "Stok belum diketahui",
+    "stale": "Data per {date}",
+    "flagPoNoStock": "Ada PO, stok belum diketahui"
   }
 }

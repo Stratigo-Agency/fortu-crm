@@ -3,8 +3,7 @@ import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { count, dayMonth, decimal } from "@/lib/format";
-import { canOpenStock } from "@/lib/shell";
-import { parseStockFilter, STOCK_LINES, type StockFilter, type StockRow, stockHref, stockRows, stockSummary } from "@/lib/stock";
+import { mayOpenStock, parseStockFilter, STOCK_LINES, type StockFilter, type StockRow, stockHref, stockRows, stockSummary } from "@/lib/stock";
 import { body, PageHeader, PageSkeleton, secondaryButton, Stat, StatStrip } from "../PageHeader";
 import { StockFilters } from "./StockFilters";
 
@@ -25,12 +24,23 @@ const th = "px-3 py-2 text-right font-semibold";
 const td = "tabular px-3 py-3 text-right";
 
 function Flags({ r }: { r: StockRow }) {
-  if (!r.coverShort && !r.poExceedsStock) return null;
+  if (!r.coverShort && !r.poExceedsStock && !r.poWithoutStock) return null;
   return (
     <span className="mt-1 flex flex-wrap gap-1.5">
+      {r.poWithoutStock && <span className="rounded-full border border-line px-2 py-0.5 text-xs font-semibold text-slate">{t("stok.flagPoNoStock")}</span>}
       {r.coverShort && <span className="rounded-full bg-late-bg px-2 py-0.5 text-xs font-semibold text-late">{t("stok.flagShort")}</span>}
       {r.poExceedsStock && <span className="rounded-full bg-late-bg px-2 py-0.5 text-xs font-semibold text-late">{t("stok.flagPo")}</span>}
     </span>
+  );
+}
+
+function StockCell({ r }: { r: StockRow }) {
+  if (r.stock === null) return <span className="text-sm text-faint">{t("stok.noStock")}</span>;
+  return (
+    <>
+      {count(r.stock)}
+      {r.stockStale && r.stockDate && <span className="block text-xs font-normal text-faint">{t("stok.stale", { date: dayMonth(r.stockDate) })}</span>}
+    </>
   );
 }
 
@@ -69,7 +79,7 @@ function StockTable({ rows }: { rows: StockRow[] }) {
                 <td className={td}>{count(r.unitsInPipeline)}</td>
                 <td className={td}>{decimal(r.weightedUnits)}</td>
                 <td className={`${td} ${r.poExceedsStock ? "font-semibold text-late" : ""}`}>{r.unitsAtPo > 0 ? count(r.unitsAtPo) : dash}</td>
-                <td className={td}>{r.stock === null ? dash : count(r.stock)}</td>
+                <td className={td}><StockCell r={r} /></td>
                 <td className={td}>{r.openPo > 0 ? count(r.openPo) : dash}</td>
                 <td className={`${td} ${r.coverShort ? "font-semibold text-late" : ""}`}>{cover(r)}</td>
               </tr>
@@ -87,13 +97,13 @@ function StockTable({ rows }: { rows: StockRow[] }) {
                 ["colPipeline", count(r.unitsInPipeline), false],
                 ["colForecast", decimal(r.weightedUnits), false],
                 ["colAtPo", r.unitsAtPo > 0 ? count(r.unitsAtPo) : dash, r.poExceedsStock],
-                ["colStock", r.stock === null ? dash : count(r.stock), false],
+                ["colStock", <StockCell key="stock" r={r} />, false],
                 ["colOpenPo", r.openPo > 0 ? count(r.openPo) : dash, false],
                 ["colCover", cover(r), r.coverShort],
               ] as const).map(([k, v, late]) => (
                 <div key={k} className="flex items-baseline justify-between gap-2">
                   <dt className="text-faint">{t(`stok.${k}`)}</dt>
-                  <dd className={`tabular ${late ? "font-semibold text-late" : "text-ink"}`}>{v}</dd>
+                  <dd className={`tabular text-right ${late ? "font-semibold text-late" : "text-ink"}`}>{v}</dd>
                 </div>
               ))}
             </dl>
@@ -106,7 +116,7 @@ function StockTable({ rows }: { rows: StockRow[] }) {
 
 async function Content({ searchParams }: { searchParams: Search }) {
   const user = await requireUser();
-  if (!canOpenStock(user)) {
+  if (!(await mayOpenStock(user.id))) {
     return (
       <>
         <PageHeader title={t("stok.title")} />
