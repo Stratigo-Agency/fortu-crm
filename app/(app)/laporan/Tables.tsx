@@ -6,7 +6,7 @@ import { rupiahShort } from "@/lib/format";
 import type { ReportPeriod } from "@/lib/reportPeriod";
 import type { AttentionRow, RepRow } from "@/lib/reports";
 
-const num = "tabular px-3 py-3 text-right";
+const num = "tabular whitespace-nowrap px-3 py-3 text-right";
 
 function Chip({ n, late }: { n: number; late?: boolean }) {
   if (n === 0) return <span>0</span>;
