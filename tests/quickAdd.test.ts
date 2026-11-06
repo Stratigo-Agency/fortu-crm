@@ -142,10 +142,11 @@ describe("describeCodes", () => {
     expect(await describeCodes({ adCode: code })).toEqual({
       kind: "ad",
       adName: "Signage Restoran",
+      code,
       productLine: "DSS",
       sourceChannel: "meta_ctwa",
     });
-    expect(await describeCodes({ adCode: code.toLowerCase() })).toMatchObject({ kind: "ad" });
+    expect(await describeCodes({ adCode: code.toLowerCase() })).toMatchObject({ kind: "ad", code });
   });
 
   it("finds a click's link, but not one that already belongs to a lead", async () => {

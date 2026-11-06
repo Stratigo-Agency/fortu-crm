@@ -229,11 +229,20 @@ function Fields({
       </div>
 
       {codeInfo ? (
-        <div className="rounded-md border border-line bg-paper px-4 py-3">
-          <p className="font-semibold text-ink">
-            {codeInfo.kind === "ad" ? t("quickAdd.fromAd", { ad: codeInfo.adName }) : t("quickAdd.fromLink")}
+        // recognised before saving: the chip names the ad and its code, and the source follows it
+        <div aria-live="polite">
+          <p className={label}>{t("quickAdd.source")}</p>
+          <p className="inline-flex max-w-full flex-wrap items-baseline gap-x-2 gap-y-0.5 rounded-xl bg-accent-soft px-3.5 py-2 text-accent-strong">
+            <span className="font-semibold">
+              {codeInfo.kind === "ad" ? t("quickAdd.fromAd", { ad: codeInfo.adName }) : t("quickAdd.fromLink")}
+            </span>
+            {codeInfo.kind === "ad" && <span className="tabular text-sm">{t("quickAdd.adCode", { code: codeInfo.code })}</span>}
           </p>
-          <p className="text-slate">{t("quickAdd.fromAdHint")}</p>
+          <p className="mt-1.5 text-sm text-slate">
+            {codeInfo.kind === "ad"
+              ? t("quickAdd.fromAdHint", { source: t(`sourceChannel.${codeInfo.sourceChannel}`) })
+              : t("quickAdd.fromLinkHint", { source: t(`sourceChannel.${codeInfo.sourceChannel}`) })}
+          </p>
         </div>
       ) : (
         <div>
