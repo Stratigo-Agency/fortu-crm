@@ -630,7 +630,12 @@
   },
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",
-    "offline": "Koneksi terputus. Perubahan belum tersimpan."
+    "offline": "Koneksi terputus. Perubahan belum tersimpan.",
+    "pageTitle": "Halaman ini belum bisa dibuka",
+    "pageHint": "Ada yang tidak beres di sisi kami. Coba muat ulang.",
+    "retry": "Muat ulang",
+    "toHome": "Ke Beranda",
+    "reference": "Kode: {digest}"
   },
   "iklan": {
     "title": "Iklan",

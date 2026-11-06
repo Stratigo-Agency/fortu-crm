@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
-import { createRateLimiter } from "@/lib/webform/rateLimit";
+import { clientIp, createRateLimiter } from "@/lib/webform/rateLimit";
 import { isBot, parseClick, plainTarget, recordClick } from "@/lib/webform/waLink";
 
 // 20 clicks a minute per IP, and 600 a minute in all. In memory, so per instance (see lib/webform/rateLimit.ts).
 const perIp = createRateLimiter(20, 60_000);
 const overall = createRateLimiter(600, 60_000, 1);
-
-function clientIp(request: Request): string {
-  // The proxy in front of us appends the address it saw to x-forwarded-for, so the LAST entry is the one
-  // we can trust. The first entries are whatever the visitor sent.
-  const forwarded = request.headers.get("x-forwarded-for")?.split(",").map((s) => s.trim()).filter(Boolean);
-  return forwarded?.at(-1) || request.headers.get("x-real-ip") || "unknown";
-}
 
 const noStore = { "cache-control": "no-store" };
 
@@ -21,7 +14,7 @@ const noStore = { "cache-control": "no-store" };
  * is sent to the same chat without a code and records nothing.
  */
 export async function GET(request: Request) {
-  if (!perIp.hit(clientIp(request)) || !overall.hit("all")) {
+  if (!perIp.hit(clientIp(request.headers)) || !overall.hit("all")) {
     return new NextResponse("Too many requests", { status: 429, headers: { ...noStore, "retry-after": "60" } });
   }
   const click = parseClick(new URL(request.url), request.headers.get("referer"));
@@ -36,6 +29,10 @@ export async function GET(request: Request) {
 }
 
 export async function HEAD(request: Request) {
+  // HEAD reads the database too, so it shares the same limits as GET.
+  if (!perIp.hit(clientIp(request.headers)) || !overall.hit("all")) {
+    return new NextResponse(null, { status: 429, headers: { ...noStore, "retry-after": "60" } });
+  }
   const click = parseClick(new URL(request.url), request.headers.get("referer"));
   const target = await plainTarget(click).catch(() => null);
   if (!target) return new NextResponse(null, { status: 404, headers: noStore });
