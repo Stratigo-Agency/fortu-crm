@@ -227,7 +227,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, canApp
     // an approval holds only for the prices that were approved: any change to the lines puts the note back
     const over = pct > p.maxDiscountPct + 0.05 && !approvalHolds;
     const text = t("deal.discount", { pct: String(pct).replace(".", ","), msrp: rupiah(p.msrp) });
-    return { text: over ? `${text} ${t("deal.discountOver", { max: p.maxDiscountPct })}` : text, late: over };
+    return { text: over ? `${text}. ${t("deal.discountOver", { max: p.maxDiscountPct })}` : text, late: over };
   }
 
   // --- stage --------------------------------------------------------------------------------
