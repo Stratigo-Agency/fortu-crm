@@ -3,8 +3,9 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
-import { rupiahShort } from "@/lib/format";
+import { count, rupiahShort } from "@/lib/format";
 import { getHome, greetingKey } from "@/lib/home";
+import { getLeadFunnel } from "@/lib/leadFunnel";
 import type { AttentionRow } from "@/lib/reports";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { newLeadCount } from "@/lib/shell";
@@ -76,7 +77,13 @@ async function Content() {
   const user = await requireUser();
   // a sales rep sees their own day; everyone else follows the sales filter
   const ownerId = user.role === "sales_rep" ? user.id : await getSalesFilter();
-  const [home, newLeads, unanswered] = await Promise.all([getHome(ownerId), newLeadCount(user), getMyUnansweredChats(user.id)]);
+  const [home, newLeads, funnel, unanswered] = await Promise.all([
+    getHome(ownerId),
+    newLeadCount(user),
+    getLeadFunnel(ownerId, "month"),
+    getMyUnansweredChats(user.id),
+  ]);
+  const bySource = funnel.groups.filter((g) => g.leads > 0);
   const firstName = user.full_name.split(" ")[0];
 
   const chips = [
@@ -119,6 +126,19 @@ async function Content() {
         <Stat label={t("beranda.late")} value={String(home.overdue)} sub={t("beranda.lateHint")} tone="late" />
       </div>
       <p className="mt-2 text-sm text-faint">{t("common.beforeTax")}</p>
+
+      <Link
+        href="/laporan"
+        className="-mx-3 mt-6 flex min-h-11 flex-wrap items-baseline gap-x-3 gap-y-1 rounded-sm px-3 py-2 hover:bg-paper"
+      >
+        <span className="text-slate">{t("beranda.leadsWhen")}</span>
+        <span className="tabular text-lg font-semibold text-ink">{count(funnel.total.leads)}</span>
+        {bySource.length > 0 && (
+          <span className="tabular text-sm text-slate">
+            {bySource.map((g) => `${t(`sourceGroup.${g.group}`)} ${count(g.leads)}`).join(" · ")}
+          </span>
+        )}
+      </Link>
 
       <section className="mt-10" aria-label={t("beranda.attention")}>
         <div className="flex items-baseline justify-between">

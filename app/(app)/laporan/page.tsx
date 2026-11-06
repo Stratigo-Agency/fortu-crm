@@ -4,10 +4,12 @@ import { sql } from "@/lib/db";
 import { t } from "@/lib/copy";
 import { dayMonth } from "@/lib/format";
 import { parsePeriod } from "@/lib/reportPeriod";
+import { getLeadFunnel } from "@/lib/leadFunnel";
 import { getReport } from "@/lib/reports";
 import { canOpenStock } from "@/lib/shell";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
+import { FunnelSection } from "./Funnel";
 import { Kpis } from "./Kpis";
 import { PeriodSelect } from "./PeriodSelect";
 import { body, PageHeader, PageSkeleton } from "../PageHeader";
@@ -32,8 +34,9 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
   // A sales rep sees only their own numbers: the owner is set here, whatever the top-bar filter says.
   const isRep = user.role === "sales_rep";
   const ownerId = isRep ? user.id : await getSalesFilter();
-  const [report, waRows, myUnanswered] = await Promise.all([
+  const [report, funnel, waRows, myUnanswered] = await Promise.all([
     getReport(ownerId, period),
+    getLeadFunnel(ownerId, period),
     getWaResponseTimes(ownerId),
     getMyUnansweredChats(user.id), // the viewer's own chats only, never someone else's
   ]);
@@ -57,6 +60,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
         }
       />
       <div className={`${body} pb-10`}>
+      <FunnelSection f={funnel} period={period} />
       <Kpis k={report.kpis} />
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <DoneChart months={report.months} target={report.monthTarget} />

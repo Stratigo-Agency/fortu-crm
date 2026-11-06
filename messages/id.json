@@ -38,7 +38,8 @@
     "estimate": "Perkiraan pipeline",
     "openDeals": "{n} deal berjalan",
     "late": "Next step terlambat",
-    "lateHint": "deal"
+    "lateHint": "deal",
+    "leadsWhen": "Lead bulan ini"
   },
   "cari": {
     "title": "Cari",
@@ -162,6 +163,7 @@
     "timing": "Waktunya belum tepat",
     "no_response": "Tidak ada respon",
     "spec": "Spesifikasi tidak cocok",
+    "not_buyer": "Bukan calon pembeli",
     "stock_leadtime": "Stok / waktu kirim",
     "other": "Lainnya",
     "competitor": "Kompetitor",
@@ -182,6 +184,14 @@
     "tender": "Tender",
     "whatsapp_direct": "WhatsApp langsung",
     "other": "Lainnya"
+  },
+  "sourceGroup": {
+    "meta": "Iklan Meta",
+    "website": "Website",
+    "offline": "Offline",
+    "wa_direct": "WhatsApp langsung",
+    "other": "Lainnya",
+    "total": "Semua sumber"
   },
   "productLine": {
     "IFP": "IFP",
@@ -307,7 +317,10 @@
     "viewOnly": "Hanya lihat. Deal ini milik {name}.",
     "missingProducts": "Tambahkan minimal 1 produk dengan unit dan harga.",
     "linesInvalid": "Isi unit dan harga di setiap produk.",
-    "saveFailed": "Belum tersimpan. Coba lagi sebentar."
+    "saveFailed": "Belum tersimpan. Coba lagi sebentar.",
+    "leadSource": "Asal lead",
+    "leadReceived": "Masuk {date}",
+    "noLead": "Tidak dari prospek"
   },
   "prospek": {
     "title": "Prospek",
@@ -338,7 +351,11 @@
     "notFitTitle": "Kenapa tidak cocok?",
     "reassignTo": "Alihkan ke",
     "alreadyHandled": "Prospek ini sudah diproses.",
-    "tabsLabel": "Status prospek"
+    "tabsLabel": "Status prospek",
+    "sourceFilter": "Sumber",
+    "traceAd": "Iklan {name}",
+    "traceCampaign": "Kampanye {name}",
+    "tracePage": "Halaman {page}"
   },
   "quickAdd": {
     "title": "Prospek baru",
@@ -685,6 +702,49 @@
     },
     "codePlaceholder": "F-IFP-01",
     "colLeads7": "Chat 7 hari"
+  },
+  "funnel": {
+    "title": "Lead dan funnel",
+    "note": "Lead yang masuk {when}, diikuti sampai sekarang",
+    "statLeads": "Lead masuk {when}",
+    "statUnhandled": "Belum ditangani",
+    "statConversion": "Lead jadi Done deal",
+    "statConversionHint": "{done} dari {leads} lead",
+    "col": {
+      "group": "Sumber",
+      "leads": "Lead masuk",
+      "handled": "Ditangani",
+      "deal": "Jadi deal",
+      "quotation": "Quotation",
+      "negotiation": "Negotiation",
+      "po": "PO",
+      "done": "Done deal",
+      "lost": "Lost"
+    },
+    "step": {
+      "handled": "Lead masuk → Ditangani",
+      "deal": "Ditangani → Jadi deal",
+      "quotation": "Jadi deal → Quotation",
+      "negotiation": "Quotation → Negotiation",
+      "po": "Negotiation → PO",
+      "done": "PO → Done deal"
+    },
+    "bottleneck": "Paling banyak berhenti di {step}: {pct} lanjut",
+    "and": "dan",
+    "insufficient": "Ada lead yang berhenti, tapi datanya belum cukup untuk menyebut titik macet. Perlu minimal {n} lead berhenti di satu langkah.",
+    "none": "Belum ada lead yang berhenti di tengah jalan.",
+    "stopped": "berhenti {n}",
+    "running": "masih berjalan {n}",
+    "notBuyer": "Bukan calon pembeli: {n}, tidak dihitung di Ditangani → Jadi deal",
+    "reentry": "Chat lanjutan dari deal yang masih berjalan: {n}, tidak dihitung sebagai lead baru",
+    "outside": "Deal tanpa prospek {when} (mis. repeat order): {n}, {done} di antaranya Done deal",
+    "noLeads": "Belum ada lead masuk {when}.",
+    "allSources": "Semua sumber",
+    "bySource": "Per sumber",
+    "typically": "biasanya {n} hari di tahap ini",
+    "weakest": "Titik macet",
+    "stepsLabel": "Langkah funnel semua sumber",
+    "leadsCount": "{n} lead"
   },
   "stok": {
     "title": "Stok & Permintaan",
