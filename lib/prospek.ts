@@ -118,11 +118,12 @@ const NO_STATS: ProspekStats = {
   meta_without_code: 0,
 };
 
-/** The numbers on top of /prospek, for one owner or for all sales (ownerId null). */
-export async function prospekStats(ownerId: string | null): Promise<ProspekStats> {
+/** The numbers on top of /prospek, for one owner or for all sales (ownerId null), and one source group or all. */
+export async function prospekStats(ownerId: string | null, group: SourceGroup | null = null): Promise<ProspekStats> {
   const [row] = await sql<ProspekStats[]>`
     SELECT new_count, contacted_count, open_count, received_today, median_log_delay_min, meta_without_code
       FROM v_prospek_stats
-     WHERE ${ownerId ? sql`NOT is_total AND owner_user_id = ${ownerId}` : sql`is_total`}`;
+     WHERE ${ownerId ? sql`NOT is_total AND owner_user_id = ${ownerId}` : sql`is_total`}
+       AND ${group ? sql`NOT all_groups AND source_group = ${group}` : sql`all_groups`}`;
   return row ?? NO_STATS;
 }

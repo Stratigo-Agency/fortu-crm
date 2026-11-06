@@ -63,3 +63,52 @@ test("Lead dan funnel comes first in Laporan and shows only the rep's own leads"
   await expect(offline.locator("td").first()).toHaveText(String(ownOffline.leads));
   await expect(section.getByRole("region", { name: "Langkah funnel semua sumber" })).toBeVisible();
 });
+
+test("a rep sees their own funnel on Laporan and Beranda even when the sales filter points at another rep", async ({ page, context, baseURL }) => {
+  const [rep] = await sql<{ id: string }[]>`SELECT id FROM users WHERE email = ${REP.email}`;
+  const [other] = await sql<{ id: string }[]>`
+    INSERT INTO users (full_name, email, role) VALUES ('Rep Filter Lain', ${`filter-${tag}@e2e.example.com`}, 'sales_rep') RETURNING id`;
+  await lead(rep.id, "walk_in");
+  const own = await funnel(rep.id);
+  // the other rep always has more leads than this rep, so the two figures differ
+  for (let i = 0; i <= own.leads; i++) await lead(other.id, "meta_ctwa");
+  expect((await funnel(other.id)).leads).toBeGreaterThan(own.leads);
+  await context.addCookies([{ name: "crm_sales", value: other.id, url: baseURL! }]);
+  try {
+
+    await page.goto("/laporan");
+    const section = page.getByRole("region", { name: "Lead dan funnel" });
+    const figure = section.locator("dl > div").filter({ has: page.locator("dt", { hasText: "Lead masuk bulan ini" }) }).locator("dd");
+    await expect(figure).toHaveText(String(own.leads));
+
+    await page.goto("/beranda");
+    const link = page.getByRole("link", { name: /Lead bulan ini/ });
+    await expect(link).toContainText(String(own.leads));
+    await expect(link).toContainText("Offline");
+  } finally {
+    await context.clearCookies({ name: "crm_sales" });
+  }
+});
+
+for (const width of [768, 1024]) {
+  test(`Lead dan funnel fits ${width} px next to the sidebar, with every column label visible`, async ({ page }) => {
+    const [rep] = await sql<{ id: string }[]>`SELECT id FROM users WHERE email = ${REP.email}`;
+    await lead(rep.id, "website_form", "contacted");
+    await page.setViewportSize({ width, height: 1000 });
+    await page.goto("/laporan");
+    const groups = page.getByRole("region", { name: "Per sumber" });
+    await expect(groups).toBeVisible();
+    const over = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(over).toBeLessThanOrEqual(0);
+    // a table from 1024 px (with a "Lead masuk" column), cards per source below it
+    const labels = ["Ditangani", "Jadi deal", "Quotation", "Negotiation", "PO", "Done deal", "Lost"];
+    for (const label of width >= 1024 ? ["Lead masuk", ...labels] : labels) {
+      const el = groups.getByText(label, { exact: true }).filter({ visible: true }).first();
+      await expect(el).toBeVisible();
+      const box = await el.boundingBox();
+      expect(box!.x + box!.width).toBeLessThanOrEqual(width);
+      // not cut off: the whole word fits its box
+      expect(await el.evaluate((n) => n.scrollWidth <= n.clientWidth + 1)).toBe(true);
+    }
+  });
+}

@@ -9,7 +9,7 @@ import type { DealDetail, DealKind, DealSettings, HistoryItem, LeadTrace, Produc
 import { DEAL_KINDS } from "@/lib/dealTypes";
 import { dayMonth, dayMonthTime, pageOf, relTime, rupiah } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
-import { NOT_FIT_REASONS } from "@/lib/leadReasons";
+import { SHARED_REASONS } from "@/lib/leadReasons";
 import { STAGE_KEYS, type StageKey, type StageRule } from "@/lib/pipelineTypes";
 import { missingRules, RULE_FIELDS } from "@/lib/stageRules";
 import { lookupCompanies, lookupContact, lookupParents, saveDealAction } from "./actions";
@@ -18,7 +18,7 @@ import { useDealFrame } from "./PanelFrame";
 
 // Sales competitors the team already names; the field takes any text.
 const COMPETITORS = ["Vannoe", "Zelt", "InnoGraph"];
-const LOST_REASONS = [...NOT_FIT_REASONS, "kompetitor", "stock_leadtime"] as const;
+const LOST_REASONS = [...SHARED_REASONS, "kompetitor", "stock_leadtime"] as const;
 
 type Line = { key: number; productId: string; qty: string; unitPrice: string };
 

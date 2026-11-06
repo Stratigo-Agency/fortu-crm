@@ -38,7 +38,7 @@ async function Content({ searchParams }: { searchParams: PageProps<"/prospek">["
   const canReassign = user.role === "sales_lead" || user.role === "ceo" || user.role === "admin";
   const [{ rows, hasMore }, stats, owners] = await Promise.all([
     listProspects({ viewerId: user.id, ownerId, tab, q, limit, group: sumber }),
-    prospekStats(ownerId),
+    prospekStats(ownerId, sumber),
     canReassign ? salesOptions() : Promise.resolve([]),
   ]);
 
