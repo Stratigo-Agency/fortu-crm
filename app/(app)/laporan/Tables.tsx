@@ -78,13 +78,29 @@ function reasonText(a: AttentionRow): string {
   }
 }
 
-export function Attention({ rows, total, canApprove = false }: { rows: AttentionRow[]; total: number; canApprove?: boolean }) {
+/** "Chat belum dibalas > 2 jam": the viewer's own WhatsApp chats waiting for a first reply (shown to them only). */
+export function UnansweredChatsRow({ n, compact = false }: { n: number; compact?: boolean }) {
+  return (
+    <Link href="/prospek" className={`flex min-h-11 items-center gap-3 hover:bg-paper ${compact ? "-mx-3 rounded-sm px-3 py-2.5" : "py-3"}`}>
+      <span className="h-2 w-2 shrink-0 rounded-full bg-late" aria-hidden="true" />
+      <span className="min-w-0 flex-1 font-semibold text-ink">{t("laporan.attentionWa")}</span>
+      <span className="tabular shrink-0 text-late">{t("laporan.attentionWaCount", { n })}</span>
+    </Link>
+  );
+}
+
+export function Attention({ rows, total, canApprove = false, unansweredChats = 0 }: { rows: AttentionRow[]; total: number; canApprove?: boolean; unansweredChats?: number }) {
   return (
     <section className="rounded-lg bg-white p-5 shadow-card" aria-label={t("laporan.attention")}>
       <div className="flex items-baseline justify-between gap-3">
         <h2 className="text-base font-semibold text-ink">{t("laporan.attention")}</h2>
         <p className="text-sm text-slate">{t("laporan.dealsCount", { n: total })}</p>
       </div>
+      {unansweredChats > 0 && (
+        <div className="mt-2 border-b border-line">
+          <UnansweredChatsRow n={unansweredChats} />
+        </div>
+      )}
       {rows.length === 0 ? (
         <p className="mt-4 text-slate">{t("laporan.attentionNone")}</p>
       ) : (

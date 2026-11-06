@@ -709,6 +709,7 @@ function LeadSource({ deal }: { deal: DealDetail }) {
         {code && <span className="rounded-md border border-line bg-white px-1.5 py-0.5 font-mono text-xs text-slate">{code}</span>}
       </p>
       {detail && <p className="mt-0.5 break-words text-sm text-slate">{detail}</p>}
+      {tr.firstChat && <p className="mt-1 whitespace-pre-line break-words text-ink">{tr.firstChat}</p>}
       <p className="tabular mt-0.5 text-sm text-faint">{t("deal.leadReceived", { date: dayMonthTime(tr.receivedAt) })}</p>
     </div>
   );

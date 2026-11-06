@@ -1,0 +1,28 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "{{WABA_ID}}",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "6281100000001", "phone_number_id": "{{PHONE_NUMBER_ID}}" },
+            "contacts": [{ "profile": { "name": "Sheena Nelson" }, "wa_id": "{{WA_ID}}", "user_id": "{{BSUID}}" }],
+            "messages": [
+              {
+                "from": "{{WA_ID}}",
+                "from_user_id": "{{BSUID}}",
+                "id": "{{MSG_ID}}",
+                "timestamp": "{{TS}}",
+                "type": "text",
+                "text": { "body": "Halo, harga IFP 75 inch berapa?" }
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}

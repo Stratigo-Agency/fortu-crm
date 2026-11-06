@@ -1,6 +1,6 @@
 import type postgres from "postgres";
 import { sql } from "@/lib/db";
-import { parseCodes } from "./codes";
+import { type Codes, parseCodes } from "./codes";
 import { InvalidActorError, InvalidTimeError, MissingActorError, UnknownLineError } from "./errors";
 import {
   type CaptureMethod,
@@ -29,6 +29,11 @@ export type LeadInput = {
   captureMethod: CaptureMethod;
   waLineId?: string; // quick-add: the rep's own line (defaults to the logging rep's line)
   firstMessage?: string; // scanned for [F-IFP-01] and #W7K2 codes
+  /** Attribution codes already read from a text that is not passed (WhatsApp webhook: the text is never kept here). */
+  codes?: Codes;
+  /** Click-to-WhatsApp referral: Meta's ad id (referral.source_id) and click id. Wins over an ad code. */
+  metaAdId?: string;
+  ctwaClid?: string;
   productInterest?: ProductInterest;
   utm?: Partial<Record<"source" | "medium" | "campaign" | "content", string>>;
   receivedAt?: string; // ISO 8601; a time without a zone is Jakarta time; defaults to now
@@ -122,11 +127,17 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
        FOR UPDATE`;
 
     // 5. Attribution codes in the first message.
-    const codes = parseCodes(input.firstMessage);
-    const [ad] = codes.adCode
+    const codes = input.codes ?? parseCodes(input.firstMessage);
+    const metaAdId = clean(input.metaAdId);
+    const [referredAd] = metaAdId
+      ? await tx<{ id: string; name: string }[]>`SELECT id, name FROM ads WHERE meta_ad_id = ${metaAdId}`
+      : [];
+    const [codedAd] = !referredAd && codes.adCode
       ? await tx<{ id: string; name: string }[]>`
           SELECT id, name FROM ads WHERE upper(prefill_code) = ${codes.adCode}`
       : [];
+    const ad = referredAd ?? codedAd;
+    const ctwaClid = clean(input.ctwaClid);
     const [click] = codes.clickCode
       ? await tx<{ id: string; utm_source: string | null; utm_medium: string | null;
                    utm_campaign: string | null; utm_content: string | null }[]>`
@@ -144,14 +155,16 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
     };
     const metadata = {
       via: input.captureMethod,
-      code: (ad && codes.adCode) ?? (click && codes.clickCode) ?? null,
+      code: (codedAd && codes.adCode) ?? (click && codes.clickCode) ?? null,
       adName: ad?.name ?? null,
+      ...(metaAdId && { metaAdId }),
       ...(eventId && { inbound_event_id: eventId }),
     };
 
     if (recent) {
       await tx`
         UPDATE leads SET ad_id        = COALESCE(ad_id, ${ad?.id ?? null}),
+                         ctwa_clid    = COALESCE(ctwa_clid, ${ctwaClid}),
                          utm_source   = COALESCE(utm_source, ${utm.source}),
                          utm_medium   = COALESCE(utm_medium, ${utm.medium}),
                          utm_campaign = COALESCE(utm_campaign, ${utm.campaign}),
@@ -188,10 +201,10 @@ export async function ingestLead(input: LeadInput, opts: { actorId?: string } = 
     // 7. The lead, its ownership record and a system activity.
     const [lead] = await tx<{ id: string }[]>`
       INSERT INTO leads (contact_id, owner_user_id, wa_line_id, source_channel, capture_method,
-                         product_interest, ad_id, utm_source, utm_medium, utm_campaign, utm_content,
+                         product_interest, ad_id, ctwa_clid, utm_source, utm_medium, utm_campaign, utm_content,
                          first_message, inbound_event_id, received_at)
       VALUES (${contact.id}, ${decision.ownerId}, ${line?.id ?? null}, ${input.sourceChannel},
-              ${input.captureMethod}, ${input.productInterest ?? null}, ${ad?.id ?? null},
+              ${input.captureMethod}, ${input.productInterest ?? null}, ${ad?.id ?? null}, ${ctwaClid},
               ${utm.source}, ${utm.medium}, ${utm.campaign}, ${utm.content},
               ${clean(input.firstMessage)}, ${eventId}, COALESCE(${receivedAt}::timestamptz, now()))
       RETURNING id`;

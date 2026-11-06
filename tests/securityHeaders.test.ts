@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { GET } from "@/app/api/auth/[...nextauth]/route";
-import { contentSecurityPolicy, securityHeaders } from "@/lib/securityHeaders";
+import { contentSecurityPolicy, META_SDK_PAGE, metaSdkPageHeaders, securityHeaders } from "@/lib/securityHeaders";
 
 const value = (headers: { key: string; value: string }[], key: string) => headers.find((h) => h.key === key)?.value;
 
@@ -28,6 +28,16 @@ describe("security headers", () => {
 
   it("lets the sign-in form go to Google and nowhere else", () => {
     expect(contentSecurityPolicy(false)).toContain("form-action 'self' https://accounts.google.com;");
+  });
+
+  it("allows Meta's SDK on Pengaturan › WhatsApp only, and still forbids framing the app there", () => {
+    expect(contentSecurityPolicy(false)).not.toContain("facebook");
+    const meta = metaSdkPageHeaders({ dev: false })[0].value;
+    expect(META_SDK_PAGE).toBe("/pengaturan/whatsapp");
+    expect(meta).toContain("script-src 'self' 'unsafe-inline' https://connect.facebook.net;");
+    expect(meta).toContain("frame-src https://www.facebook.com");
+    expect(meta).toContain("frame-ancestors 'none'");
+    expect(meta).not.toContain("'unsafe-eval'");
   });
 
   it("sends HSTS in production only", () => {

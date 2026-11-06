@@ -215,6 +215,7 @@ By hand, signed in as a sales rep (a phone for the first two):
 | `cron-insights` | `node jobs/insights-sync.js` | `0 19 * * *` (19:00 UTC = 02:00 Jakarta) |
 | `cron-sweeper` | `node jobs/sweeper.js` | `0 1-13 * * *` (01:00–13:00 UTC = 08:00–20:00 Jakarta, every hour) |
 | `cron-accurate` | `node jobs/accurate-sync.js` | `0 18 * * *` (18:00 UTC = 01:00 Jakarta) |
+| `cron-retry-inbound` | `node jobs/retry-inbound.js` | `*/5 * * * *` (every 5 minutes; only needed once a WhatsApp line is connected) |
 
 The two cron services are added after `web` works. Each has its own section below.
 
@@ -321,8 +322,49 @@ Sources used for the client (read 6 Nov 2026):
 
 Not verified against a live database (no credentials yet): the API Token header scheme (`Authorization: Bearer`, `X-Api-Timestamp` as `dd/MM/yyyy HH:mm:ss`, `X-Api-Signature` = base64 HMAC-SHA256 of the timestamp with the signature secret, host from `https://account.accurate.id/api/api-token.do`; Accurate documents it in a separate PDF), and the exact response field names of `list-stock.do`, `detail.do` (PO and invoice) and `statusName`. The tests use synthetic answers written from the documented shapes. Run `--dry-run` first with the real token and compare.
 
+## cron-retry-inbound (WhatsApp webhook retries, T19)
+The `web` service answers Meta's webhook at once and processes the event right after the answer. If that fails
+(a deploy restarts the service, the database blips), the event stays in `inbound_events` with `processed_at` empty.
+This job processes such events once they are older than 2 minutes, at most 5 tries each; the reason of the last
+failure is in `inbound_events.error` (an error name, never message text). Processing twice is safe: one message id
+is one lead.
+
+1. In the Railway project, add a service from the same repo. Name it `cron-retry-inbound`.
+2. Settings → Config-as-code → **Config file path**: `railway.cron-retry-inbound.json` (start command
+   `node jobs/retry-inbound.js`, cron `*/5 * * * *`, no migration step). Five minutes is Railway's shortest cron.
+3. Variables: `DATABASE_URL` (reference the `web` service's). Nothing else: the retry calls no Meta API.
+4. Check: Deployments → a run ends with `retry-inbound ok found=0 processed=0 failed=0`. A run where an event failed
+   again exits with 1.
+
+A manual run (from a computer with the variables in `.env.local`):
+
+```bash
+npm run build
+npm run inbound:retry
+```
+
+Events that failed 5 times (look at them before deleting anything):
+
+```sql
+SELECT id, received_at, attempts, error FROM inbound_events
+ WHERE provider = 'whatsapp_webhook' AND processed_at IS NULL ORDER BY received_at;
+```
+
+## WhatsApp webhook on `web` (T19)
+Only when a rep's number is moved to Coexistence (docs/whatsapp-coexistence.md). On `web`:
+- `META_APP_ID` – the Meta app (Tech Provider) id
+- `META_APP_SECRET` – its app secret: checks `X-Hub-Signature-256` and swaps the signup code for a token
+- `META_VERIFY_TOKEN` – any long random text; type the same text in the app's webhook settings
+- `META_ES_CONFIG_ID` – the Embedded Signup configuration id (Facebook Login for Business › Configurations)
+- `META_GRAPH_VERSION` – optional, default `v24.0`
+- `WA_TOKEN_KEY` – optional; the key the business tokens are encrypted with. Empty = derived from `AUTH_SECRET`.
+  Changing it (or `AUTH_SECRET` when it is empty) makes stored tokens unreadable: connect the numbers again.
+
+Webhook URL for Meta: `<AUTH_URL>/api/v1/webhooks/whatsapp` (https only). Without these variables the webhook
+answers 500 to Meta (it retries) and Pengaturan › WhatsApp shows a note instead of the button.
+
 ## Variables on `web`
-See `.env.example`. Meta variables are only needed on `cron-insights` until the WhatsApp Cloud API webhook (T19).
+See `.env.example`. Meta variables are needed on `cron-insights`, and on `web` once a WhatsApp line is connected (above).
 
 ## Hardening (T22)
 
@@ -334,6 +376,7 @@ In memory, per `web` instance (one instance today; with two the limits double). 
 | `POST /api/v1/ingest/web-form` | 60 / min per IP (checked before the body is read); 300 / min in all, counted only for requests with a valid signature | 429 `rate_limited`, `Retry-After: 60` |
 | `GET` and `HEAD /go/wa` | 20 / min per IP, 600 / min in all | 429, `Retry-After: 60` |
 | Password sign-in | 10 wrong passwords per email **and** IP, 30 per IP, in 15 min (only misses count). Per email alone it only slows (each try waits 0,8 s from 10 misses) and refuses at 50. With no address header: 20 per email | sign-in refused like a wrong password, even with the right one, until the window passes. A colleague typing wrong passwords for your email can't lock you out from your own IP |
+| `GET` and `POST /api/v1/webhooks/whatsapp` | only failures count: 60 bad signatures or verify tokens / min per IP, then that IP is refused before its body is read. A correctly signed request is never refused for volume (a history sync sends many at once) | 429, `Retry-After: 60` |
 | `/api/health` | none (Railway's healthcheck) | – |
 
 The IP is the **last** `x-forwarded-for` entry (the one Railway's proxy adds). The web-form caller is the fortu.co.id backend, so all its requests share one IP: its normal traffic is a few a minute.

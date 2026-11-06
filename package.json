@@ -24,7 +24,8 @@
     "sweeper:run": "node --env-file-if-exists=.env.local jobs/sweeper.js",
     "review:pack": "node scripts/review-pack.mjs",
     "ads:codes": "npm run jobs:build --silent && node --env-file-if-exists=.env.local jobs/ad-codes.js",
-    "accurate:sync": "node --env-file-if-exists=.env.local jobs/accurate-sync.js"
+    "accurate:sync": "node --env-file-if-exists=.env.local jobs/accurate-sync.js",
+    "inbound:retry": "node --env-file-if-exists=.env.local jobs/retry-inbound.js"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
