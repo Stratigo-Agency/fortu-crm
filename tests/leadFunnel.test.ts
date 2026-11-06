@@ -6,7 +6,7 @@ import { getLeadFunnel, leadFunnelRange, parseSourceGroup, type LeadFunnel } fro
 import { listProspects, prospekStats } from "@/lib/prospek";
 import { addLineItem, createAd, createDeal, createLead, createUser, freeAdCode } from "./fixtures";
 
-// Lead dan funnel (migration 016): every figure is checked against numbers counted by hand.
+// Lead dan funnel (migrations 016 and 018): every figure is checked against numbers counted by hand.
 // Each test uses its own month in 2018 (or its own rep); reviewPack.test.ts owns March 2019 for all reps.
 
 type Stage = "chat" | "quotation" | "negotiation" | "po" | "done" | "lost";
@@ -93,8 +93,8 @@ describe("lead_funnel: March 2018, counted by hand", () => {
     expect(f.total).toMatchObject({
       leads: 13, handled: 11, deals: 7, quotation: 5, negotiation: 4, po: 3, done: 2, lost: 3, unhandled: 2,
       notBuyer: 1, reentry: 1,
-      // conversion = passed / (passed + stopped): 11/13, 7/10 (spam left out), 5/6 (one running), 4/5, 3/4, 2/3
-      pct: { handled: 85, deal: 70, quotation: 83, negotiation: 80, po: 75, done: 67 },
+      // share = passed / entered: 11/13, 7/10 (spam left out), 5/7 (one still running counts), 4/5, 3/4, 2/3
+      pct: { handled: 85, deal: 70, quotation: 71, negotiation: 80, po: 75, done: 67 },
       pctLeadToDone: 15,
       // leads stopped somewhere, but at most 3 at one step: too few to name a step
       status: "insufficient",
@@ -110,6 +110,8 @@ describe("lead_funnel: March 2018, counted by hand", () => {
       ["po", 4, 3, 1, 0],
       ["done", 3, 2, 1, 0],
     ]);
+    // the bottleneck is judged on leads that finished the step: passed / (passed + stopped), 5/6 at Quotation
+    expect(f.steps.map((s) => s.finishedPct)).toEqual([85, 70, 83, 80, 75, 67]);
 
     const g = Object.fromEntries(f.groups.map((r) => [r.group, r]));
     expect(f.groups.map((r) => r.group)).toEqual(["meta", "website", "offline", "wa_direct", "other"]);
@@ -147,13 +149,13 @@ describe("lead_funnel: stopped or still running", () => {
       deals.push(await dealFrom(l.id, rep.id, ["quotation"]));
     }
     let f = await leadFunnelRange(rep.id, "2018-05-01", "2018-05-31");
-    expect(stepOf(f, "negotiation")).toMatchObject({ entered: 5, passed: 0, stopped: 0, running: 5, pct: null, isBottleneck: false });
+    expect(stepOf(f, "negotiation")).toMatchObject({ entered: 5, passed: 0, stopped: 0, running: 5, pct: 0, finishedPct: null, isBottleneck: false });
     expect(f.total).toMatchObject({ status: "none", bottleneck: null });
 
     for (const d of deals.slice(0, 4)) await makeStale(d);
     f = await leadFunnelRange(rep.id, "2018-05-01", "2018-05-31");
     // 4 stopped: some stopped, too few to judge
-    expect(stepOf(f, "negotiation")).toMatchObject({ stopped: 4, running: 1, pct: 0 });
+    expect(stepOf(f, "negotiation")).toMatchObject({ stopped: 4, running: 1, pct: 0, finishedPct: 0 });
     expect(f.total).toMatchObject({ status: "insufficient", bottleneck: null });
 
     await makeStale(deals[4]);
@@ -169,6 +171,18 @@ describe("lead_funnel: stopped or still running", () => {
     const f = await leadFunnelRange(rep.id, today, today);
     expect(stepOf(f, "handled")).toMatchObject({ entered: 1, passed: 0, stopped: 0, running: 1 });
     expect(f.total.status).toBe("none");
+  });
+
+  it("shows the share of the step before, so Ditangani reads 25 of 36 and not 25 of 26", async () => {
+    const rep = await createUser();
+    // 36 leads: 25 handled, 10 new today (still running), 1 new and old (stopped)
+    for (let i = 0; i < 25; i++) await createLead(rep.id, { source: "meta_ctwa", status: "contacted", receivedAt: at("2018-10-03") });
+    const [{ today }] = await sql<{ today: string }[]>`SELECT jakarta_today()::text AS today`;
+    for (let i = 0; i < 10; i++) await createLead(rep.id, { source: "meta_ctwa" });
+    await createLead(rep.id, { source: "meta_ctwa", receivedAt: at("2018-10-03") });
+    const f = await leadFunnelRange(rep.id, "2018-10-01", today);
+    expect(f.total).toMatchObject({ leads: 36, handled: 25, unhandled: 11 });
+    expect(stepOf(f, "handled")).toMatchObject({ entered: 36, passed: 25, stopped: 1, running: 10, pct: 69, finishedPct: 96 });
   });
 
   it("names every step tied for the lowest conversion", async () => {

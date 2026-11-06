@@ -7,6 +7,7 @@ import { Stat, StatStrip } from "../PageHeader";
 
 // Lead dan funnel (Pak Jovian): how many leads came in this period, from which source, and where they stop.
 // Every number is from lead_funnel() (rule 5); nothing is added up here.
+// The % beside a count is the share of the leads that reached the step before (passed / entered).
 
 const dash = "—";
 const pctText = (p: number | null) => (p === null ? dash : `${p}%`);
@@ -90,16 +91,17 @@ function StepNote({ r }: { r: { weak: boolean; stopped: number; running: number;
   );
 }
 
-/** Semua sumber: one bar per step, the share of leads that got that far, the conversion and the usual days. */
+/** Semua sumber: one bar per step, the share of leads that got that far, the share of the step before and the usual days. */
 function Steps({ f }: { f: LeadFunnel }) {
   const leads = Math.max(f.total.leads, 1);
-  type Row = { key: FunnelStep | "leads"; label: string; n: number; pct: number | null; days: number | null; weak: boolean; stopped: number; running: number };
+  type Row = { key: FunnelStep | "leads"; label: string; n: number; of: number; pct: number | null; days: number | null; weak: boolean; stopped: number; running: number };
   const rows: Row[] = [
-    { key: "leads", label: t("funnel.col.leads"), n: f.total.leads, pct: null, days: null, weak: false, stopped: 0, running: 0 },
+    { key: "leads", label: t("funnel.col.leads"), n: f.total.leads, of: 0, pct: null, days: null, weak: false, stopped: 0, running: 0 },
     ...f.steps.map((s) => ({
       key: s.step,
       label: t(`funnel.col.${s.step}`),
       n: s.passed,
+      of: s.entered,
       pct: s.pct,
       days: s.medianDays,
       weak: s.isBottleneck,
@@ -118,7 +120,12 @@ function Steps({ f }: { f: LeadFunnel }) {
               <span className="tabular flex items-baseline gap-2">
                 <span className="font-semibold text-ink">{count(r.n)}</span>
                 {r.key !== "leads" && (
-                  <span className={`text-sm ${r.weak ? "font-semibold text-late" : "text-faint"}`}>{pctText(r.pct)}</span>
+                  <span
+                    className={`text-sm ${r.weak ? "font-semibold text-late" : "text-faint"}`}
+                    title={t("funnel.shareOf", { n: count(r.n), of: count(r.of) })}
+                  >
+                    {pctText(r.pct)}
+                  </span>
                 )}
               </span>
             </div>
@@ -136,7 +143,7 @@ function Steps({ f }: { f: LeadFunnel }) {
   );
 }
 
-/** A count with the conversion from the step before under it; the bottleneck of the row in orange. */
+/** A count with its share of the step before under it; the bottleneck of the row in orange. */
 function Cell({ n, pct, weak }: { n: number; pct?: number | null; weak?: boolean }) {
   return (
     <>
