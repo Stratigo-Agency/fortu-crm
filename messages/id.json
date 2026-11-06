@@ -542,7 +542,18 @@
     "colSource": "Sumber",
     "colRate": "Win rate",
     "colSku": "SKU",
-    "skuOpenStock": "Buka Stok"
+    "skuOpenStock": "Buka Stok",
+    "waTitle": "Kecepatan balas chat",
+    "waPeriod": "30 hari",
+    "waMedian": "Median balasan pertama",
+    "waMinutes": "{n} menit",
+    "waWithin15": "Dibalas ≤ 15 menit",
+    "waWithin1h": "Dibalas ≤ 1 jam",
+    "waUnanswered": "Belum dibalas > 2 jam",
+    "waEmpty": "Belum ada chat dari nomor yang tersambung.",
+    "waColChats": "Chat",
+    "attentionWa": "Chat belum dibalas > 2 jam",
+    "attentionWaCount": "{n} chat"
   },
   "pengaturan": {
     "nav": {

@@ -13,6 +13,8 @@ import { PeriodSelect } from "./PeriodSelect";
 import { body, PageHeader, PageSkeleton } from "../PageHeader";
 import { AdsToCrmCard, DemoLostCard, SkuTable, SourcesTable } from "./Panels";
 import { Attention, RepTable } from "./Tables";
+import { WaResponseCard } from "./WaResponseCard";
+import { getMyUnansweredChats, getWaResponseTimes } from "@/lib/whatsapp/responseTimes";
 
 export default function Page({ searchParams }: { searchParams: Promise<{ periode?: string | string[] }> }) {
   return (
@@ -30,7 +32,11 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
   // A sales rep sees only their own numbers: the owner is set here, whatever the top-bar filter says.
   const isRep = user.role === "sales_rep";
   const ownerId = isRep ? user.id : await getSalesFilter();
-  const report = await getReport(ownerId, period);
+  const [report, waRows, myUnanswered] = await Promise.all([
+    getReport(ownerId, period),
+    getWaResponseTimes(ownerId),
+    getMyUnansweredChats(user.id), // the viewer's own chats only, never someone else's
+  ]);
   const [who] = ownerId ? await sql<{ full_name: string }[]>`SELECT full_name FROM users WHERE id = ${ownerId}` : [];
 
   return (
@@ -61,9 +67,12 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
         <RepTable reps={report.reps} canPick={!isRep} />
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Attention rows={report.attention.rows} total={report.attention.total} canApprove={user.role === "ceo" || user.role === "admin"} />
+        <Attention rows={report.attention.rows} total={report.attention.total} canApprove={user.role === "ceo" || user.role === "admin"} unansweredChats={myUnanswered} />
         <AdsToCrmCard ads={report.adsToCrm} />
         <div className="md:col-span-2 xl:col-span-1"><DemoLostCard demo={report.demo} reasons={report.lostReasons} /></div>
+      </div>
+      <div className="mt-4">
+        <WaResponseCard rows={waRows} />
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <SkuTable rows={report.skus} canOpenStock={canOpenStock(user)} />

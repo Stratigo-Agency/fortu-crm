@@ -24,6 +24,11 @@ test("a sales rep is refused", async ({ page }) => {
   await expect(page.getByText("+62 811-9988-7766")).toHaveCount(0);
 });
 
+test("Laporan shows the reply-speed card to a rep", async ({ page }) => {
+  await page.goto("/laporan");
+  await expect(page.getByRole("region", { name: "Kecepatan balas chat" })).toBeVisible();
+});
+
 test.describe("the CEO", () => {
   test.use({ storageState: { cookies: [], origins: [] } });
 

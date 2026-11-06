@@ -8,7 +8,9 @@ import { getHome, greetingKey } from "@/lib/home";
 import type { AttentionRow } from "@/lib/reports";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { newLeadCount } from "@/lib/shell";
+import { getMyUnansweredChats } from "@/lib/whatsapp/responseTimes";
 import { SearchBox } from "../cari/SearchBox";
+import { UnansweredChatsRow } from "../laporan/Tables";
 
 export default function Page() {
   return (
@@ -74,7 +76,7 @@ async function Content() {
   const user = await requireUser();
   // a sales rep sees their own day; everyone else follows the sales filter
   const ownerId = user.role === "sales_rep" ? user.id : await getSalesFilter();
-  const [home, newLeads] = await Promise.all([getHome(ownerId), newLeadCount(user)]);
+  const [home, newLeads, unanswered] = await Promise.all([getHome(ownerId), newLeadCount(user), getMyUnansweredChats(user.id)]);
   const firstName = user.full_name.split(" ")[0];
 
   const chips = [
@@ -127,6 +129,11 @@ async function Content() {
             </Link>
           )}
         </div>
+        {unanswered > 0 && (
+          <div className="mt-2 border-b border-line">
+            <UnansweredChatsRow n={unanswered} compact />
+          </div>
+        )}
         {home.attention.rows.length === 0 ? (
           <p className="mt-3 text-slate">{t("beranda.allClear")}</p>
         ) : (
