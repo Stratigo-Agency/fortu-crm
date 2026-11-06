@@ -13,6 +13,7 @@ import { NOT_FIT_REASONS } from "@/lib/leadReasons";
 import { STAGE_KEYS, type StageKey, type StageRule } from "@/lib/pipelineTypes";
 import { missingRules, RULE_FIELDS } from "@/lib/stageRules";
 import { lookupCompanies, lookupContact, lookupParents, saveDealAction } from "./actions";
+import { ApproveDiscountButton } from "./ApproveDiscountButton";
 import { DealHeader } from "./DealHeader";
 import { useDealFrame } from "./PanelFrame";
 
@@ -53,6 +54,8 @@ type Props = {
   settings: DealSettings;
   /** sales lead, CEO and admin may hand the deal to someone else */
   canReassign: boolean;
+  /** the CEO and admins approve a discount over the limit */
+  canApproveDiscount: boolean;
   /** the prospect this new deal comes from (Jadikan deal) */
   fromLeadId: string | null;
   /** from a failed drag: the stage that was wanted and the rule that stopped it */
@@ -103,7 +106,7 @@ function initialForm(d: DealDetail, wanted: StageKey | null, today: string): For
 
 const ruleMessage = (rule: StageRule) => t(`stageRule.${rule}`);
 
-export function DealForm({ deal, products, owners, settings, canReassign, fromLeadId, wantedStage, missingRule, parentOptions }: Props) {
+export function DealForm({ deal, products, owners, settings, canReassign, canApproveDiscount, fromLeadId, wantedStage, missingRule, parentOptions }: Props) {
   const router = useRouter();
   const frame = useDealFrame();
   const isNew = deal.id === null;
@@ -522,6 +525,9 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                     );
                   })}
                 </ul>
+                {canApproveDiscount && deal.id && deal.needsDiscountApproval && linesAsSaved && (
+                  <ApproveDiscountButton dealId={deal.id} />
+                )}
                 {approvalHolds && deal.discountApprovedByName && (
                   <p className="text-sm text-slate">{t("deal.discountApproved", { name: deal.discountApprovedByName })}</p>
                 )}

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { ForbiddenError, requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { type ContactMatch, contactByPhone, parentDeals, searchCompanies } from "@/lib/deal";
+import { approveDiscount } from "@/lib/discount";
 import { DealInputError, parseDealInput, saveDeal } from "@/lib/dealSave";
 import { LeadClosedError } from "@/lib/leads";
 import type { StageRule } from "@/lib/pipelineTypes";
@@ -48,4 +49,23 @@ export async function lookupContact(phone: string): Promise<ContactMatch | null>
 export async function lookupParents(companyName: string): Promise<{ id: string; name: string }[]> {
   await requireUser();
   return parentDeals(text(companyName, 200));
+}
+
+export type ApproveResult = { ok: true } | { ok: false; message: string };
+
+/** The CEO or an admin approves the discount on a deal (Deal panel and Laporan · Perlu perhatian). */
+export async function approveDiscountAction(dealId: string): Promise<ApproveResult> {
+  const user = await requireUser();
+  try {
+    await approveDiscount(user, text(dealId, 40));
+  } catch (err) {
+    if (err instanceof ForbiddenError) return { ok: false, message: t("authz.forbidden") };
+    console.error("approve discount failed", err);
+    return { ok: false, message: t("deal.approveFailed") };
+  }
+  revalidatePath("/pipeline");
+  revalidatePath(`/deal/${dealId}`);
+  revalidatePath("/laporan");
+  revalidatePath("/beranda");
+  return { ok: true };
 }

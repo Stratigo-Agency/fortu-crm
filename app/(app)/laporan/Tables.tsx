@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { setSalesFilter } from "@/app/(app)/actions";
+import { ApproveDiscountButton } from "@/app/(app)/deal/ApproveDiscountButton";
 import { t } from "@/lib/copy";
 import { rupiahShort } from "@/lib/format";
 import type { AttentionRow, RepRow } from "@/lib/reports";
@@ -77,7 +78,7 @@ function reasonText(a: AttentionRow): string {
   }
 }
 
-export function Attention({ rows, total }: { rows: AttentionRow[]; total: number }) {
+export function Attention({ rows, total, canApprove = false }: { rows: AttentionRow[]; total: number; canApprove?: boolean }) {
   return (
     <section className="rounded-lg bg-white p-5 shadow-card" aria-label={t("laporan.attention")}>
       <div className="flex items-baseline justify-between gap-3">
@@ -89,7 +90,7 @@ export function Attention({ rows, total }: { rows: AttentionRow[]; total: number
       ) : (
         <ul className="mt-2 divide-y divide-line">
           {rows.map((a) => (
-            <li key={a.dealId}>
+            <li key={a.dealId} className="py-0">
               <Link href={`/deal/${a.dealId}`} className="flex min-h-11 items-start gap-3 py-3 hover:bg-paper">
                 <span className={`mt-2 inline-block h-2 w-2 shrink-0 rounded-full ${a.reason === "next_step_overdue" ? "bg-late" : a.reason === "discount" ? "bg-violet" : "bg-amber"}`} aria-hidden="true" />
                 <span className="min-w-0 flex-1">
@@ -101,6 +102,11 @@ export function Attention({ rows, total }: { rows: AttentionRow[]; total: number
                   <span className="block text-sm">{a.ownerName ?? "—"}</span>
                 </span>
               </Link>
+              {canApprove && a.reason === "discount" && (
+                <div className="pb-3 pl-5">
+                  <ApproveDiscountButton dealId={a.dealId} dealName={a.name} />
+                </div>
+              )}
             </li>
           ))}
         </ul>
