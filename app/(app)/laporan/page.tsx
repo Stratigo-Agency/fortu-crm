@@ -8,6 +8,7 @@ import { getLeadFunnel } from "@/lib/leadFunnel";
 import { getReport } from "@/lib/reports";
 import { canOpenStock } from "@/lib/shell";
 import { getSalesFilter } from "@/lib/salesFilter";
+import { ownNumbersOwner } from "@/lib/salesScope";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { FunnelSection } from "./Funnel";
 import { Kpis } from "./Kpis";
@@ -31,7 +32,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
   const period = parsePeriod((await searchParams).periode);
   // A sales rep sees only their own numbers: the owner is set here, whatever the top-bar filter says.
   const isRep = user.role === "sales_rep";
-  const ownerId = isRep ? user.id : await getSalesFilter();
+  const ownerId = ownNumbersOwner(user, await getSalesFilter());
   const [report, funnel] = await Promise.all([getReport(ownerId, period), getLeadFunnel(ownerId, period)]);
   const [who] = ownerId ? await sql<{ full_name: string }[]>`SELECT full_name FROM users WHERE id = ${ownerId}` : [];
 

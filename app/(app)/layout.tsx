@@ -48,6 +48,7 @@ async function Shell() {
             selected={selected}
             allLabel={t("nav.allReps")}
             label={t("nav.salesFilter")}
+            viewer={{ role: user.role, name: user.full_name }}
           />
           <UserChip fullName={user.full_name} role={t(`pengaturan.role.${user.role}`)} />
         </div>

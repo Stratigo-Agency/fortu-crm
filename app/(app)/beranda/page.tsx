@@ -8,6 +8,7 @@ import { getHome, greetingKey } from "@/lib/home";
 import { getLeadFunnel } from "@/lib/leadFunnel";
 import type { AttentionRow } from "@/lib/reports";
 import { getSalesFilter } from "@/lib/salesFilter";
+import { ownNumbersOwner } from "@/lib/salesScope";
 import { newLeadCount } from "@/lib/shell";
 import { SearchBox } from "../cari/SearchBox";
 
@@ -74,7 +75,7 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub: 
 async function Content() {
   const user = await requireUser();
   // a sales rep sees their own day; everyone else follows the sales filter
-  const ownerId = user.role === "sales_rep" ? user.id : await getSalesFilter();
+  const ownerId = ownNumbersOwner(user, await getSalesFilter());
   const [home, newLeads, funnel] = await Promise.all([getHome(ownerId), newLeadCount(user), getLeadFunnel(ownerId, "month")]);
   const bySource = funnel.groups.filter((g) => g.leads > 0);
   const firstName = user.full_name.split(" ")[0];
