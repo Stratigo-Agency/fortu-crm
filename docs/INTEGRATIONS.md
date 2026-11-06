@@ -113,6 +113,13 @@ Moving a line = fill `wa_lines.meta_phone_number_id`, flip `mode`, subscribe the
 
 The POST handler verifies the signature, writes `inbound_events`, returns 200; processing runs right after in the same request. A retry job picks up rows with `processed_at` null. With Coexistence, Meta also sends echoes of replies typed in the phone app; if confirmed, `first_response_at` fills itself and the 15-minute SLA becomes measurable.
 
+Built in T19 (docs/whatsapp-coexistence.md):
+- Lines are connected in Pengaturan › WhatsApp with Embedded Signup (Coexistence); the server swaps the code for a token, subscribes the app to the WABA and requests the contacts and history sync. A line is processed only in mode `coexistence` / `cloud_api` **with consent recorded** (`wa_lines.consent_at`, `consent_by`).
+- `messages[].from` / `contacts[].wa_id` can be missing (the user has a username): the BSUID (`from_user_id`, `contacts[].user_id`) is kept in `wa_contacts` and finds the contact later. No lead without a phone number.
+- A lead is made for the first message of a conversation (no lead from that contact on that line in 30 days) or a message from an ad (`referral.source_id` → `ads.meta_ad_id`, `referral.ctwa_clid` → `leads.ctwa_clid`, or a prefill code in the text). Later messages are metadata only.
+- `smb_message_echoes` (replies typed in the phone app) fill `first_response_at` once; `history` and `smb_app_state_sync` are kept, `history` as metadata only, never leads; `account_update` `PARTNER_REMOVED` switches the line back to `business_app`; `statuses` are ignored.
+- Every message gets a metadata row in `wa_messages`; text goes to `wa_message_texts` only when `wa_lines.store_message_text` is on, and is readable by the line owner, ceo and admin only. Stored webhook payloads are redacted after processing.
+
 ## Meta insights sync (T13)
 ```http
 GET https://graph.facebook.com/<version>/act_<AD_ACCOUNT_ID>/insights
