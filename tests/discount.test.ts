@@ -135,3 +135,53 @@ describe("discount limit and approval", () => {
     await expect(approveDiscount({ id: ceo.id, role: "ceo" }, "not-an-id")).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
+
+describe("the CEO is told when a deal starts needing approval", () => {
+  const asked = (dealId: string) =>
+    sql<{ user_id: string; read_at: Date | null; amount: string }[]>`
+      SELECT user_id, read_at, payload #>> '{deal,amount}' AS amount
+        FROM notifications WHERE deal_id = ${dealId} AND kind = 'discount_approval' AND channel = 'in_app'`;
+
+  it("saving a price over the limit tells every active CEO right away, and only them", async () => {
+    const rep = await createUser();
+    const ceo = await createUser({ role: "ceo" });
+    const retired = await createUser({ role: "ceo", isActive: false });
+    const p = await createProduct({ listPrice: MSRP });
+    await sql`UPDATE products SET max_discount_pct = 15 WHERE id = ${p.id}`;
+    const actor = { id: rep.id, role: "sales_rep" as const };
+    const id = await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER }]));
+
+    const ids = (await asked(id)).map((n) => n.user_id);
+    expect(ids).toContain(ceo.id);
+    expect(ids).not.toContain(rep.id);
+    expect(ids).not.toContain(retired.id);
+
+    // saving again at the same price does not ask twice
+    await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER }], { id, nextStep: "Telepon lagi" }));
+    expect((await asked(id)).filter((n) => n.user_id === ceo.id)).toHaveLength(1);
+  });
+
+  it("a new price on the same day updates the CEO's alert and makes it unread again", async () => {
+    const rep = await createUser();
+    const ceo = await createUser({ role: "ceo" });
+    const p = await createProduct({ listPrice: MSRP });
+    await sql`UPDATE products SET max_discount_pct = 15 WHERE id = ${p.id}`;
+    const actor = { id: rep.id, role: "sales_rep" as const };
+    const id = await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER }]));
+    await sql`UPDATE notifications SET read_at = now() WHERE deal_id = ${id} AND user_id = ${ceo.id}`;
+
+    await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER - 500_000 }], { id }));
+    const mine = (await asked(id)).filter((n) => n.user_id === ceo.id);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ read_at: null, amount: String(OVER - 500_000) });
+  });
+
+  it("a discount inside the limit tells nobody", async () => {
+    const rep = await createUser();
+    await createUser({ role: "ceo" });
+    const p = await createProduct({ listPrice: MSRP });
+    await sql`UPDATE products SET max_discount_pct = 15 WHERE id = ${p.id}`;
+    const id = await save({ id: rep.id, role: "sales_rep" }, input([{ productId: p.id, qty: 1, unitPrice: Math.round(MSRP * 0.95) }]));
+    expect(await asked(id)).toHaveLength(0);
+  });
+});

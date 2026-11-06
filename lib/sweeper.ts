@@ -146,7 +146,9 @@ export async function notifyDiscountApprovals(dealId: string | null = null): Pro
        AND NOT EXISTS (SELECT 1 FROM notifications n
                         WHERE n.kind = 'discount_approval' AND n.deal_id = d.id AND n.user_id = u.id AND n.channel = 'in_app'
                           AND (n.payload #>> '{deal,amount}')::numeric = d.amount)
-    ON CONFLICT DO NOTHING
+    -- re-priced the same day: the day's row takes the new price and becomes unread again
+    ON CONFLICT (kind, deal_id, user_id, channel, day) WHERE deal_id IS NOT NULL
+      DO UPDATE SET payload = EXCLUDED.payload, sent_at = now(), read_at = NULL
     RETURNING id`;
   return rows.length;
 }

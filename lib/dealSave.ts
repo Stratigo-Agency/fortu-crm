@@ -6,6 +6,7 @@ import { DEAL_KINDS, type DealInput } from "@/lib/dealTypes";
 import { InvalidPhoneError } from "@/lib/ingest/errors";
 import type { Tx } from "@/lib/ingest/owner";
 import { normalizePhone } from "@/lib/ingest/phone";
+import { notifyDiscountApprovals } from "@/lib/sweeper";
 import { stageRuleOf } from "@/lib/pipeline";
 import { STAGE_KEYS, type StageRule } from "@/lib/pipelineTypes";
 
@@ -141,7 +142,7 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
   else await assertCanEditDeal(actor, input.id as string);
 
   try {
-    return await sql.begin(async (tx): Promise<SaveDealResult> => {
+    const saved = await sql.begin(async (tx): Promise<SaveDealResult> => {
       await tx`SELECT set_config('app.user_id', ${actor.id}, true)`; // = SET LOCAL app.user_id
 
       // The deal's current owner (an edit), read first so saving never fails on an owner who is unchanged.
@@ -234,6 +235,10 @@ export async function saveDeal(actor: Actor, input: DealInput): Promise<SaveDeal
       }
       return { ok: true, id: dealId };
     });
+    // A price over the limit asks the CEO now, not at the next sweep. The save is already done: a failure here
+    // is only logged, and the sweeper tries again.
+    if (saved.ok) await notifyDiscountApprovals(saved.id).catch((err) => console.error("discount alert failed", err));
+    return saved;
   } catch (err) {
     const rule = stageRuleOf(err);
     if (rule) return { ok: false, rule };
