@@ -4,7 +4,7 @@ import { body, PageHeader, PageSkeleton, primaryButton, searchField, searchIcon,
 import { Suspense } from "react";
 import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
-import { dayMonthTime, relTime } from "@/lib/format";
+import { dayMonthTime, pageOf, relTime } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { parseSourceGroup, SOURCE_GROUPS, type SourceGroup } from "@/lib/leadFunnel";
 import { listProspects, PAGE_SIZE, parseLimit, parseTab, type ProspekRow, type ProspekTab, prospekStats } from "@/lib/prospek";
@@ -232,14 +232,4 @@ function SourceTrace({ row, code }: { row: ProspekRow; code: string | null }) {
       {detail && <p className="break-words text-sm text-slate">{detail}</p>}
     </div>
   );
-}
-
-/** "fortu.co.id/ifp" from a full URL; anything that isn't a URL as it is. */
-function pageOf(url: string): string {
-  try {
-    const u = new URL(url);
-    return `${u.host.replace(/^www\./, "")}${u.pathname === "/" ? "" : u.pathname}`;
-  } catch {
-    return url;
-  }
 }

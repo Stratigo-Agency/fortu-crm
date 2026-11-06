@@ -78,6 +78,16 @@ export function dayMonthTime(d: Date | string, now: Date = new Date()): string {
   return `${dayMonth(at, now)}, ${time}`;
 }
 
+/** "fortu.co.id/ifp" from a full URL: no scheme, www, query string or hash. Anything that isn't a URL as it is. */
+export function pageOf(url: string): string {
+  try {
+    const u = new URL(url);
+    return `${u.host.replace(/^www\./, "")}${u.pathname === "/" ? "" : u.pathname}`;
+  } catch {
+    return url;
+  }
+}
+
 /** "10%" from a probability like "0.100" (pipeline_stages.probability). */
 export function percent(p: number | string): string {
   return `${Math.round(toNumber(p) * 100)}%`;

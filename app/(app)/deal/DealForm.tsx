@@ -7,7 +7,7 @@ import { Select } from "../ui/Select";
 import { Suggest } from "../ui/Suggest";
 import type { DealDetail, DealKind, DealSettings, HistoryItem, LeadTrace, ProductOption } from "@/lib/dealTypes";
 import { DEAL_KINDS } from "@/lib/dealTypes";
-import { dayMonth, dayMonthTime, relTime, rupiah } from "@/lib/format";
+import { dayMonth, dayMonthTime, pageOf, relTime, rupiah } from "@/lib/format";
 import { formatPhone } from "@/lib/ingest/phone";
 import { NOT_FIT_REASONS } from "@/lib/leadReasons";
 import { STAGE_KEYS, type StageKey, type StageRule } from "@/lib/pipelineTypes";
@@ -680,7 +680,7 @@ function LeadSource({ deal }: { deal: DealDetail }) {
     : tr.utmCampaign
       ? t("prospek.traceCampaign", { name: tr.utmCampaign })
       : tr.landingUrl
-        ? t("prospek.tracePage", { page: tr.landingUrl.replace(/^https?:\/\/(www\.)?/, "") })
+        ? t("prospek.tracePage", { page: pageOf(tr.landingUrl) })
         : null;
   return (
     <div className="min-w-0 rounded-sm bg-paper px-3 py-2.5">
