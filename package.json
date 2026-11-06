@@ -19,6 +19,7 @@
     "jobs:build": "node scripts/build-jobs.mjs",
     "insights:sync": "node --env-file-if-exists=.env.local jobs/insights-sync.js",
     "sweeper:run": "node --env-file-if-exists=.env.local jobs/sweeper.js",
+    "review:pack": "node scripts/review-pack.mjs",
     "ads:codes": "npm run jobs:build --silent && node --env-file-if-exists=.env.local jobs/ad-codes.js"
   },
   "dependencies": {
