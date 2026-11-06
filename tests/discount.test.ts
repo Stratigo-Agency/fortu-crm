@@ -2,7 +2,8 @@ import { randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 import { ForbiddenError } from "@/lib/authz";
 import { sql } from "@/lib/db";
-import { approveDiscount } from "@/lib/discount";
+import { approveDiscount as approveWith } from "@/lib/discount";
+import { linesFingerprint } from "@/lib/linesFingerprint";
 import { saveDeal } from "@/lib/dealSave";
 import type { DealInput } from "@/lib/dealTypes";
 import { createProduct, createUser, randomPhone } from "./fixtures";
@@ -30,6 +31,13 @@ const state = async (id: string) => {
       FROM v_deals_enriched e JOIN deals d ON d.id = e.id WHERE e.id = ${id}`;
   return d;
 };
+const fingerprintOf = async (id: string) => {
+  const [r] = await sql<{ fp: string }[]>`SELECT ${linesFingerprint("d.id")} AS fp FROM deals d WHERE d.id = ${id}`;
+  return r.fp;
+};
+type Actor = { id: string; role: "sales_rep" | "ceo" | "admin" | "sales_lead" | "marketing" };
+/** The CEO approves what is on the screen right now. */
+const approveDiscount = async (actor: Actor, id: string) => approveWith(actor, id, await fingerprintOf(id).catch(() => "none"));
 /** 18% off MSRP 30 jt */
 const OVER = Math.round(MSRP * 0.82);
 
@@ -42,13 +50,13 @@ describe("discount limit and approval", () => {
     const id = await save({ id: rep.id, role: "sales_rep" }, input([{ productId: p.id, qty: 1, unitPrice: OVER }]));
     expect((await state(id)).needs).toBe(true);
 
-    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, id)).toBe(true);
+    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, id)).toBe("approved");
     const after = await state(id);
     expect(after).toMatchObject({ needs: false, by: ceo.id });
     expect(after.at).not.toBeNull();
 
     // nothing left to approve
-    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, id)).toBe(false);
+    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, id)).toBe("nothing");
   });
 
   it("a discount inside the limit never needs approval", async () => {
@@ -87,6 +95,23 @@ describe("discount limit and approval", () => {
     await approveDiscount({ id: admin.id, role: "admin" }, id);
     await save(actor, input([{ productId: q.id, qty: 3, unitPrice: OVER - 1_000_000 }], { id }));
     expect(await state(id)).toMatchObject({ needs: true, by: null });
+  });
+
+  it("approving after the lines were saved again is refused: the CEO approves only what was seen", async () => {
+    const rep = await createUser();
+    const ceo = await createUser({ role: "ceo" });
+    const p = await createProduct({ listPrice: MSRP });
+    await sql`UPDATE products SET max_discount_pct = 15 WHERE id = ${p.id}`;
+    const actor = { id: rep.id, role: "sales_rep" as const };
+    const id = await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER }]));
+    const seen = await fingerprintOf(id); // the CEO opens the deal
+
+    await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER - 2_000_000 }], { id })); // the rep lowers the price
+    expect(await approveWith({ id: ceo.id, role: "ceo" }, id, seen)).toBe("changed");
+    expect(await state(id)).toMatchObject({ needs: true, by: null, at: null });
+
+    // after reloading, the new prices can be approved
+    expect(await approveWith({ id: ceo.id, role: "ceo" }, id, await fingerprintOf(id))).toBe("approved");
   });
 
   it("a rep (or a sales lead, or marketing) cannot approve", async () => {
@@ -131,7 +156,7 @@ describe("discount limit and approval", () => {
 
   it("an unknown deal id is not an error, just nothing to approve", async () => {
     const ceo = await createUser({ role: "ceo" });
-    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, randomUUID())).toBe(false);
+    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, randomUUID())).toBe("nothing");
     await expect(approveDiscount({ id: ceo.id, role: "ceo" }, "not-an-id")).rejects.toBeInstanceOf(ForbiddenError);
   });
 });
@@ -174,6 +199,30 @@ describe("the CEO is told when a deal starts needing approval", () => {
     const mine = (await asked(id)).filter((n) => n.user_id === ceo.id);
     expect(mine).toHaveLength(1);
     expect(mine[0]).toMatchObject({ read_at: null, amount: String(OVER - 500_000) });
+  });
+
+  it("the owner re-prices after the approval: the approval ends and the CEO is asked again, even at a price asked before", async () => {
+    const rep = await createUser();
+    const ceo = await createUser({ role: "ceo" });
+    const p = await createProduct({ listPrice: MSRP });
+    await sql`UPDATE products SET max_discount_pct = 15 WHERE id = ${p.id}`;
+    const actor = { id: rep.id, role: "sales_rep" as const };
+    const id = await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER }]));
+    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, id)).toBe("approved");
+    await sql`UPDATE notifications SET read_at = now() WHERE deal_id = ${id} AND user_id = ${ceo.id}`;
+
+    await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER - 1_000_000 }], { id }));
+    expect(await state(id)).toMatchObject({ needs: true, by: null });
+    let mine = (await asked(id)).filter((n) => n.user_id === ceo.id);
+    expect(mine[0]).toMatchObject({ read_at: null, amount: String(OVER - 1_000_000) });
+
+    // approved again, then back to the first price: the total is one the CEO was told about before
+    expect(await approveDiscount({ id: ceo.id, role: "ceo" }, id)).toBe("approved");
+    await sql`UPDATE notifications SET read_at = now() WHERE deal_id = ${id} AND user_id = ${ceo.id}`;
+    await save(actor, input([{ productId: p.id, qty: 1, unitPrice: OVER }], { id }));
+    mine = (await asked(id)).filter((n) => n.user_id === ceo.id);
+    expect(mine).toHaveLength(1);
+    expect(mine[0]).toMatchObject({ read_at: null, amount: String(OVER) });
   });
 
   it("a discount inside the limit tells nobody", async () => {

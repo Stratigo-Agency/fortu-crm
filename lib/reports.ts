@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { linesFingerprint } from "@/lib/linesFingerprint";
 import type { ReportPeriod } from "@/lib/reportPeriod";
 
 // Numbers for /laporan. Every figure comes from a SQL view (CLAUDE.md rule 5); this file only picks rows.
@@ -29,7 +30,7 @@ export type MonthBar = { month: string; amount: string; units: number };
 export type StageBar = { key: string; name: string; probability: string; deals: number; amount: string; weighted: string };
 export type AttentionRow = {
   dealId: string; name: string; ownerName: string | null; amount: string; reason: "next_step_overdue" | "close_date_passed" | "stale" | "discount";
-  severity: number; nextStep: string | null; daysOverdue: number | null; daysStale: number | null;
+  severity: number; nextStep: string | null; linesFingerprint: string | null; daysOverdue: number | null; daysStale: number | null;
 };
 export type RepRow = {
   userId: string; name: string; openDeals: number; openAmount: string; weighted: string; won: string;
@@ -246,6 +247,7 @@ export async function getAttention(ownerId: string | null, limit: number): Promi
   const rows = await sql<AttentionRow[]>`
     SELECT a.deal_id AS "dealId", a.name, u.full_name AS "ownerName", a.amount::text AS amount, a.reason, a.severity,
            a.next_step AS "nextStep",
+           CASE WHEN a.reason = 'discount' THEN ${linesFingerprint("a.deal_id")} END AS "linesFingerprint",
            CASE WHEN a.reason = 'next_step_overdue' THEN (jakarta_today() - a.next_step_date)::int END AS "daysOverdue",
            CASE WHEN a.reason = 'stale' THEN (jakarta_today() - (a.updated_at AT TIME ZONE 'Asia/Jakarta')::date)::int END AS "daysStale"
       FROM v_attention a LEFT JOIN users u ON u.id = a.owner_user_id

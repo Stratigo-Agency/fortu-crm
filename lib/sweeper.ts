@@ -1,4 +1,5 @@
 import { sql } from "@/lib/db";
+import { linesFingerprint } from "@/lib/linesFingerprint";
 
 // The hourly sweeper: finds deals that need someone's attention and writes one notification per person,
 // kind, deal and Jakarta day (unique index notifications_dedupe, migration 012), so running it every hour
@@ -131,21 +132,24 @@ async function overdueNextSteps(): Promise<number> {
 }
 
 /**
- * A discount above the limit waits for approval: the CEO hears once per price (again if the deal is re-priced).
+ * A discount above the limit waits for approval: the CEO hears once per set of prices (again whenever the lines change).
  * With a deal id only that deal is checked: saveDeal calls it right after a price change, so the CEO need not
  * wait for the next sweep.
  */
 export async function notifyDiscountApprovals(dealId: string | null = null): Promise<number> {
   const rows = await sql`
     INSERT INTO notifications (user_id, kind, deal_id, channel, payload)
-    SELECT u.id, 'discount_approval'::notif_kind, d.id, 'in_app', ${payloadOf("discount_approval", "d.id")}
+    SELECT u.id, 'discount_approval'::notif_kind, d.id, 'in_app',
+           ${payloadOf("discount_approval", "d.id")} || jsonb_build_object('lines_fp', ${linesFingerprint("d.id")})
       FROM v_deals_enriched d
       JOIN v_deal_alert_payload p ON p.deal_id = d.id
       JOIN users u ON u.is_active AND u.role = 'ceo'
      WHERE ${OPEN} AND d.needs_discount_approval AND (${dealId}::uuid IS NULL OR d.id = ${dealId}::uuid)
-       AND NOT EXISTS (SELECT 1 FROM notifications n
-                        WHERE n.kind = 'discount_approval' AND n.deal_id = d.id AND n.user_id = u.id AND n.channel = 'in_app'
-                          AND (n.payload #>> '{deal,amount}')::numeric = d.amount)
+       -- only the latest alert counts: a price that comes back after another price asks the CEO again
+       AND ${linesFingerprint("d.id")} IS DISTINCT FROM
+           (SELECT n.payload ->> 'lines_fp' FROM notifications n
+             WHERE n.kind = 'discount_approval' AND n.deal_id = d.id AND n.user_id = u.id AND n.channel = 'in_app'
+             ORDER BY n.sent_at DESC LIMIT 1)
     -- re-priced the same day: the day's row takes the new price and becomes unread again
     ON CONFLICT (kind, deal_id, user_id, channel, day) WHERE deal_id IS NOT NULL
       DO UPDATE SET payload = EXCLUDED.payload, sent_at = now(), read_at = NULL

@@ -7,7 +7,7 @@ import { t } from "@/lib/copy";
 import { approveDiscountAction } from "./actions";
 
 /** "Setujui diskon" for the CEO and admins: on the deal and in Laporan · Perlu perhatian. */
-export function ApproveDiscountButton({ dealId, dealName }: { dealId: string; dealName?: string }) {
+export function ApproveDiscountButton({ dealId, dealName, fingerprint }: { dealId: string; dealName?: string; fingerprint: string }) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -15,10 +15,13 @@ export function ApproveDiscountButton({ dealId, dealName }: { dealId: string; de
   async function approve() {
     setPending(true);
     setError(null);
-    const r = await approveDiscountAction(dealId);
+    const r = await approveDiscountAction(dealId, fingerprint);
     setPending(false);
     if (r.ok) router.refresh();
-    else setError(r.message);
+    else {
+      setError(r.message);
+      if (r.changed) router.refresh(); // show the prices as they are now
+    }
   }
 
   return (

@@ -60,6 +60,8 @@ export type DealDetail = {
   /** the name shown in "Diskon disetujui …" */
   discountApprovedByName: string | null;
   canEdit: boolean;
+  /** names the saved product lines; the CEO's approval is only valid for the lines it was given for */
+  linesFingerprint: string;
   history: HistoryItem[];
 };
 

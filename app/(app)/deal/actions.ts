@@ -51,15 +51,16 @@ export async function lookupParents(companyName: string): Promise<{ id: string; 
   return parentDeals(text(companyName, 200));
 }
 
-export type ApproveResult = { ok: true } | { ok: false; message: string };
+export type ApproveResult = { ok: true } | { ok: false; message: string; changed?: boolean };
 
 /** The CEO or an admin approves the discount on a deal (Deal panel and Laporan · Perlu perhatian). */
-export async function approveDiscountAction(dealId: string): Promise<ApproveResult> {
+export async function approveDiscountAction(dealId: string, seenFingerprint: string): Promise<ApproveResult> {
   const user = await requireUser();
   try {
-    await approveDiscount(user, text(dealId, 40));
+    const r = await approveDiscount(user, text(dealId, 40), text(seenFingerprint, 64));
+    if (r === "changed") return { ok: false, changed: true, message: t("deal.approveChanged") };
   } catch (err) {
-    if (err instanceof ForbiddenError) return { ok: false, message: t("authz.forbidden") };
+    if (err instanceof ForbiddenError) return { ok: false, message: t("deal.approveForbidden") };
     console.error("approve discount failed", err);
     return { ok: false, message: t("deal.approveFailed") };
   }

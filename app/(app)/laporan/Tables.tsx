@@ -104,7 +104,7 @@ export function Attention({ rows, total, canApprove = false }: { rows: Attention
               </Link>
               {canApprove && a.reason === "discount" && (
                 <div className="pb-3 pl-5">
-                  <ApproveDiscountButton dealId={a.dealId} dealName={a.name} />
+                  <ApproveDiscountButton dealId={a.dealId} dealName={a.name} fingerprint={a.linesFingerprint ?? ""} />
                 </div>
               )}
             </li>

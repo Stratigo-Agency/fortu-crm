@@ -526,7 +526,7 @@ export function DealForm({ deal, products, owners, settings, canReassign, canApp
                   })}
                 </ul>
                 {canApproveDiscount && deal.id && deal.needsDiscountApproval && linesAsSaved && (
-                  <ApproveDiscountButton dealId={deal.id} />
+                  <ApproveDiscountButton dealId={deal.id} fingerprint={deal.linesFingerprint} />
                 )}
                 {approvalHolds && deal.discountApprovedByName && (
                   <p className="text-sm text-slate">{t("deal.discountApproved", { name: deal.discountApprovedByName })}</p>
