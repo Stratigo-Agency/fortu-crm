@@ -79,7 +79,7 @@ railway variables -s web \
 | `WEBFORM_HMAC_SECRET` | checks the signature of leads from the website |
 | `HOSTNAME` | makes the server listen on all addresses so the healthcheck can reach it |
 
-`META_*` and `SMTP_*` belong to the cron services (sections below), not to `web`. Do not set `DATABASE_URL_TEST`, `E2E` or `NEXT_DIST_DIR` here.
+`META_*` and `SMTP_*` belong to the cron services (sections below), not to `web`. Do not set `DATABASE_URL_TEST`, `E2E` or `NEXT_DIST_DIR` here, and on production never `SHOW_SAMPLE_DATA` (staging only, section 7).
 
 Check the list: `railway variables -s web`. Values stay hidden in the dashboard unless you click them.
 
@@ -155,7 +155,15 @@ railway variables -s web --set 'AUTH_SECRET=<a new one from openssl>'
 railway run -s Postgres bash -c 'DATABASE_URL="$DATABASE_PUBLIC_URL" ALLOW_DEMO=1 npm run db:demo'
 ```
 
-Check `railway status` first: it must say environment `staging`. The script also prints `database: <host>/<name>` before it changes anything. It adds 4 demo reps (`@demo.fortu.invalid`), 25 deals and 6 prospects, all marked sample. Running it again resets the demo rows. It stops if the database already holds real deals, prospects, contacts or companies (the team's users are fine). Only if you are sure, add `--allow-real-data` after `npm run db:demo --`.
+Check `railway status` first: it must say environment `staging`. The script also prints `database: <host>/<name>` before it changes anything. It adds 4 demo reps (`@demo.fortu.invalid`), 25 deals (each with the lead it came from: Iklan Meta with an ad code, Website with UTM and landing page, Offline, WhatsApp langsung), 10 more prospects, and 4 demo ads (`Z-` codes) with 14 days of insights. Every row is marked sample (`is_sample`). Running it again resets the demo rows. It stops if the database already holds real deals, prospects, contacts or companies (the team's users are fine). Only if you are sure, add `--allow-real-data` after `npm run db:demo --`.
+
+**Demo rows and the figures.** Because they are `is_sample`, demo leads are left out of the Lead dan funnel figures on Laporan, the Prospek list and its figures, and the leads count on the ads screen. On production that never changes. To see them on staging, set this on the staging `web` service only and redeploy:
+
+```bash
+railway variables -s web --set 'SHOW_SAMPLE_DATA=1'    # staging only
+```
+
+The app then opens its database connections with `app.show_sample_data = on` (migration 019), and those figures include the demo rows. It is off unless the value is exactly `1`. Never set it on production; `railway variables -s web` should not list it there. Deals, Pipeline and the other Laporan figures always show demo deals.
 
 Remove it (safe on any database, it only touches rows marked sample):
 
