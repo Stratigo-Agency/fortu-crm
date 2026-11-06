@@ -22,7 +22,7 @@ railway add --database postgres          # the Postgres service, named "Postgres
 Add the app from GitHub, in the dashboard (the CLI cannot authorise GitHub for you):
 
 1. Project → **New** → **GitHub Repo** → `Stratigo-Agency/fortu-crm`. Name the service `web`.
-2. `web` → Settings → Source: branch `main`. Turn on **Wait for CI** if the repo has checks.
+2. `web` → Settings → Source: branch `main`.
 3. `railway.json` in the repo already sets the build (`npm run build`), the migration step before each deploy (`npm run db:migrate`), the start command (`npm start`) and the healthcheck (`/api/health`). Nothing to type in Settings.
 4. `web` → Settings → Networking → **Generate Domain**. Write the address down: `https://<name>.up.railway.app`. This is `AUTH_URL`.
 
@@ -155,7 +155,7 @@ railway variables -s web --set 'AUTH_SECRET=<a new one from openssl>'
 railway run -s Postgres bash -c 'DATABASE_URL="$DATABASE_PUBLIC_URL" ALLOW_DEMO=1 npm run db:demo'
 ```
 
-Check `railway status` first: it must say environment `staging`. The script also prints `database: <host>/<name>` before it changes anything. It adds 4 demo reps (`@demo.fortu.invalid`), 25 deals and 6 prospects, all marked sample. Running it again resets the demo rows.
+Check `railway status` first: it must say environment `staging`. The script also prints `database: <host>/<name>` before it changes anything. It adds 4 demo reps (`@demo.fortu.invalid`), 25 deals and 6 prospects, all marked sample. Running it again resets the demo rows. It stops if the database already holds real deals, prospects, contacts or companies (the team's users are fine). Only if you are sure, add `--allow-real-data` after `npm run db:demo --`.
 
 Remove it (safe on any database, it only touches rows marked sample):
 
@@ -163,7 +163,7 @@ Remove it (safe on any database, it only touches rows marked sample):
 railway run -s Postgres bash -c 'DATABASE_URL="$DATABASE_PUBLIC_URL" npm run db:demo:clear'
 ```
 
-**Never run `db:demo` against production.** The script refuses without `ALLOW_DEMO=1`, so do not put that variable in a Railway service or in `.env.local`.
+**Never run `db:demo` against production.** The script refuses without `ALLOW_DEMO=1` and on a database with real data, so do not put that variable in a Railway service or in `.env.local`.
 
 ## 8. Roll back
 

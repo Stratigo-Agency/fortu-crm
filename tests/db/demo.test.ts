@@ -53,6 +53,13 @@ describe("demo data", () => {
     expect((await counts()).deals).toBe(0);
   });
 
+  it("refuses to load into a database that holds real data, unless told", async () => {
+    await sql`INSERT INTO companies (name) VALUES ('Perusahaan asli')`;
+    await expect(runDemo("load", { url: target.href, allow: true, log: quiet })).rejects.toThrow(/already holds real data/);
+    expect((await counts()).deals).toBe(0);
+    await sql`DELETE FROM companies WHERE name = 'Perusahaan asli'`;
+  });
+
   it("loads 25 deals across all stages, marked as sample, and can be re-run", async () => {
     await runDemo("load", { url: target.href, allow: true, log: quiet });
     await runDemo("load", { url: target.href, allow: true, log: quiet });
@@ -70,6 +77,18 @@ describe("demo data", () => {
     expect(sum("stale")).toBeGreaterThanOrEqual(3);
     expect(sum("project")).toBeGreaterThanOrEqual(2);
     expect(sum("discount")).toBe(1);
+  });
+
+  it("says what blocks the clean-up when a real deal uses a demo rep, and changes nothing", async () => {
+    const [{ id: demoRep }] = await sql`SELECT id FROM users WHERE email = 'rina@demo.fortu.invalid'`;
+    const [{ id: realContact }] = await sql`INSERT INTO contacts (phone_e164, full_name) VALUES ('+628111000999', 'Kontak asli') RETURNING id`;
+    const [{ id: realDeal }] = await sql`
+      INSERT INTO deals (name, contact_id, owner_user_id, stage_id, next_step, next_step_date)
+      SELECT 'Deal asli', ${realContact}, ${demoRep}, id, 'Telepon', jakarta_today() + 3 FROM pipeline_stages WHERE key = 'chat' RETURNING id`;
+    await expect(runDemo("clear", { url: target.href, allow: false, log: quiet })).rejects.toThrow(/real rows still use it/);
+    expect((await counts()).sample_deals).toBe(25);
+    await sql`DELETE FROM deals WHERE id = ${realDeal}`;
+    await sql`DELETE FROM contacts WHERE id = ${realContact}`;
   });
 
   it("clears everything it made and nothing else", async () => {
