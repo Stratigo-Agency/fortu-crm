@@ -10,6 +10,7 @@ try {
 
 // E2E_PORT and E2E_DB let a second checkout run its own copy at the same time (the database name must end in _test).
 const PORT = Number(process.env.E2E_PORT ?? 3100);
+process.env.E2E_BASE = `http://localhost:${PORT}`;
 const base = process.env.DATABASE_URL_TEST;
 if (!base) throw new Error("DATABASE_URL_TEST is not set (copy .env.example to .env.local)");
 const dbUrl = new URL(base);

@@ -28,6 +28,7 @@ const MIGRATIONS = [
   "011_reports_full.sql",
   "012_notification_dedupe.sql",
   "013_discount_notifications.sql",
+  "014_stock_cover.sql",
   "015_report_indexes.sql",
 ];
 

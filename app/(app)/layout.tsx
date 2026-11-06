@@ -3,7 +3,7 @@ import { requireUser } from "@/lib/authz";
 import { t } from "@/lib/copy";
 import { getSalesFilter, salesOptions } from "@/lib/salesFilter";
 import { unreadCount } from "@/lib/notifications";
-import { canOpenSettings, newLeadCount } from "@/lib/shell";
+import { canOpenSettings, canOpenStock, newLeadCount } from "@/lib/shell";
 import { NotificationBell } from "./NotificationBell";
 import { HideOnPhone } from "./HideOnPhone";
 import { SalesFilter } from "./SalesFilter";
@@ -20,6 +20,7 @@ async function Shell() {
     { href: "/kontak", label: t("nav.kontak"), icon: "kontak" },
     { href: "/perusahaan", label: t("nav.perusahaan"), icon: "perusahaan" },
     { href: "/laporan", label: t("nav.laporan"), icon: "laporan" },
+    ...(canOpenStock(user) ? [{ href: "/stok", label: t("nav.stok"), icon: "stok" as const }] : []),
   ];
   const bottomItems: NavItem[] = [
     ...(canOpenSettings(user) ? [{ href: "/pengaturan", label: t("nav.pengaturan"), icon: "pengaturan" as const, also: ["/pengaturan/iklan"] }] : []),

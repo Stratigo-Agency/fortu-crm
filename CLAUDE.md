@@ -32,7 +32,7 @@ lib/db.ts  lib/auth.ts  lib/authz.ts  lib/copy.ts  lib/format.ts  lib/stageRules
 lib/ingest/{ingestLead,phone,codes,owner}.ts
 lib/sweeper.ts lib/mail.ts lib/notifications.ts   reminders to the deal owner only (no CEO alerts): rules, SMTP digests, the bell
 jobs/{insights-sync,sweeper}.ts                    Railway cron jobs (compiled to jobs/*.js)
-db/migrations/001_init.sql … 012_notification_dedupe.sql
+db/migrations/001_init.sql … 015_report_indexes.sql
 db/seeds/seed_products.sql
 messages/id.json                          ALL user-facing text
 public/brand/                             logos

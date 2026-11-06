@@ -5,6 +5,7 @@ import { t } from "@/lib/copy";
 import { dayMonth } from "@/lib/format";
 import { parsePeriod } from "@/lib/reportPeriod";
 import { getReport } from "@/lib/reports";
+import { canOpenStock } from "@/lib/shell";
 import { getSalesFilter } from "@/lib/salesFilter";
 import { CloseChart, DoneChart, StageChart } from "./Charts";
 import { Kpis } from "./Kpis";
@@ -65,7 +66,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
         <div className="md:col-span-2 xl:col-span-1"><DemoLostCard demo={report.demo} reasons={report.lostReasons} /></div>
       </div>
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
-        <SkuTable rows={report.skus} />
+        <SkuTable rows={report.skus} canOpenStock={canOpenStock(user)} />
         <SourcesTable rows={report.sources} />
       </div>
       </div>

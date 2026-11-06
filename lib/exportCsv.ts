@@ -1,5 +1,6 @@
 import { sql } from "@/lib/db";
 import { formatPhone } from "@/lib/ingest/phone";
+import { type StockFilter, stockRows } from "@/lib/stock";
 
 // CSV for Excel and Numbers: UTF-8 with a BOM, ";" between columns (Indonesian Excel's default),
 // Rupiah and counts as plain integers (no "Rp", no dots) so they stay numbers, dates as YYYY-MM-DD.
@@ -55,5 +56,16 @@ export async function contactsCsv(): Promise<string> {
     ["id", "nama", "jabatan", "email", "no_whatsapp", "perusahaan", "sumber", "sales", "chat_pertama", "chat_terakhir", "deal_berjalan", "perlu_followup"],
     rows.map((r) => [r.id as string, r.full_name as string, r.job_title as string, r.email as string, phone(r.phone_e164), r.company_name as string,
       r.source as string, r.owner_name as string, day(r.first_chat), day(r.last_chat), int(r.open_deals), r.needs_followup ? "ya" : "tidak"]),
+  );
+}
+
+/** Stok & Permintaan with the same filters as the screen; numbers stay numbers (decimals use a dot, like the other files). */
+export async function stockCsv(filter: StockFilter): Promise<string> {
+  const rows = await stockRows(filter);
+  const num = (v: string | null) => (v === null ? null : Number(v));
+  return toCsv(
+    ["sku", "nama", "lini", "terjual_per_bulan", "unit_di_pipeline", "perkiraan_unit", "di_tahap_po", "stok", "stok_per", "po_terbuka", "bulan_cakupan", "berisiko"],
+    rows.map((r) => [r.sku, r.name, r.productLine, num(r.soldPerMonth), r.unitsInPipeline, num(r.weightedUnits), r.unitsAtPo, r.stock, r.stockDate, r.openPo, num(r.coverMonths),
+      r.atRisk ? "ya" : "tidak"]),
   );
 }
