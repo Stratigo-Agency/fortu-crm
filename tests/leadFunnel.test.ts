@@ -7,7 +7,7 @@ import { listProspects, prospekStats } from "@/lib/prospek";
 import { addLineItem, createAd, createDeal, createLead, createUser, freeAdCode } from "./fixtures";
 
 // Lead dan funnel (migration 016): every figure is checked against numbers counted by hand.
-// Each test uses its own month in 2019 (or its own rep), so the shared test database doesn't interfere.
+// Each test uses its own month in 2018 (or its own rep); reviewPack.test.ts owns March 2019 for all reps.
 
 type Stage = "chat" | "quotation" | "negotiation" | "po" | "done" | "lost";
 
@@ -43,12 +43,12 @@ async function makeStale(dealId: string) {
 const at = (day: string, time = "03:00:00") => `${day}T${time}Z`; // 10:00 in Jakarta
 const stepOf = (f: LeadFunnel, step: string) => f.steps.find((s) => s.step === step);
 
-describe("lead_funnel: March 2019, counted by hand", () => {
+describe("lead_funnel: March 2018, counted by hand", () => {
   it("counts leads, stopped and running per step and source group, and the leads counted apart", async () => {
     const rep = await createUser();
     const other = await createUser();
     const L = (source: string, o: { status?: string; receivedAt?: string } = {}) =>
-      createLead(rep.id, { source, status: o.status ?? "new", receivedAt: o.receivedAt ?? at("2019-03-10") });
+      createLead(rep.id, { source, status: o.status ?? "new", receivedAt: o.receivedAt ?? at("2018-03-10") });
 
     // Iklan Meta (7)
     await L("meta_ctwa"); // 1 new, not handled, old → stopped before Ditangani
@@ -65,8 +65,8 @@ describe("lead_funnel: March 2019, counted by hand", () => {
     // Offline (1)
     await dealFrom((await L("walk_in")).id, rep.id, ["done"]); // 10 straight to Done deal
     // Jakarta boundary: 1 March 00:30 in Jakarta counts, 1 April 00:30 does not
-    await L("other", { receivedAt: "2019-02-28T17:30:00Z" }); // 11
-    await L("other", { receivedAt: "2019-03-31T17:30:00Z" });
+    await L("other", { receivedAt: "2018-02-28T17:30:00Z" }); // 11
+    await L("other", { receivedAt: "2018-03-31T17:30:00Z" });
     // WhatsApp langsung (2): spam is a lead, but not part of Ditangani → Jadi deal; a budget no is a stop
     const spam = await L("whatsapp_direct");
     await sql`UPDATE leads SET status = 'disqualified', disqualify_reason = 'not_buyer' WHERE id = ${spam.id}`; // 12
@@ -74,22 +74,22 @@ describe("lead_funnel: March 2019, counted by hand", () => {
     await sql`UPDATE leads SET status = 'disqualified', disqualify_reason = 'budget' WHERE id = ${budget.id}`; // 13
     // Chat lanjutan: the contact already had an open deal (made 1 March) when this chat came in on 12 March
     const running = await createDeal(rep.id);
-    await sql`UPDATE deals SET created_at = ${at("2019-03-01")} WHERE id = ${running.id}`;
-    await sql`UPDATE deal_stage_history SET changed_at = ${at("2019-03-01")} WHERE deal_id = ${running.id}`;
-    const again = await L("whatsapp_direct", { receivedAt: at("2019-03-12") });
+    await sql`UPDATE deals SET created_at = ${at("2018-03-01")} WHERE id = ${running.id}`;
+    await sql`UPDATE deal_stage_history SET changed_at = ${at("2018-03-01")} WHERE deal_id = ${running.id}`;
+    const again = await L("whatsapp_direct", { receivedAt: at("2018-03-12") });
     await sql`UPDATE leads SET contact_id = (SELECT contact_id FROM deals WHERE id = ${running.id}) WHERE id = ${again.id}`;
     // A repeat order without a lead: made and paid in March
     const repeat = await createDeal(rep.id);
     await move(repeat.id, "done");
-    await sql`UPDATE deals SET created_at = ${at("2019-03-18")}, closed_on = '2019-03-20' WHERE id = ${repeat.id}`;
+    await sql`UPDATE deals SET created_at = ${at("2018-03-18")}, closed_on = '2018-03-20' WHERE id = ${repeat.id}`;
     // a sample lead with a Done deal never counts
     const sample = await L("meta_ctwa");
     await dealFrom(sample.id, rep.id, ["done"]);
     await sql`UPDATE leads SET is_sample = true WHERE id = ${sample.id}`;
     // another rep's lead
-    await createLead(other.id, { source: "whatsapp_direct", status: "contacted", receivedAt: at("2019-03-15") });
+    await createLead(other.id, { source: "whatsapp_direct", status: "contacted", receivedAt: at("2018-03-15") });
 
-    const f = await leadFunnelRange(rep.id, "2019-03-01", "2019-03-31");
+    const f = await leadFunnelRange(rep.id, "2018-03-01", "2018-03-31");
     expect(f.total).toMatchObject({
       leads: 13, handled: 11, deals: 7, quotation: 5, negotiation: 4, po: 3, done: 2, lost: 3, unhandled: 2,
       notBuyer: 1, reentry: 1,
@@ -122,7 +122,7 @@ describe("lead_funnel: March 2019, counted by hand", () => {
     // with a lower threshold, Ditangani → Jadi deal (3 stopped, 70%) is named; at 2 it still beats Ditangani (85%)
     await sql`UPDATE app_settings SET value = '3' WHERE key = 'funnel_min_entering'`;
     try {
-      const low = await leadFunnelRange(rep.id, "2019-03-01", "2019-03-31");
+      const low = await leadFunnelRange(rep.id, "2018-03-01", "2018-03-31");
       expect(low.total).toMatchObject({ status: "found", bottleneck: { steps: ["deal"], pct: 70 } });
       expect(stepOf(low, "deal")).toMatchObject({ enoughData: true, isBottleneck: true });
       expect(stepOf(low, "handled")).toMatchObject({ enoughData: false, isBottleneck: false });
@@ -131,10 +131,10 @@ describe("lead_funnel: March 2019, counted by hand", () => {
     }
 
     // All sales: the other rep's WhatsApp lead is in, sample rows are still out
-    const all = await leadFunnelRange(null, "2019-03-01", "2019-03-31");
+    const all = await leadFunnelRange(null, "2018-03-01", "2018-03-31");
     expect(all.total).toMatchObject({ leads: 14, handled: 12, deals: 7, done: 2 });
     // the other rep sees only their own lead
-    expect((await leadFunnelRange(other.id, "2019-03-01", "2019-03-31")).total).toMatchObject({ leads: 1, deals: 0 });
+    expect((await leadFunnelRange(other.id, "2018-03-01", "2018-03-31")).total).toMatchObject({ leads: 1, deals: 0 });
   });
 });
 
@@ -143,21 +143,21 @@ describe("lead_funnel: stopped or still running", () => {
     const rep = await createUser();
     const deals: string[] = [];
     for (let i = 0; i < 5; i++) {
-      const l = await createLead(rep.id, { source: "event", receivedAt: at("2019-05-05") });
+      const l = await createLead(rep.id, { source: "event", receivedAt: at("2018-05-05") });
       deals.push(await dealFrom(l.id, rep.id, ["quotation"]));
     }
-    let f = await leadFunnelRange(rep.id, "2019-05-01", "2019-05-31");
+    let f = await leadFunnelRange(rep.id, "2018-05-01", "2018-05-31");
     expect(stepOf(f, "negotiation")).toMatchObject({ entered: 5, passed: 0, stopped: 0, running: 5, pct: null, isBottleneck: false });
     expect(f.total).toMatchObject({ status: "none", bottleneck: null });
 
     for (const d of deals.slice(0, 4)) await makeStale(d);
-    f = await leadFunnelRange(rep.id, "2019-05-01", "2019-05-31");
+    f = await leadFunnelRange(rep.id, "2018-05-01", "2018-05-31");
     // 4 stopped: some stopped, too few to judge
     expect(stepOf(f, "negotiation")).toMatchObject({ stopped: 4, running: 1, pct: 0 });
     expect(f.total).toMatchObject({ status: "insufficient", bottleneck: null });
 
     await makeStale(deals[4]);
-    f = await leadFunnelRange(rep.id, "2019-05-01", "2019-05-31");
+    f = await leadFunnelRange(rep.id, "2018-05-01", "2018-05-31");
     expect(f.total).toMatchObject({ status: "found", bottleneck: { steps: ["negotiation"], pct: 0 } });
     expect(f.groups.find((g) => g.group === "offline")).toMatchObject({ status: "found", bottleneck: { steps: ["negotiation"] } });
   });
@@ -174,29 +174,29 @@ describe("lead_funnel: stopped or still running", () => {
   it("names every step tied for the lowest conversion", async () => {
     const rep = await createUser();
     // 20 leads: 10 never handled (stopped), 10 handled; 5 of those became a deal, 5 stopped → 50% and 50%
-    for (let i = 0; i < 10; i++) await createLead(rep.id, { source: "tender", receivedAt: at("2019-07-03") });
+    for (let i = 0; i < 10; i++) await createLead(rep.id, { source: "tender", receivedAt: at("2018-07-03") });
     for (let i = 0; i < 10; i++) {
-      const l = await createLead(rep.id, { source: "tender", status: "contacted", receivedAt: at("2019-07-03") });
+      const l = await createLead(rep.id, { source: "tender", status: "contacted", receivedAt: at("2018-07-03") });
       if (i < 5) await dealFrom(l.id, rep.id);
     }
-    const f = await leadFunnelRange(rep.id, "2019-07-01", "2019-07-31");
+    const f = await leadFunnelRange(rep.id, "2018-07-01", "2018-07-31");
     expect(f.total).toMatchObject({ leads: 20, handled: 10, deals: 5, status: "found", bottleneck: { steps: ["handled", "deal"], pct: 50 } });
     expect(f.steps.filter((s) => s.isBottleneck).map((s) => s.step)).toEqual(["handled", "deal"]);
   });
 
   it("follows a deal moved back: Negotiation → Quotation has passed Quotation, Done → PO reopened is not Done", async () => {
     const rep = await createUser();
-    const back = await createLead(rep.id, { source: "referral", receivedAt: at("2019-08-02") });
+    const back = await createLead(rep.id, { source: "referral", receivedAt: at("2018-08-02") });
     await dealFrom(back.id, rep.id, ["quotation", "negotiation", "quotation"]);
-    const reopened = await createLead(rep.id, { source: "referral", receivedAt: at("2019-08-02") });
+    const reopened = await createLead(rep.id, { source: "referral", receivedAt: at("2018-08-02") });
     const d = await dealFrom(reopened.id, rep.id, ["quotation", "negotiation", "po", "done", "po"]);
-    let f = await leadFunnelRange(rep.id, "2019-08-01", "2019-08-31");
+    let f = await leadFunnelRange(rep.id, "2018-08-01", "2018-08-31");
     expect(f.total).toMatchObject({ leads: 2, deals: 2, quotation: 2, negotiation: 2, po: 1, done: 0, lost: 0 });
     // both open and changed today: still running at Negotiation → PO and PO → Done deal
     expect(stepOf(f, "po")).toMatchObject({ entered: 2, passed: 1, stopped: 0, running: 1 });
     expect(stepOf(f, "done")).toMatchObject({ entered: 1, passed: 0, stopped: 0, running: 1 });
     await makeStale(d);
-    f = await leadFunnelRange(rep.id, "2019-08-01", "2019-08-31");
+    f = await leadFunnelRange(rep.id, "2018-08-01", "2018-08-31");
     expect(stepOf(f, "done")).toMatchObject({ stopped: 1, running: 0, pct: 0 });
   });
 });
@@ -206,22 +206,22 @@ describe("lead_funnel: owner", () => {
     const a = await createUser();
     const b = await createUser();
     // handed over: the lead was A's, the deal now belongs to B
-    const handed = await createLead(a.id, { source: "walk_in", receivedAt: at("2019-09-04") });
+    const handed = await createLead(a.id, { source: "walk_in", receivedAt: at("2018-09-04") });
     const d = await dealFrom(handed.id, a.id);
     await sql`UPDATE deals SET owner_user_id = ${b.id} WHERE id = ${d}`;
     // unowned lead whose deal is A's
-    const unowned = await createLead(null, { source: "walk_in", receivedAt: at("2019-09-04") });
+    const unowned = await createLead(null, { source: "walk_in", receivedAt: at("2018-09-04") });
     await dealFrom(unowned.id, a.id);
     // unowned lead, no deal
-    await createLead(null, { source: "walk_in", receivedAt: at("2019-09-04") });
+    await createLead(null, { source: "walk_in", receivedAt: at("2018-09-04") });
 
-    expect((await leadFunnelRange(a.id, "2019-09-01", "2019-09-30")).total).toMatchObject({ leads: 1, deals: 1 });
-    expect((await leadFunnelRange(b.id, "2019-09-01", "2019-09-30")).total).toMatchObject({ leads: 1, deals: 1 });
+    expect((await leadFunnelRange(a.id, "2018-09-01", "2018-09-30")).total).toMatchObject({ leads: 1, deals: 1 });
+    expect((await leadFunnelRange(b.id, "2018-09-01", "2018-09-30")).total).toMatchObject({ leads: 1, deals: 1 });
     const owners = await sql<{ lead_id: string; owner_user_id: string }[]>`
-      SELECT lead_id, owner_user_id FROM lead_funnel_cohort('2019-09-01', '2019-09-30')
+      SELECT lead_id, owner_user_id FROM lead_funnel_cohort('2018-09-01', '2018-09-30')
        WHERE lead_id IN (${handed.id}, ${unowned.id})`;
     expect(Object.fromEntries(owners.map((o) => [o.lead_id, o.owner_user_id]))).toEqual({ [handed.id]: b.id, [unowned.id]: a.id });
-    const all = await leadFunnelRange(null, "2019-09-01", "2019-09-30");
+    const all = await leadFunnelRange(null, "2018-09-01", "2018-09-30");
     expect(all.groups.find((g) => g.group === "offline")?.leads).toBeGreaterThanOrEqual(3);
   });
 });
@@ -229,8 +229,8 @@ describe("lead_funnel: owner", () => {
 describe("lead_funnel: usual days", () => {
   it("gives the median days in each stage from completed stays in that same stage", async () => {
     const rep = await createUser();
-    const a = await createLead(rep.id, { source: "tender", receivedAt: at("2019-06-01") });
-    const b = await createLead(rep.id, { source: "tender", receivedAt: at("2019-06-01") });
+    const a = await createLead(rep.id, { source: "tender", receivedAt: at("2018-06-01") });
+    const b = await createLead(rep.id, { source: "tender", receivedAt: at("2018-06-01") });
     const da = await dealFrom(a.id, rep.id, ["quotation", "negotiation"]);
     const db = await dealFrom(b.id, rep.id, ["quotation"]);
     // a: Chat masuk 2 days, Quotation 1 day, still in Negotiation
@@ -238,13 +238,13 @@ describe("lead_funnel: usual days", () => {
     const setAt = (deal: string, stage: string, day: string) => sql`
       UPDATE deal_stage_history SET changed_at = ${at(day)}
        WHERE deal_id = ${deal} AND to_stage_id = (SELECT id FROM pipeline_stages WHERE key = ${stage})`;
-    await setAt(da, "chat", "2019-06-02");
-    await setAt(da, "quotation", "2019-06-04");
-    await setAt(da, "negotiation", "2019-06-05");
-    await setAt(db, "chat", "2019-06-04");
-    await setAt(db, "quotation", "2019-06-08");
+    await setAt(da, "chat", "2018-06-02");
+    await setAt(da, "quotation", "2018-06-04");
+    await setAt(da, "negotiation", "2018-06-05");
+    await setAt(db, "chat", "2018-06-04");
+    await setAt(db, "quotation", "2018-06-08");
 
-    const f = await leadFunnelRange(rep.id, "2019-06-01", "2019-06-30");
+    const f = await leadFunnelRange(rep.id, "2018-06-01", "2018-06-30");
     const days = Object.fromEntries(f.steps.map((s) => [s.step, s.medianDays]));
     // Jadi deal = days in Chat masuk (2 and 4), Quotation = days in Quotation (1; b is still there)
     expect(days).toEqual({ handled: null, deal: 3, quotation: 1, negotiation: null, po: null, done: null });
