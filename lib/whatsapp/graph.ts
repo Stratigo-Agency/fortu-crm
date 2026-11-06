@@ -13,7 +13,7 @@ export class GraphError extends Error {
 }
 
 type Options = {
-  method?: "GET" | "POST";
+  method?: "GET" | "POST" | "DELETE";
   token?: string;
   query?: Record<string, string>;
   body?: Record<string, unknown>;

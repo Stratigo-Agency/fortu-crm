@@ -12,7 +12,7 @@ import { ConnectWhatsApp } from "./ConnectWhatsApp";
 import { LineTextForm, RevokeForm } from "./LineControls";
 
 // Pengaturan › WhatsApp (admin, ceo): the reps' numbers connected to the CRM (Coexistence) and the button that
-// connects one more. docs/whatsapp-coexistence.md explains it for the team.
+// connects one more. docs/whatsapp-coexistence.md explains it for the team (linked from nowhere in the UI).
 
 export default function Page() {
   return (
@@ -41,7 +41,7 @@ async function WhatsApp() {
 
   return (
     <>
-      <PageHeader title={t("whatsapp.title")} meta={t("whatsapp.guide")} />
+      <PageHeader title={t("whatsapp.title")} />
       <div className="flex flex-col gap-4 px-4 py-5 md:px-6">
         <section aria-labelledby="wa-lines-h" className="rounded-lg bg-white p-5 shadow-card">
           <h2 id="wa-lines-h" className="text-base font-semibold text-ink">{t("whatsapp.linesTitle")}</h2>
@@ -75,7 +75,10 @@ async function WhatsApp() {
                         {l.consentAt ? t("whatsapp.consentBy", { name: l.consentBy ?? "", date: dayMonth(l.consentAt) }) : <span className="text-faint">{t("whatsapp.noConsent")}</span>}
                       </td>
                       <td className="px-3 py-3 text-slate">{l.lastEventAt ? relTime(l.lastEventAt) : t("whatsapp.never")}</td>
-                      <td className="px-3 py-3"><LineTextForm lineId={l.id} storeText={l.storeText} label={l.label} /></td>
+                      <td className="px-3 py-3">
+                        {/* message text needs consent: after a withdrawal or a reconnect it starts off again */}
+                        {l.consentAt ? <LineTextForm lineId={l.id} storeText={l.storeText} label={l.label} /> : <span className="text-faint">{"—"}</span>}
+                      </td>
                       <td className="px-3 py-3">{l.consentAt && <RevokeForm lineId={l.id} />}</td>
                     </tr>
                   ))}
@@ -87,7 +90,6 @@ async function WhatsApp() {
 
         <section aria-labelledby="wa-connect-h" className="rounded-lg bg-white p-5 shadow-card">
           <h2 id="wa-connect-h" className="text-base font-semibold text-ink">{t("whatsapp.connectTitle")}</h2>
-          <p className="mt-1 text-sm text-slate">{t("whatsapp.connectHint")}</p>
           <div className="mt-4">
             {configured ? (
               <ConnectWhatsApp

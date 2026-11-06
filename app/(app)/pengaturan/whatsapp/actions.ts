@@ -15,11 +15,11 @@ export async function saveLineTextAction(_prev: SaveResult, form: FormData) {
   return runSave(form, (u, f) => saveLineText(u, f));
 }
 
-/** The rep withdrew consent. */
+/** The rep withdrew consent: unsubscribed at Meta, switched off here, kept text deleted. */
 export async function revokeConsentAction(_prev: SaveResult, form: FormData) {
   return runSave(form, async (u, f) => {
-    await revokeConsent(u, f);
-    return t("whatsapp.revoked");
+    const r = await revokeConsent(u, f);
+    return t(r.unsubscribed ? "whatsapp.revoked" : "whatsapp.revokedMetaDown");
   });
 }
 
@@ -49,7 +49,7 @@ export async function connectWhatsAppAction(input: ConnectInput): Promise<Connec
     if (err instanceof WhatsAppSetupError) return { ok: false, message: t(`whatsapp.err.${err.key}`) };
     if (err instanceof GraphError) {
       console.warn("whatsapp onboarding: Meta refused", { step: err.step, status: err.status, code: err.code });
-      return { ok: false, message: t("whatsapp.err.meta", { step: err.step }) };
+      return { ok: false, message: t("whatsapp.err.meta") };
     }
     console.error("whatsapp onboarding failed", err instanceof Error ? err.name : "unknown");
     return { ok: false, message: t("errors.generic") };

@@ -53,8 +53,10 @@ test.describe("the CEO", () => {
     await expect(lines.getByText("Tersambung ke CRM")).toBeVisible();
     await expect(lines.getByText(/^Rep E2E, /)).toBeVisible();
     await expect(lines.getByRole("button", { name: "Cabut izin" })).toBeVisible();
-    // the e2e server has no Meta app: a short note instead of the button
-    await expect(page.getByRole("note")).toContainText("META_APP_ID");
+    await expect(lines.getByText("Nomor dilepas dari CRM. Isi pesan yang tersimpan dihapus.")).toBeVisible();
+    // the e2e server has no Meta app: a short note for the CEO instead of the button, without setting names
+    await expect(page.getByRole("note")).toHaveText("Pengaturan Meta belum lengkap. Hubungi admin.");
+    await expect(page.locator("main")).not.toContainText(/META_|docs\//);
 
     const res = await page.request.get("/pengaturan/whatsapp");
     expect(res.headers()["content-security-policy"]).toContain("https://connect.facebook.net");

@@ -5,6 +5,7 @@ import { InvalidPhoneError } from "@/lib/ingest/errors";
 import { normalizePhone } from "@/lib/ingest/phone";
 import { graph, GraphError } from "./graph";
 import { seal } from "./secretBox";
+import { clearLineText } from "./texts";
 
 // After Embedded Signup (Coexistence) in Pengaturan › WhatsApp: everything server to server.
 // https://developers.facebook.com/docs/whatsapp/embedded-signup/onboarding-customers-as-a-tech-provider
@@ -91,21 +92,26 @@ export async function connectLine(actor: { id: string; role: Role }, input: Conn
   }
 
   // 3. The line, with who agreed. Saved before the calls below, so the first webhooks find it.
+  // A reconnect is a fresh start: the new consent replaces the old one, message text is off again and whatever was
+  // kept under the old consent is deleted.
   const label = `No_${owner.full_name.split(" ")[0]}`;
-  let lineId: string;
+  let lineId = "";
   try {
-    [{ id: lineId }] = await sql<{ id: string }[]>`
-      INSERT INTO wa_lines (user_id, phone_e164, label, mode, meta_waba_id, meta_phone_number_id, connected_at,
-                            consent_at, consent_by, consent_recorded_by, meta_business_token_enc)
-      VALUES (${owner.id}, ${phone}, ${label}, 'coexistence', ${wabaId}, ${number.id}, now(),
-              now(), ${consentBy}, ${actor.id}, ${seal(token)})
-      ON CONFLICT (phone_e164) DO UPDATE
-         SET user_id = EXCLUDED.user_id, mode = 'coexistence', meta_waba_id = EXCLUDED.meta_waba_id,
-             meta_phone_number_id = EXCLUDED.meta_phone_number_id, connected_at = now(), is_active = true,
-             consent_at = now(), consent_by = EXCLUDED.consent_by, consent_recorded_by = EXCLUDED.consent_recorded_by,
-             meta_business_token_enc = EXCLUDED.meta_business_token_enc,
-             contacts_sync_request_id = NULL, history_sync_request_id = NULL
-      RETURNING id`;
+    await sql.begin(async (tx) => {
+      [{ id: lineId }] = await tx<{ id: string }[]>`
+        INSERT INTO wa_lines (user_id, phone_e164, label, mode, meta_waba_id, meta_phone_number_id, connected_at,
+                              consent_at, consent_by, consent_recorded_by, meta_business_token_enc)
+        VALUES (${owner.id}, ${phone}, ${label}, 'coexistence', ${wabaId}, ${number.id}, now(),
+                now(), ${consentBy}, ${actor.id}, ${seal(token)})
+        ON CONFLICT (phone_e164) DO UPDATE
+           SET user_id = EXCLUDED.user_id, mode = 'coexistence', meta_waba_id = EXCLUDED.meta_waba_id,
+               meta_phone_number_id = EXCLUDED.meta_phone_number_id, connected_at = now(), is_active = true,
+               consent_at = now(), consent_by = EXCLUDED.consent_by, consent_recorded_by = EXCLUDED.consent_recorded_by,
+               store_message_text = false, meta_business_token_enc = EXCLUDED.meta_business_token_enc,
+               contacts_sync_request_id = NULL, history_sync_request_id = NULL
+        RETURNING id`;
+      await clearLineText(tx, lineId);
+    });
   } catch (err) {
     // the Meta number id already belongs to another line
     if ((err as { code?: string }).code === "23505") throw new WhatsAppSetupError("taken");

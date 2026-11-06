@@ -21,12 +21,15 @@ export function LineTextForm({ lineId, storeText, label }: { lineId: string; sto
   );
 }
 
+/** Withdraw consent; the line under the button says what happens. */
 export function RevokeForm({ lineId }: { lineId: string }) {
   const [result, action, pending] = useActionState(revokeConsentAction, null);
+  const hintId = `revoke-hint-${lineId}`;
   return (
-    <form action={action} className="flex flex-wrap items-center gap-2">
+    <form action={action} className="flex max-w-60 flex-col items-start gap-1.5">
       <input type="hidden" name="lineId" value={lineId} />
-      <button type="submit" disabled={pending} className={secondaryButton}>{t("whatsapp.revoke")}</button>
+      <button type="submit" disabled={pending} aria-describedby={hintId} className={secondaryButton}>{t("whatsapp.revoke")}</button>
+      <span id={hintId} className="text-sm text-faint">{t("whatsapp.revokeHint")}</span>
       {result && <span role={result.ok ? "status" : "alert"} className="text-sm text-slate">{result.message}</span>}
     </form>
   );
