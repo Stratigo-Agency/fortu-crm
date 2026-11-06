@@ -1,12 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { REP } from "./global-setup";
 
-test("a signed-in rep sees the app, and a wrong password is refused", async ({ page, browser }) => {
+test("a signed-in rep sees the app, and a wrong password is refused", async ({ page, browser, baseURL }) => {
   await page.goto("/pipeline");
   await expect(page.getByRole("heading", { name: "Pipeline" })).toBeVisible();
 
   const anonymous = await browser.newContext({
-    baseURL: process.env.E2E_BASE as string,
+    baseURL,
     storageState: { cookies: [], origins: [] }, // not signed in
   });
   const fresh = await anonymous.newPage();

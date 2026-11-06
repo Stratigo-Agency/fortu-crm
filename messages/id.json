@@ -80,8 +80,8 @@
       "subjectMany": "{n} deal perlu perhatian",
       "subjectOne": "{deal} · {reason}",
       "reason": {
-        "high_value_lead": "deal bernilai besar",
-        "stale_deal": "belum ada gerakan"
+        "stale_deal": "belum ada gerakan",
+        "next_step_overdue": "next step terlambat"
       }
     }
   },
@@ -267,6 +267,10 @@
     "discountOver": "Di atas batas {max}%, perlu persetujuan Pak Jovian.",
     "discountApproved": "Diskon disetujui {name}",
     "approveDiscount": "Setujui diskon",
+    "approveDiscountFor": "Setujui diskon {deal}",
+    "approveForbidden": "Hanya Pak Jovian yang bisa menyetujui diskon.",
+    "approveChanged": "Harga baru saja diubah. Cek lagi sebelum menyetujui.",
+    "approveFailed": "Belum tersetujui. Coba lagi sebentar.",
     "noMsrp": "MSRP belum diatur",
     "project": "Deal proyek: libatkan Sales Manager dan cek stok.",
     "nextStep": "Next step",
@@ -633,7 +637,12 @@
   },
   "errors": {
     "generic": "Belum tersimpan. Coba lagi sebentar.",
-    "offline": "Koneksi terputus. Perubahan belum tersimpan."
+    "offline": "Koneksi terputus. Perubahan belum tersimpan.",
+    "pageTitle": "Halaman ini belum bisa dibuka",
+    "pageHint": "Ada yang tidak beres di sisi kami. Coba muat ulang.",
+    "retry": "Muat ulang",
+    "toHome": "Ke Beranda",
+    "reference": "Kode: {digest}"
   },
   "iklan": {
     "title": "Iklan",

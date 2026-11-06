@@ -1,0 +1,5 @@
+{"s":true,"d":[
+ {"id":501,"number":"PO/001","transDate":"01/10/2026","statusName":"Menunggu diproses"},
+ {"id":502,"number":"PO/002","transDate":"05/10/2026","statusName":"Sebagian diproses"},
+ {"id":503,"number":"PO/003","transDate":"06/09/2026","statusName":"Ditutup"}
+],"sp":{"page":1,"pageCount":1}}

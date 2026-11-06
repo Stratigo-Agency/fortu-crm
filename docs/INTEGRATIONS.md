@@ -13,7 +13,7 @@ Stage names follow migration 004 (Chat masuk … Done deal). If this file and a 
 | WhatsApp Cloud API / Coexistence | `GET` + `POST /api/v1/webhooks/whatsapp` | verify token (GET); `X-Hub-Signature-256` with the Meta app secret (POST) | inbound_events → leads (`cloud_api_webhook`), activities | later (T19) |
 | Meta Marketing API | Railway cron `insights-sync`, 02:00 WIB | system-user token, `ads_read` | ad_campaigns, ad_sets, ads, ad_insights_daily | T13 |
 | Stale deals, reminders | Railway cron `sweeper`, hourly 08:00–20:00 WIB | internal | notifications | T16 |
-| Accurate.id | Railway cron `accurate-sync`, nightly | Accurate API token | products, inventory_snapshots, purchase_orders, sales_monthly | T20 |
+| Accurate.id | Railway cron `cron-accurate`, 01:00 WIB, read-only | Accurate API token | products, inventory_snapshots, purchase_orders, sales_monthly | T20 |
 
 Screens read Postgres in Server Components. Only outside systems get HTTP routes, all under `/api/v1/` (plus `/go/wa`).
 
@@ -125,19 +125,22 @@ GET https://graph.facebook.com/<version>/act_<AD_ACCOUNT_ID>/insights
 - Owner and product line are set once per campaign / ad set in `/pengaturan/iklan` (naming convention: `No_Frisca`, `Frisca - IFP`), not parsed on every run.
 
 ## Alerts (T16)
+Reminders go to the deal's owner only, about their own work. Pak Jovian (CEO) asked for no alerts about
+deals (big, stuck, won, discounted): nobody is notified about someone else's deal. Discounts waiting for
+approval are listed in Laporan · Perlu perhatian with the approve button; that is a list, not a push.
+
 | Kind | Condition | To | Channel |
 | --- | --- | --- | --- |
-| `high_value_lead` | deal created or re-priced ≥ `app_settings.high_value_amount` (Rp100 jt) | CEO, sales leads | in-app + email |
-| `stale_deal` | deal ≥ Rp100 jt past its stage's `stale_after_days` | owner; CEO from the second day | in-app + email |
-| `won` | deal reaches Done deal | CEO, sales leads, owner | in-app |
-| `sla_breach` | lead not answered in 15 min (Cloud API lines only) | owner, sales lead | in-app |
-| next step overdue (004) | `next_step_date` before today | owner | in-app |
-| discount approval (004) | `needs_discount_approval` | CEO | in-app |
+| `stale_deal` | deal ≥ `app_settings.high_value_amount` (Rp100 jt) past its stage's `stale_after_days` | owner | in-app + email |
+| `next_step_overdue` (004) | `next_step_date` before today | owner, once a day | in-app + email |
+| `sla_breach` | lead not answered in 15 min (Cloud API lines only) | owner | in-app |
+
+Not sent any more (the enum values stay so old rows still read): `high_value_lead`, `won`, `discount_approval`.
 
 One payload for every channel (numbers illustrative). Dedupe on (`kind`, `deal_id`, Jakarta day).
 ```json
 {
-  "kind": "high_value_lead",
+  "kind": "stale_deal",
   "occurred_at": "2026-11-03T10:15:00+07:00",
   "deal": {
     "id": "8f0c…", "name": "SMA Negeri 1 · 12× IFP 75\"",
