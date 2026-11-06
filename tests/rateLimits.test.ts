@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { describe, expect, it, vi } from "vitest";
 import { POST } from "@/app/api/v1/ingest/web-form/route";
 import { HEAD } from "@/app/go/wa/route";
@@ -61,6 +61,24 @@ describe("POST /api/v1/ingest/web-form", () => {
     expect(await limited.json()).toMatchObject({ error: "rate_limited" });
     expect((await post(randomIp())).status).toBe(401);
   });
+
+  it("counts the 300-a-minute total only for signed requests, so unsigned traffic can't use it up", async () => {
+    const secret = (process.env.WEBFORM_HMAC_SECRET = "uji-rahasia-webform");
+    const ts = () => String(Math.floor(Date.now() / 1000));
+    const signed = (from: string) => {
+      const body = "{}";
+      const t = ts();
+      const sig = createHmac("sha256", secret).update(`${t}.${body}`).digest("hex");
+      return POST(new Request("http://localhost/api/v1/ingest/web-form", { method: "POST", body, headers: { "x-forwarded-for": from, "x-fortu-timestamp": t, "x-fortu-signature": `sha256=${sig}` } }));
+    };
+    // 400 unsigned requests from 7 addresses: all 401, none counted in the total
+    for (let n = 0; n < 7; n++) {
+      const ip = randomIp();
+      for (let i = 0; i < 57; i++) expect((await POST(new Request("http://localhost/api/v1/ingest/web-form", { method: "POST", body: "{}", headers: { "x-forwarded-for": ip } }))).status).toBe(401);
+    }
+    // the real caller still gets through: a signed request with an empty body passes the signature and fails validation (400), not 429
+    expect((await signed(randomIp())).status).toBe(400);
+  }, 30_000);
 });
 
 describe("password sign-in · too many wrong passwords", () => {

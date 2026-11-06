@@ -8,7 +8,8 @@ import { toLeadInput, webFormSchema } from "@/lib/webform/schema";
 
 const MAX_BODY_BYTES = 32 * 1024;
 
-// 60 requests a minute per IP and 300 a minute in all, checked before anything is read or signed. The real
+// 60 requests a minute per IP, checked before anything is read or signed, and 300 a minute in all, counted only
+// for requests whose signature is valid, so unsigned traffic can't use up the real caller's share. The real
 // caller (the fortu.co.id backend) sends a few a minute. In memory, so per instance (see lib/webform/rateLimit.ts).
 const perIp = createRateLimiter(60, 60_000);
 const overall = createRateLimiter(300, 60_000, 1);
@@ -44,9 +45,9 @@ export async function POST(request: Request) {
   const reply = (status: number, json: Record<string, unknown>) =>
     NextResponse.json({ ...json, requestId }, { status, headers: { "cache-control": "no-store" } });
 
-  if (!perIp.hit(clientIp(request.headers)) || !overall.hit("all")) {
-    return NextResponse.json({ error: "rate_limited", requestId }, { status: 429, headers: { "cache-control": "no-store", "retry-after": "60" } });
-  }
+  const rateLimited = () =>
+    NextResponse.json({ error: "rate_limited", requestId }, { status: 429, headers: { "cache-control": "no-store", "retry-after": "60" } });
+  if (!perIp.hit(clientIp(request.headers))) return rateLimited();
 
   const secret = process.env.WEBFORM_HMAC_SECRET;
   if (!secret) {
@@ -68,6 +69,7 @@ export async function POST(request: Request) {
   if (raw === null) return reply(413, { error: "too_large" });
   const signed = verifySignature(secret, headers, raw);
   if (!signed.ok) return reject(signed.reason);
+  if (!overall.hit("all")) return rateLimited(); // signed requests only
 
   let json: unknown;
   try {
