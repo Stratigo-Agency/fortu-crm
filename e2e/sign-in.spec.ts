@@ -6,7 +6,7 @@ test("a signed-in rep sees the app, and a wrong password is refused", async ({ p
   await expect(page.getByRole("heading", { name: "Pipeline" })).toBeVisible();
 
   const anonymous = await browser.newContext({
-    baseURL: "http://localhost:3100",
+    baseURL: process.env.E2E_BASE as string,
     storageState: { cookies: [], origins: [] }, // not signed in
   });
   const fresh = await anonymous.newPage();

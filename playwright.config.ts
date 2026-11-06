@@ -8,11 +8,12 @@ try {
   // CI sets the variables itself
 }
 
-const PORT = 3100;
+const PORT = Number(process.env.E2E_PORT ?? 3100);
+process.env.E2E_BASE = `http://localhost:${PORT}`;
 const base = process.env.DATABASE_URL_TEST;
 if (!base) throw new Error("DATABASE_URL_TEST is not set (copy .env.example to .env.local)");
 const dbUrl = new URL(base);
-dbUrl.pathname = "/fortu_e2e_test";
+dbUrl.pathname = `/${process.env.E2E_DB ?? "fortu_e2e_test"}`;
 process.env.DATABASE_URL_E2E = dbUrl.href;
 
 export const AUTH_FILE = "e2e/.auth/rep.json";
