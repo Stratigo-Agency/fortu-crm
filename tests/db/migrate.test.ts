@@ -76,4 +76,12 @@ describe("seeds", () => {
       expect(count).toBe(32);
     }
   });
+
+  it("runs only the files named with --only, and refuses a missing file or demo data", async () => {
+    const lines: string[] = [];
+    await runSeeds({ url, only: ["seed_products.sql"], log: (l: string) => lines.push(l) });
+    expect(lines).toEqual(["seeded seed_products.sql"]);
+    await expect(runSeeds({ url, only: ["nope.sql"], log: () => {} })).rejects.toThrow("no such seed file: nope.sql");
+    await expect(runSeeds({ url, only: ["demo.sql"], log: () => {} })).rejects.toThrow("npm run db:demo");
+  });
 });
