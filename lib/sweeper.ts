@@ -130,15 +130,19 @@ async function overdueNextSteps(): Promise<number> {
   return rows.length;
 }
 
-/** A discount above the limit waits for approval: the CEO hears once per price (again if the deal is re-priced). */
-async function discountApprovals(): Promise<number> {
+/**
+ * A discount above the limit waits for approval: the CEO hears once per price (again if the deal is re-priced).
+ * With a deal id only that deal is checked: saveDeal calls it right after a price change, so the CEO need not
+ * wait for the next sweep.
+ */
+export async function notifyDiscountApprovals(dealId: string | null = null): Promise<number> {
   const rows = await sql`
     INSERT INTO notifications (user_id, kind, deal_id, channel, payload)
     SELECT u.id, 'discount_approval'::notif_kind, d.id, 'in_app', ${payloadOf("discount_approval", "d.id")}
       FROM v_deals_enriched d
       JOIN v_deal_alert_payload p ON p.deal_id = d.id
       JOIN users u ON u.is_active AND u.role = 'ceo'
-     WHERE ${OPEN} AND d.needs_discount_approval
+     WHERE ${OPEN} AND d.needs_discount_approval AND (${dealId}::uuid IS NULL OR d.id = ${dealId}::uuid)
        AND NOT EXISTS (SELECT 1 FROM notifications n
                         WHERE n.kind = 'discount_approval' AND n.deal_id = d.id AND n.user_id = u.id AND n.channel = 'in_app'
                           AND (n.payload #>> '{deal,amount}')::numeric = d.amount)
@@ -154,6 +158,6 @@ export async function runSweep(): Promise<SweepCounts> {
     stale_deal: await staleDeals(),
     won: await wonDeals(),
     next_step_overdue: await overdueNextSteps(),
-    discount_approval: await discountApprovals(),
+    discount_approval: await notifyDiscountApprovals(),
   };
 }
