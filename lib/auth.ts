@@ -2,7 +2,7 @@ import type { Profile } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { pgError, sql } from "@/lib/db";
 import { hashPassword, verifyPassword } from "@/lib/password.mjs";
-import { clientIp, createRateLimiter } from "@/lib/webform/rateLimit";
+import { clientIp, createRateLimiter, type RateLimiter } from "@/lib/webform/rateLimit";
 
 export type Role = "admin" | "ceo" | "sales_lead" | "sales_rep" | "marketing";
 
@@ -88,12 +88,21 @@ export async function refreshToken(
 let dummyHash: Promise<string> | undefined;
 const getDummyHash = () => (dummyHash ??= hashPassword("tidak-ada-user"));
 
-// Wrong-password limits, in memory like the other limiters (lib/webform/rateLimit.ts): 10 misses per email and
-// 30 per address in 15 minutes. Only misses count, so signing in right never uses them up. While an email
-// is over its limit even the right password is refused, which also stops guessing across many addresses.
+// Wrong-password limits, in memory like the other limiters (lib/webform/rateLimit.ts). Only misses count, so
+// signing in right never uses them up (a slot is reserved before the password is checked, and given back on success).
+//  - 10 misses per email AND address in 15 minutes: that pair is locked, even for the right password. Someone
+//    guessing from their own address can't lock a colleague out, because the colleague comes from another address.
+//  - 30 misses per address, across all emails.
+//  - per email alone the counter only slows: from 10 misses every try waits a moment, and only 50 misses in
+//    15 minutes (guessing spread over many addresses) refuse the email outright.
+//  - when the address is unknown (no proxy header) there is no pair: 20 misses per email, nothing shared.
 const MISS_WINDOW_MS = 15 * 60_000;
-export const missesPerEmail = createRateLimiter(10, MISS_WINDOW_MS);
+export const missesPerEmailIp = createRateLimiter(10, MISS_WINDOW_MS);
+export const missesPerEmail = createRateLimiter(50, MISS_WINDOW_MS);
+export const missesPerEmailNoIp = createRateLimiter(20, MISS_WINDOW_MS);
 export const missesPerIp = createRateLimiter(30, MISS_WINDOW_MS);
+const SLOW_AFTER_EMAIL_MISSES = 10;
+export const SLOW_DELAY_MS = 800;
 
 /**
  * Email + password sign-in. Returns the user id, or null for an unknown email,
@@ -107,14 +116,33 @@ export async function authorizeCredentials(
 ): Promise<{ id: string } | null> {
   if (typeof email !== "string" || typeof password !== "string" || !email || !password) return null;
   const emailKey = email.trim().toLowerCase().slice(0, 200);
-  const ipKey = headers ? clientIp(headers) : "unknown";
-  if (!missesPerEmail.allows(emailKey) || !missesPerIp.allows(ipKey)) return null;
-  const user = await checkPassword(email, password);
-  if (!user) {
-    missesPerEmail.hit(emailKey);
-    missesPerIp.hit(ipKey);
-    return null;
+  const ip = headers ? clientIp(headers) : "unknown";
+  const known = ip !== "unknown";
+  const slow = missesPerEmail.count(emailKey) >= SLOW_AFTER_EMAIL_MISSES;
+
+  // Reserve a slot in each limiter before the (slow) password check, so parallel tries can't all pass the gate.
+  const limiters: [RateLimiter, string][] = known
+    ? [[missesPerEmailIp, `${emailKey}|${ip}`], [missesPerEmail, emailKey], [missesPerIp, ip]]
+    : [[missesPerEmailNoIp, emailKey], [missesPerEmail, emailKey]];
+  const reserved: [RateLimiter, string][] = [];
+  for (const [limiter, key] of limiters) {
+    if (!limiter.hit(key)) {
+      for (const [l, k] of reserved) l.release(k);
+      return null;
+    }
+    reserved.push([limiter, key]);
   }
+
+  if (slow) await new Promise((resolve) => setTimeout(resolve, SLOW_DELAY_MS));
+  let user: { id: string } | null;
+  try {
+    user = await checkPassword(email, password);
+  } catch (err) {
+    for (const [l, k] of reserved) l.release(k); // a database error is not a wrong password
+    throw err;
+  }
+  if (!user) return null; // the reserved slots stay: this was a miss
+  for (const [l, k] of reserved) l.release(k);
   await sql`UPDATE users SET last_login_at = now() WHERE id = ${user.id}`;
   return { id: user.id };
 }
