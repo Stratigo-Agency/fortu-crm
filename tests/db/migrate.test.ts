@@ -32,6 +32,7 @@ const MIGRATIONS = [
   "013_discount_notifications.sql",
   "014_stock_cover.sql",
   "015_report_indexes.sql",
+  "017_whatsapp_coexistence.sql",
 ];
 
 describe("migrations", () => {
