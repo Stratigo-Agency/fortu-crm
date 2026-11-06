@@ -61,7 +61,7 @@ async function Content({ searchParams }: { searchParams: Promise<{ periode?: str
         <div className="md:col-span-2 xl:col-span-1"><CloseChart buckets={report.closeForecast} /></div>
       </div>
       <div className="mt-4">
-        <RepTable reps={report.reps} canPick={!isRep} />
+        <RepTable reps={report.reps} canPick={!isRep} period={period} />
       </div>
       <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <Attention rows={report.attention.rows} total={report.attention.total} canApprove={user.role === "ceo" || user.role === "admin"} />

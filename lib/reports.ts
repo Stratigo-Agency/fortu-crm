@@ -131,15 +131,18 @@ export async function getReport(ownerId: string | null, period: ReportPeriod = "
 
   const attention = await getAttention(ownerId, 10);
 
+  // Kinerja sales follows the period select: Done, units and target over this month / quarter / year.
   const reps = await sql<RepRow[]>`
     SELECT c.user_id AS "userId", c.full_name AS name, c.open_deals::int AS "openDeals", c.open_amount::text AS "openAmount",
-           c.weighted_pipeline::text AS weighted, c.won_this_month::text AS won, c.target_this_month::text AS target,
-           CASE WHEN c.target_this_month > 0 THEN ROUND(c.won_this_month * 100 / c.target_this_month) END::int AS "attainmentPct",
-           c.units_won_this_month::int AS units, ROUND(c.win_rate_90d * 100)::int AS "winRatePct",
+           c.weighted_pipeline::text AS weighted, COALESCE(dp.done_amount, 0)::text AS won, tp.target_amount::text AS target,
+           CASE WHEN tp.target_amount > 0 THEN ROUND(COALESCE(dp.done_amount, 0) * 100 / tp.target_amount) END::int AS "attainmentPct",
+           COALESCE(dp.units, 0)::int AS units, ROUND(c.win_rate_90d * 100)::int AS "winRatePct",
            c.next_step_overdue::int AS overdue, c.stale_deals::int AS stale
       FROM v_rep_scorecard c
+      LEFT JOIN v_done_period_by_owner dp ON dp.period = ${period} AND NOT dp.is_total AND dp.owner_user_id = c.user_id
+      LEFT JOIN v_target_period tp ON tp.period = ${period} AND tp.user_id = c.user_id
      WHERE ${ownerId}::uuid IS NULL OR c.user_id = ${ownerId}
-     ORDER BY c.won_this_month DESC, c.full_name`;
+     ORDER BY COALESCE(dp.done_amount, 0) DESC, c.full_name`;
 
   const [monthTarget] = await sql<{ t: string | null }[]>`
     SELECT target_amount::text AS t FROM v_target_attainment
