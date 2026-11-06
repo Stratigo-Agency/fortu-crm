@@ -9,11 +9,12 @@ import { addLineItem, createDeal, createUser } from "./fixtures";
 
 type Stage = "chat" | "quotation" | "negotiation" | "po" | "done";
 
-async function deal(ownerId: string, o: { amount: number; stage: Stage; idleDays?: number }) {
+async function deal(ownerId: string, o: { amount: number; stage: Stage; idleDays?: number; nextStepDays?: number }) {
   const d = await createDeal(ownerId);
   await addLineItem(d.id, { qty: 1, unitPrice: o.amount });
   await sql`UPDATE deals SET stage_id = (SELECT id FROM pipeline_stages WHERE key = ${o.stage}), expected_close_date = jakarta_today() + 20,
-                   next_step_date = jakarta_today() + 5 WHERE id = ${d.id}`;
+                   next_step_date = jakarta_today() + ${o.nextStepDays ?? 5}::int,
+                   closed_on = ${o.stage === "done" ? sql`jakarta_today()` : null} WHERE id = ${d.id}`;
   if (o.idleDays) {
     await sql.begin(async (tx) => {
       await tx`SET LOCAL session_replication_role = replica`;
@@ -38,10 +39,8 @@ describe("reminder emails", () => {
 
   it("one short email per person with the link, and nothing again on the next run", async () => {
     const owner = await createUser({ fullName: "Rudy Hartono" });
-    const ceo = await createUser({ role: "ceo", fullName: "Pak Jovian" });
     const a = await deal(owner.id, { amount: 150_000_000, stage: "negotiation", idleDays: 8 });
     const b = await deal(owner.id, { amount: 200_000_000, stage: "quotation", idleDays: 9 });
-    await deal(owner.id, { amount: 300_000_000, stage: "quotation" }); // new today: the CEO hears about this one
     await sql`UPDATE users SET email = ${`rudy-${owner.id}@fortu.test`} WHERE id = ${owner.id}`;
     await runSweep();
 
@@ -53,14 +52,43 @@ describe("reminder emails", () => {
     expect(mine[0].text).toContain("Uji deal (Negotiation, Rp150 jt): belum ada gerakan");
     expect(mine[0].text).toMatch(/Buka: https?:\/\/.*\/deal\//);
     expect(result.failed).toBe(0);
-    const toCeo = sent.filter((m) => m.to === ceo.email);
-    expect(toCeo).toHaveLength(1); // one digest, however many big deals came in
-    expect(toCeo[0].text).toContain("Uji deal (Quotation, Rp300 jt): deal bernilai besar");
 
     // sent once: the second run has nothing for them
     const second = await send();
     expect(second.sent.filter((m) => m.to === `rudy-${owner.id}@fortu.test`)).toHaveLength(0);
     expect(await sql`SELECT 1 FROM notifications WHERE channel = 'email' AND deal_id IN (${a}, ${b})`).not.toHaveLength(0);
+  });
+
+  it("the owner is emailed about an overdue next step; the CEO and the sales leads get no email about anyone's deals", async () => {
+    const owner = await createUser({ fullName: "Sinta Dewi" });
+    const ceo = await createUser({ role: "ceo", fullName: "Pak Jovian" });
+    const lead = await createUser({ role: "sales_lead" });
+    await sql`UPDATE users SET email = ${`sinta-${owner.id}@fortu.test`} WHERE id = ${owner.id}`;
+    await deal(owner.id, { amount: 40_000_000, stage: "quotation", nextStepDays: -2 }); // overdue
+    await deal(owner.id, { amount: 300_000_000, stage: "quotation" }); // a new big deal
+    await deal(owner.id, { amount: 250_000_000, stage: "done" }); // paid today
+    await deal(owner.id, { amount: 400_000_000, stage: "negotiation", idleDays: 10 }); // big and stuck
+    await runSweep();
+
+    const { sent } = await send();
+    const mine = sent.filter((m) => m.to === `sinta-${owner.id}@fortu.test`);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].text).toContain("Uji deal (Quotation, Rp40 jt): next step terlambat");
+    expect(mine[0].text).toContain("Uji deal (Negotiation, Rp400 jt): belum ada gerakan");
+    expect(mine[0].text).not.toContain("Rp300 jt");
+    expect(mine[0].text).not.toContain("Rp250 jt");
+    expect(sent.filter((m) => m.to === ceo.email || m.to === lead.email)).toHaveLength(0);
+  });
+
+  it("an old big-deal notice left from before is not emailed", async () => {
+    const owner = await createUser();
+    const ceo = await createUser({ role: "ceo" });
+    const id = await deal(owner.id, { amount: 300_000_000, stage: "quotation" });
+    await sql`
+      INSERT INTO notifications (user_id, kind, deal_id, channel, payload)
+      VALUES (${ceo.id}, 'high_value_lead', ${id}, 'in_app', ${sql.json({ kind: "high_value_lead", deal: { id, name: "Uji deal", amount: 300000000 } })})`;
+    const { sent } = await send();
+    expect(sent.filter((m) => m.to === ceo.email)).toHaveLength(0);
   });
 
   it("a later episode of the same deal is emailed again", async () => {

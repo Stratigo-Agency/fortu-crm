@@ -35,7 +35,7 @@ npm run insights:sync -- --from 2026-10-24 --to 2026-10-30
 Ranges are cut into 14-day requests. Re-running a range is safe: rows are upserted on (ad, date).
 
 ## cron-sweeper (reminders, T16)
-Every hour from 08:00 to 20:00 Jakarta it looks for deals that need someone and writes the reminders that show in the bell. Big deals and stuck deals are also emailed.
+Every hour from 08:00 to 20:00 Jakarta it reminds each sales rep about their own deals: the reminders show in the bell and are also emailed to that rep. Nobody is told about someone else's deals: Pak Jovian asked for no alerts about deals (big, stuck, won or discounted), so the CEO, the sales leads and admins only get reminders about deals they own. Discounts waiting for approval are listed in Laporan, not pushed.
 
 1. In the Railway project, add a service from the same repo. Name it `cron-sweeper`.
 2. Settings → Config-as-code → **Config file path**: `railway.cron-sweeper.json` (start command, cron schedule `0 1-13 * * *`, no migration step).
@@ -47,17 +47,16 @@ Every hour from 08:00 to 20:00 Jakarta it looks for deals that need someone and 
    - `SMTP_USER` – the mailbox that sends (for example `crm@fortu.co.id`)
    - `SMTP_PASS` – that mailbox's password
    - `SMTP_FROM` – optional, defaults to `SMTP_USER`
-4. Check: Deployments → a run ends with `sweeper ok high_value_lead=… stale_deal=… won=… next_step_overdue=… discount_approval=… emails=… items=… failed=0`. A failed run exits with 1 and shows as failed. Without the `SMTP_*` variables it prints `email skipped` and the bell still works.
+4. Check: Deployments → a run ends with `sweeper ok stale_deal=… next_step_overdue=… emails=… items=… failed=0`. A failed run exits with 1 and shows as failed. Without the `SMTP_*` variables it prints `email skipped` and the bell still works.
 
 What it sends, and to whom:
 
 | Reminder | When | To | Email |
 | --- | --- | --- | --- |
-| Deal besar | a deal created or re-priced to Rp100 jt+ in the last 2 days | CEO, sales leads | yes |
-| Belum bergerak | a Rp100 jt+ deal sits past its stage's stale days | owner on the first day, CEO from the second day (once) | yes |
-| Done deal | a deal is paid today | CEO, sales leads, owner | no |
-| Next step terlambat | the next step date has passed | owner, once a day | no |
-| Diskon perlu disetujui | a discount is above the limit | CEO, once | no |
+| Belum bergerak | a Rp100 jt+ deal sits past its stage's stale days | owner only, once until the deal moves | yes |
+| Next step terlambat | the next step date has passed | owner only, once a day | yes |
+
+A deal whose owner is inactive gets no reminder; reassign it in Pengaturan. Old "Deal besar", "Done deal" and "Diskon perlu disetujui" reminders already in the bell stay readable, but no new ones are made.
 
 Each person gets at most one reminder per kind, deal and day, so running the job again (or manually) is safe. One email per person per run lists all their deals. If the mail server is down, the next run sends it.
 
