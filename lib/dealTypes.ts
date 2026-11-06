@@ -57,6 +57,8 @@ export type DealDetail = {
   isProject: boolean;
   needsDiscountApproval: boolean;
   discountApprovedBy: string | null;
+  /** the name shown in "Diskon disetujui …" */
+  discountApprovedByName: string | null;
   canEdit: boolean;
   history: HistoryItem[];
 };

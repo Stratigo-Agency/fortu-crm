@@ -205,6 +205,15 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
     setForm((f) => ({ ...f, lines: f.lines.filter((l) => l.key !== key) }));
   }
 
+  // The saved approval still covers what is on screen: same products, quantities and prices as saved.
+  const linesAsSaved = useMemo(() => {
+    const key = (l: { productId: string; qty: number; unitPrice: number }) => `${l.productId}:${l.qty}:${l.unitPrice}`;
+    const saved = deal.lines.map(key).sort().join("|");
+    const shown = form.lines.map((l) => key({ productId: l.productId, qty: Number(l.qty), unitPrice: Number(l.unitPrice) })).sort().join("|");
+    return saved === shown;
+  }, [deal.lines, form.lines]);
+  const approvalHolds = !!deal.discountApprovedBy && linesAsSaved;
+
   function lineNote(l: (typeof parsed)[number]): { text: string; late: boolean } | null {
     const p = productById.get(l.productId);
     if (!p || !l.priceN) return null;
@@ -212,7 +221,8 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
     const pct = Math.round((1 - l.priceN / p.msrp) * 1000) / 10;
     if (Math.abs(pct) < 0.05) return { text: t("deal.atMsrp"), late: false };
     if (pct <= 0) return null;
-    const over = pct > p.maxDiscountPct + 0.05;
+    // an approval holds only for the prices that were approved: any change to the lines puts the note back
+    const over = pct > p.maxDiscountPct + 0.05 && !approvalHolds;
     const text = t("deal.discount", { pct: String(pct).replace(".", ","), msrp: rupiah(p.msrp) });
     return { text: over ? `${text} ${t("deal.discountOver", { max: p.maxDiscountPct })}` : text, late: over };
   }
@@ -512,6 +522,9 @@ export function DealForm({ deal, products, owners, settings, canReassign, fromLe
                     );
                   })}
                 </ul>
+                {approvalHolds && deal.discountApprovedByName && (
+                  <p className="text-sm text-slate">{t("deal.discountApproved", { name: deal.discountApprovedByName })}</p>
+                )}
                 <div className="flex items-baseline justify-between gap-3 rounded-sm bg-paper px-4 py-3">
                   <span className="text-slate">
                     {t("deal.total")} <span className="tabular text-xl font-semibold text-ink">{rupiah(previewTotal)}</span>
