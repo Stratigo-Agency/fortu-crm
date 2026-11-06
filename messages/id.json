@@ -79,8 +79,8 @@
       "subjectMany": "{n} deal perlu perhatian",
       "subjectOne": "{deal} · {reason}",
       "reason": {
-        "high_value_lead": "deal bernilai besar",
-        "stale_deal": "belum ada gerakan"
+        "stale_deal": "belum ada gerakan",
+        "next_step_overdue": "next step terlambat"
       }
     }
   },

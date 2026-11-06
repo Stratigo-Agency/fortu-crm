@@ -5,10 +5,10 @@ import { sql } from "@/lib/db";
 import { type AlertKind, type AlertPayload } from "@/lib/notificationText";
 
 // Reminder emails (INTEGRATIONS.md · Alerts, channel "in-app + email"): at most one short Bahasa email per
-// person per run. The email is only sent for notifications that don't have an email row yet; the row is
+// person per run, only about their own deals (the sweeper only writes reminders for the owner). The email is only sent for notifications that don't have an email row yet; the row is
 // written after a successful send, so a failed run is retried by the next one.
 
-export const EMAIL_KINDS = ["high_value_lead", "stale_deal"] as const satisfies readonly AlertKind[];
+export const EMAIL_KINDS = ["stale_deal", "next_step_overdue"] as const satisfies readonly AlertKind[];
 type EmailKind = (typeof EMAIL_KINDS)[number];
 
 /** The SMTP transport from SMTP_HOST / SMTP_USER / SMTP_PASS (Hostinger: smtp.hostinger.com, port 465), or null when unset. */
