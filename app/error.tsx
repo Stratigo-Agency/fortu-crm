@@ -2,7 +2,8 @@
 
 import { t } from "@/lib/copy";
 
-// Shown when a screen fails while it is drawn. The sidebar stays; only the content is replaced.
+// Shown when a page outside the signed-in app fails (sign-in, the layout itself). There is no sidebar here;
+// screens inside the app use app/(app)/error.tsx, which keeps it.
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <main role="alert" className="mx-auto flex w-full max-w-md flex-col items-start gap-3 px-4 py-16 md:px-6">
