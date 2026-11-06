@@ -39,7 +39,7 @@ public/brand/                             logos
 ```
 
 ## Rules that are not negotiable
-1. **UI language is Bahasa Indonesia.** Every label, button, empty state, error and toast comes from `messages/id.json` through `t('key')`. No English string in a component, except the stage names and sales words the team already uses (Quotation, Negotiation, PO, Done deal, Lost, next step, win rate, run rate). Database keys and code stay English.
+1. **UI language is Bahasa Indonesia.** Every label, button, empty state, error and toast comes from `messages/id.json` through `t('key')`. No English string in a component, except the stage names and sales words the team already uses (Quotation, Negotiation, PO, Done deal, Lost, next step, win rate, run rate, lead, funnel). Database keys and code stay English.
 2. **Every lead enters through `ingestLead()`.** Quick-add, the web-form route, `/go/wa` matching and the future WhatsApp webhook all call it. Never insert into `leads` anywhere else.
 3. **View all, edit own.** Any signed-in user may read every lead and deal. A write needs `can_edit_deal(user, deal)` / `can_edit_lead(user, lead)` = owner, `sales_lead`, `ceo` or `admin`. Every Server Action calls `assertCanEdit*()` from `lib/authz.ts` AND repeats the condition in the UPDATE's WHERE. Deleting a deal: `ceo`/`admin` only. Settings: `admin` and `ceo`.
 4. **Stage rules live in the database** (`trg_deal_stage`, migration 004) and are mirrored in `lib/stageRules.ts` only to show errors before saving:
