@@ -17,7 +17,8 @@ Usage
 Rules
   - Make `submission_id` (a UUID) once per submission and reuse it on every retry. The CRM answers 200 to a
     submission it already has, so a retry never makes a second lead.
-  - Retry on a network error or a 5xx answer (3 tries, growing wait). Do not retry a 4xx: 400 means the body is
+  - Retry on a network error, a 5xx answer or 429 (3 tries, growing wait; on 429 wait as long as Retry-After says).
+    Do not retry any other 4xx: 400 means the body is
     wrong (e.g. an unreadable phone number) and 401 means the signature or the clock is wrong.
   - Sign the exact bytes you send. Build the JSON text once, sign it, and send that same text.
   - Keep the server clock correct: a request more than 300 seconds off is refused with 401.
@@ -80,6 +81,11 @@ async def forward_lead(payload: dict) -> None:
             else:
                 if r.status_code < 400:
                     return
+                if r.status_code == 429:
+                    log.warning("CRM rate limited (try %s/%s)", attempt, RETRIES)
+                    if attempt < RETRIES:
+                        await asyncio.sleep(min(int(r.headers.get("Retry-After", "60") or 60), 120))
+                    continue
                 if r.status_code < 500:
                     log.error("CRM refused the lead (%s): %s", r.status_code, r.text[:200])
                     return  # 4xx: retrying the same body cannot help

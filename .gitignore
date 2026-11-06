@@ -32,3 +32,6 @@ e2e/.auth
 # compiled scheduled jobs
 jobs/*.js
 ad-codes.csv
+
+# review pack output with real numbers (only docs/review/contoh-data-demo.md is committed)
+docs/review/2026-12-review.md

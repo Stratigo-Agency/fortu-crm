@@ -43,11 +43,11 @@ describe("refreshToken", () => {
 });
 
 describe("isPublicPath", () => {
-  it.each(["/masuk", "/masuk/", "/api/auth/callback/google", "/api/v1/ingest/web-form", "/go/wa"])(
+  it.each(["/masuk", "/masuk/", "/api/auth/callback/google", "/api/v1/ingest/web-form", "/go/wa", "/api/health"])(
     "%s is public",
     (p) => expect(isPublicPath(p)).toBe(true),
   );
-  it.each(["/", "/pipeline", "/masukan", "/api/other", "/gopher", "/deal/1"])(
+  it.each(["/", "/pipeline", "/masukan", "/api/other", "/gopher", "/deal/1", "/api/healthz", "/api/health/x"])(
     "%s needs sign-in",
     (p) => expect(isPublicPath(p)).toBe(false),
   );

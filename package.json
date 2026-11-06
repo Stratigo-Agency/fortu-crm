@@ -11,6 +11,8 @@
     "db:migrate": "node --env-file-if-exists=.env.local scripts/migrate.mjs",
     "db:up": "node scripts/db-up.mjs",
     "db:seed": "node --env-file-if-exists=.env.local scripts/seed.mjs",
+    "db:demo": "node --env-file-if-exists=.env.local scripts/demo.mjs load",
+    "db:demo:clear": "node --env-file-if-exists=.env.local scripts/demo.mjs clear",
     "db:test:reset": "node --env-file-if-exists=.env.local scripts/test-db-reset.mjs",
     "test": "vitest run",
     "db:import-msrp": "node --env-file-if-exists=.env.local scripts/import-msrp.mjs",
@@ -20,7 +22,9 @@
     "jobs:build": "node scripts/build-jobs.mjs",
     "insights:sync": "node --env-file-if-exists=.env.local jobs/insights-sync.js",
     "sweeper:run": "node --env-file-if-exists=.env.local jobs/sweeper.js",
-    "ads:codes": "npm run jobs:build --silent && node --env-file-if-exists=.env.local jobs/ad-codes.js"
+    "review:pack": "node scripts/review-pack.mjs",
+    "ads:codes": "npm run jobs:build --silent && node --env-file-if-exists=.env.local jobs/ad-codes.js",
+    "accurate:sync": "node --env-file-if-exists=.env.local jobs/accurate-sync.js"
   },
   "dependencies": {
     "@dnd-kit/core": "6.3.1",
