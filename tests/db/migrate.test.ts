@@ -32,6 +32,7 @@ const MIGRATIONS = [
   "015_report_indexes.sql",
   "016_lead_funnel.sql",
   "018_funnel_share.sql",
+  "019_sample_data_flag.sql",
 ];
 
 describe("migrations", () => {

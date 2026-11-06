@@ -1,4 +1,5 @@
 import postgres from "postgres";
+import { sampleDataConnection } from "@/lib/sampleData";
 
 // One client per process. In dev, hot reloads re-evaluate this module, so the
 // client is kept on globalThis instead of opening a new pool each time.
@@ -10,6 +11,8 @@ export const sql =
   postgres(process.env.DATABASE_URL as string, {
     max: 10,
     idle_timeout: 20,
+    // staging only: SHOW_SAMPLE_DATA=1 lets demo rows into the funnel and Prospek figures (lib/sampleData.ts)
+    connection: sampleDataConnection(),
   });
 
 if (process.env.NODE_ENV !== "production") globalForDb.sql = sql;
