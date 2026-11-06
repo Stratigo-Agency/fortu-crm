@@ -179,7 +179,7 @@ export function DatePicker({
         </span>
         <CalendarDays size={16} strokeWidth={1.8} aria-hidden="true" className="shrink-0 text-faint" />
       </button>
-      <Popup anchor={button} within={root} open={open && active !== ""} onClose={() => close(false)} width={332} room={400}>
+      <Popup anchor={button} within={root} open={open && active !== ""} onClose={() => close(false)} width={332} room={440}>
         <div
           id={calId}
           role="dialog"
