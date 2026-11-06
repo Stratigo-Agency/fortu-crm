@@ -1,0 +1,26 @@
+{
+  "object": "whatsapp_business_account",
+  "entry": [
+    {
+      "id": "{{WABA_ID}}",
+      "changes": [
+        {
+          "value": {
+            "messaging_product": "whatsapp",
+            "metadata": { "display_phone_number": "6281100000001", "phone_number_id": "{{PHONE_NUMBER_ID}}" },
+            "statuses": [
+              {
+                "id": "{{MSG_ID}}",
+                "status": "delivered",
+                "timestamp": "{{TS}}",
+                "recipient_id": "{{WA_ID}}",
+                "recipient_user_id": "{{BSUID}}"
+              }
+            ]
+          },
+          "field": "messages"
+        }
+      ]
+    }
+  ]
+}
