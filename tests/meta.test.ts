@@ -42,10 +42,10 @@ describe("fetching", () => {
       urls.push(url);
       return json(urls.length === 1 ? fixture("meta-insights-page1", i) : fixture("meta-insights-page2", i));
     }) as unknown as typeof fetch;
-    const rows = await fetchInsights({ token: "TOKEN-1", accountId: "act_1414727130175042", since: "2026-10-24", until: "2026-10-30", fetchImpl, sleep: noSleep });
+    const rows = await fetchInsights({ token: "TOKEN-1", accountId: "act_1000000000000001", since: "2026-10-24", until: "2026-10-30", fetchImpl, sleep: noSleep });
     expect(rows).toHaveLength(3);
     const first = new URL(urls[0]);
-    expect(first.pathname).toBe("/v24.0/act_1414727130175042/insights");
+    expect(first.pathname).toBe("/v24.0/act_1000000000000001/insights");
     expect(first.searchParams.get("level")).toBe("ad");
     expect(first.searchParams.get("time_increment")).toBe("1");
     expect(JSON.parse(first.searchParams.get("time_range") as string)).toEqual({ since: "2026-10-24", until: "2026-10-30" });

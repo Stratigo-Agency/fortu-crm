@@ -235,7 +235,7 @@ Pulls the last 3 days of ad insights from the Meta Marketing API every night and
 3. Variables (reference the `web` service's `DATABASE_URL`, do not copy it):
    - `DATABASE_URL`
    - `META_SYSTEM_USER_TOKEN` – token of the system user with `ads_read` on the ad account
-   - `META_AD_ACCOUNT_ID` – the account number (`1414727130175042`, with or without `act_`)
+   - `META_AD_ACCOUNT_ID` – the ad account number (digits only or with `act_`; Meta shows it in Ads Manager, never commit it)
    - `META_GRAPH_VERSION` – optional, default `v24.0`
 4. Check: Deployments → the run should end with `insights-sync ok from=… to=… rows=… ads=… spend=Rp… conversations=…`. A failed run exits with 1 and shows as failed. Pengaturan › Iklan also shows when Meta was last read, or why it failed.
 
