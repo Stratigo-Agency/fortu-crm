@@ -35,3 +35,17 @@ ad-codes.csv
 
 # review pack output with real numbers (only docs/review/contoh-data-demo.md is committed)
 docs/review/2026-12-review.md
+
+# local-only material: never pushed (this repository is public)
+# docs/local/ holds working papers (checklists, briefs for the ad agency, ad code lists, plans with real names and numbers)
+docs/local/
+*.local.*
+credentials*.txt
+*.csv
+!tests/fixtures/*.csv
+*.pptx
+*.xlsx
+*.xls
+*.pdf
+!docs/**/*.pdf
+.claude/
