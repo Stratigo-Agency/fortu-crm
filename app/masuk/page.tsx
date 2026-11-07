@@ -133,7 +133,7 @@ export default function MasukPage(props: PageProps<"/masuk">) {
           className="hidden items-center justify-center border-l border-line bg-gradient-to-b from-sky-soft to-paper p-12 md:flex"
         >
           <div className="flex max-w-sm flex-col gap-6 text-center">
-            <p className="text-3xl font-semibold leading-snug tracking-tight text-ink">{t("authz.tagline")}</p>
+            <p className="text-2xl font-medium leading-snug lg:text-3xl tracking-tight text-ink">{t("authz.tagline")}</p>
             <p className="text-sm text-slate">{t("authz.taglineNote")}</p>
           </div>
         </div>
