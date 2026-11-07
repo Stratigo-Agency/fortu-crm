@@ -6,7 +6,7 @@ import { ingestLead } from "@/lib/ingest/ingestLead";
 import { parseCodes } from "@/lib/ingest/codes";
 import { isPublicPath } from "@/lib/publicPaths";
 import { createRateLimiter } from "@/lib/webform/rateLimit";
-import { DEFAULT_TEXT, isBot, neutralizeCodes, newRefCode } from "@/lib/webform/waLink";
+import { DEFAULT_TEXT, isBot, lineLabels, neutralizeCodes, newRefCode } from "@/lib/webform/waLink";
 import { createUser, createWaLine } from "./fixtures";
 
 const BROWSER = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Safari/604.1";
@@ -59,6 +59,38 @@ describe("GET /go/wa", () => {
     const [{ label }] = await sql<{ label: string }[]>`SELECT label FROM wa_lines WHERE id = ${off.id}`;
     expect((await get(`line=${label}`)).status).toBe(404);
     expect((await sql`SELECT count(*)::int AS n FROM wa_click_events`)[0].n).toBe(before);
+  });
+
+  it("a group of lines sends each click to one of its active numbers", async () => {
+    const tag = randomUUID().slice(0, 6);
+    const a = await lineFor(`Tim_${tag}_a`);
+    const b = await lineFor(`Tim_${tag}_b`);
+    const off = await createWaLine((await createUser()).id, false, `Tim_${tag}_off`);
+    const seen = new Set<string>();
+    for (let i = 0; i < 30; i++) {
+      const res = await get(`line=${encodeURIComponent(`${a.label}, ${b.label},Tim_${tag}_off,tidak-ada`)}`);
+      expect(res.status).toBe(302);
+      seen.add(new URL(res.headers.get("location") as string).pathname.slice(1));
+    }
+    expect([...seen].sort()).toEqual([a.line.phone, b.line.phone].map((p) => p.replace("+", "")).sort());
+    expect(seen.has(off.phone.replace("+", ""))).toBe(false);
+  });
+
+  it("in a group, a line whose rep takes leads wins over one whose rep is away", async () => {
+    const tag = randomUUID().slice(0, 6);
+    const away = await createUser({ acceptingLeads: false });
+    await createWaLine(away.id, true, `Grp_${tag}_away`);
+    const here = await lineFor(`Grp_${tag}_here`);
+    for (let i = 0; i < 8; i++) {
+      const res = await get(`line=Grp_${tag}_away,Grp_${tag}_here`);
+      expect(new URL(res.headers.get("location") as string).pathname).toBe(`/${here.line.phone.replace("+", "")}`);
+    }
+  });
+
+  it("reads a group of labels: trimmed, lower case, no repeats, at most 10", () => {
+    expect(lineLabels(null)).toEqual([]);
+    expect(lineLabels(" Jakarta-1 , jakarta-1,,Medan ")).toEqual(["jakarta-1", "medan"]);
+    expect(lineLabels(Array.from({ length: 15 }, (_, i) => `L${i}`).join(","))).toHaveLength(10);
   });
 
   it("each click gets its own code", async () => {

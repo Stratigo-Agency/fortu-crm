@@ -32,7 +32,7 @@ export type Click = {
 export function parseClick(url: URL, referrer: string | null): Click {
   const q = (k: string, max: number) => clip(url.searchParams.get(k), max);
   return {
-    line: q("line", 60),
+    line: q("line", 300),
     text: ((t) => (t ? neutralizeCodes(t) : null))(q("text", 300)),
     utm: { source: q("utm_source", 100), medium: q("utm_medium", 100), campaign: q("utm_campaign", 100), content: q("utm_content", 100) },
     referrer: clip(referrer, 500),
@@ -50,13 +50,29 @@ export function isBot(userAgent: string | null): boolean {
   return !userAgent || /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|skype|curl|wget|python-requests|headless/i.test(userAgent);
 }
 
-async function findLine(label: string | null) {
-  if (!label) return null;
-  const [line] = await sql<{ phone_e164: string; user_id: string | null }[]>`
-    SELECT phone_e164, user_id FROM wa_lines
-     WHERE lower(label) = lower(${label}) AND is_active
-     ORDER BY id LIMIT 1`;
-  return line ?? null;
+/** "Jakarta-1, Jakarta-2" → ["jakarta-1", "jakarta-2"]: up to 10 labels, case does not matter. */
+export function lineLabels(line: string | null): string[] {
+  if (!line) return [];
+  const labels = line.split(",").map((l) => l.trim().toLowerCase()).filter(Boolean);
+  return [...new Set(labels)].slice(0, 10);
+}
+
+/**
+ * The line to send this click to. `line` is one label or a comma-separated group (a team's numbers):
+ * among the active lines of the group, a line whose rep is active and taking leads comes first; the rest
+ * is picked at random, so a team's chats spread over its numbers.
+ */
+async function findLine(line: string | null) {
+  const labels = lineLabels(line);
+  if (labels.length === 0) return null;
+  const [found] = await sql<{ phone_e164: string; user_id: string | null }[]>`
+    SELECT l.phone_e164, l.user_id
+      FROM wa_lines l
+      LEFT JOIN users u ON u.id = l.user_id
+     WHERE lower(l.label) = ANY(${labels}::text[]) AND l.is_active
+     ORDER BY (u.is_active AND u.accepting_leads) IS TRUE DESC, random()
+     LIMIT 1`;
+  return found ?? null;
 }
 
 /** The plain WhatsApp chat address (no code), for a HEAD request or a crawler. Null when the line is unknown or off. */

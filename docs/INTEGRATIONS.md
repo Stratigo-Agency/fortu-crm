@@ -9,7 +9,7 @@ Stage names follow migration 004 (Chat masuk … Done deal). If this file and a 
 | Rep quick-add | Server Action `createLead()` | rep session | contacts, leads, activities | MVP |
 | Screens (qualify, move stage, lines, activity, reassign) | Server Actions `qualifyLead()`, `moveDealStage()`, `saveLineItems()`, `logActivity()`, `reassign()` | session + `can_edit_*` | deals, deal_line_items, activities, ownership_changes (stage history by trigger) | MVP |
 | fortu.co.id form (Vue SPA → FastAPI) | `POST /api/v1/ingest/web-form`, server-to-server | HMAC-SHA256 over `timestamp.body` in `X-Fortu-Signature`, `X-Fortu-Timestamp` within 300 s | inbound_events → leads (`web_form`, `pick_lead_owner()`) | MVP |
-| Tracked WhatsApp link (website buttons, Google Ads, IG bio) | `GET /go/wa?line=<label>&utm_source=…` | public, rate-limited | wa_click_events, then 302 to `wa.me/<number>?text=<prefill> #W7K2` | MVP |
+| Tracked WhatsApp link (website buttons, Google Ads, IG bio) | `GET /go/wa?line=<label>[,<label>…]&utm_source=…` (a group: one of its active lines, reps taking leads first, else at random) | public, rate-limited | wa_click_events, then 302 to `wa.me/<number>?text=<prefill> #W7K2` | MVP |
 | WhatsApp Cloud API / Coexistence | `GET` + `POST /api/v1/webhooks/whatsapp` | verify token (GET); `X-Hub-Signature-256` with the Meta app secret (POST) | inbound_events → leads (`cloud_api_webhook`), activities | later (T19) |
 | Meta Marketing API | Railway cron `insights-sync`, 02:00 WIB | system-user token, `ads_read` | ad_campaigns, ad_sets, ads, ad_insights_daily | T13 |
 | Stale deals, reminders | Railway cron `sweeper`, hourly 08:00–20:00 WIB | internal | notifications | T16 |
