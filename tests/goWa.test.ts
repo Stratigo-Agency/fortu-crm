@@ -89,8 +89,20 @@ describe("GET /go/wa", () => {
 
   it("reads a group of labels: trimmed, lower case, no repeats, at most 10", () => {
     expect(lineLabels(null)).toEqual([]);
-    expect(lineLabels(" Jakarta-1 , jakarta-1,,Medan ")).toEqual(["jakarta-1", "medan"]);
-    expect(lineLabels(Array.from({ length: 15 }, (_, i) => `L${i}`).join(","))).toHaveLength(10);
+    expect(lineLabels("  ")).toEqual([]);
+    expect(lineLabels(" Jakarta-1 , jakarta-1,,Medan ")).toEqual(["jakarta-1 , jakarta-1,,medan", "jakarta-1", "medan"]);
+    expect(lineLabels("Jakarta-1")).toEqual(["jakarta-1"]);
+    expect(lineLabels(Array.from({ length: 15 }, (_, i) => `L${i}`).join(","))).toHaveLength(11);
+  });
+
+  it("a label that holds a comma still opens its own line", async () => {
+    const tag = randomUUID().slice(0, 6);
+    const { line } = await lineFor(`Sales, ${tag}`);
+    await lineFor(tag); // the part after the comma is another line's label: the whole label must win
+    for (let i = 0; i < 6; i++) {
+      const res = await get(`line=${encodeURIComponent(`Sales, ${tag}`)}`);
+      expect(new URL(res.headers.get("location") as string).pathname).toBe(`/${line.phone.replace("+", "")}`);
+    }
   });
 
   it("each click gets its own code", async () => {

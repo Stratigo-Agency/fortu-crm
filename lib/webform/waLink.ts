@@ -50,17 +50,22 @@ export function isBot(userAgent: string | null): boolean {
   return !userAgent || /bot|crawl|spider|slurp|preview|facebookexternalhit|whatsapp|telegram|skype|curl|wget|python-requests|headless/i.test(userAgent);
 }
 
-/** "Jakarta-1, Jakarta-2" → ["jakarta-1", "jakarta-2"]: up to 10 labels, case does not matter. */
+/**
+ * "Jakarta-1, Jakarta-2" → ["jakarta-1", "jakarta-2"]: up to 10 labels, case does not matter.
+ * The whole text also counts as one label, so an existing label that holds a comma still works.
+ */
 export function lineLabels(line: string | null): string[] {
-  if (!line) return [];
-  const labels = line.split(",").map((l) => l.trim().toLowerCase()).filter(Boolean);
-  return [...new Set(labels)].slice(0, 10);
+  if (!line?.trim()) return [];
+  const whole = line.trim().toLowerCase();
+  const parts = line.split(",").map((l) => l.trim().toLowerCase()).filter(Boolean);
+  return [...new Set([whole, ...parts])].slice(0, 11);
 }
 
 /**
- * The line to send this click to. `line` is one label or a comma-separated group (a team's numbers):
- * among the active lines of the group, a line whose rep is active and taking leads comes first; the rest
- * is picked at random, so a team's chats spread over its numbers.
+ * The line to send this click to. `line` is one label or a comma-separated group (a team's numbers).
+ * A label that matches the whole text wins. Otherwise, among the group's active lines, a line whose rep is
+ * active and taking leads comes first (a line without a rep, such as an office number, only when none is);
+ * the rest is picked at random, so a team's chats spread over its numbers.
  */
 async function findLine(line: string | null) {
   const labels = lineLabels(line);
@@ -70,7 +75,7 @@ async function findLine(line: string | null) {
       FROM wa_lines l
       LEFT JOIN users u ON u.id = l.user_id
      WHERE lower(l.label) = ANY(${labels}::text[]) AND l.is_active
-     ORDER BY (u.is_active AND u.accepting_leads) IS TRUE DESC, random()
+     ORDER BY lower(l.label) = ${labels[0]} DESC, (u.is_active AND u.accepting_leads) IS TRUE DESC, random()
      LIMIT 1`;
   return found ?? null;
 }
