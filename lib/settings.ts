@@ -266,7 +266,18 @@ export async function saveTeam(actor: Actor, form: FormData): Promise<void> {
         if (e.phone) {
           const [line] = await tx<{ id: string }[]>`SELECT id FROM wa_lines WHERE user_id = ${e.id} ORDER BY is_active DESC, id LIMIT 1`;
           if (line) await tx`UPDATE wa_lines SET phone_e164 = ${e.phone}, label = COALESCE(NULLIF(${e.label}, ''), label) WHERE id = ${line.id}`;
-          else await tx`INSERT INTO wa_lines (user_id, phone_e164, label) VALUES (${e.id}, ${e.phone}, ${e.label || `No_${e.id.slice(0, 6)}`})`;
+          else {
+            // An active number on file without an owner (a team number from the website) is given to this person. Its
+            // label stays, so tracked links (/go/wa?line=<label>) keep working. Lines on the WhatsApp API or with a
+            // consent on record are never handed over: their stored texts and consent belong to someone else.
+            const claimed = await tx`UPDATE wa_lines SET user_id = ${e.id}
+                                      WHERE phone_e164 = ${e.phone} AND user_id IS NULL AND is_active
+                                        AND mode = 'business_app' AND meta_phone_number_id IS NULL AND consent_at IS NULL
+                                      RETURNING id`;
+            if (claimed.length === 0) {
+              await tx`INSERT INTO wa_lines (user_id, phone_e164, label) VALUES (${e.id}, ${e.phone}, ${e.label || `No_${e.id.slice(0, 6)}`})`;
+            }
+          }
         }
       }
     });
