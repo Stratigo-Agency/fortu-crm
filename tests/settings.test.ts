@@ -204,10 +204,22 @@ describe("Tim sales", () => {
     const admin = await createUser({ role: "admin" });
     const rep = await createUser();
     const free = await createWaLine(null, true, `Tim_${rep.id.slice(0, 6)}`);
-    await saveTeam(admin, await allFields({ [`wa:${rep.id}`]: free.phone }));
+    await saveTeam(admin, await allFields({ [`wa:${rep.id}`]: free.phone, [`walabel:${rep.id}`]: "Nama baru" }));
     const [line] = await sql<{ user_id: string; label: string }[]>`SELECT user_id, label FROM wa_lines WHERE id = ${free.id}`;
     expect(line).toEqual({ user_id: rep.id, label: `Tim_${rep.id.slice(0, 6)}` });
     expect((await sql`SELECT count(*)::int AS n FROM wa_lines WHERE phone_e164 = ${free.phone}`)[0].n).toBe(1);
+  });
+
+  it("an inactive or consented number without an owner is not handed over", async () => {
+    const admin = await createUser({ role: "admin" });
+    const a = await createUser();
+    const off = await createWaLine(null, false, `Mati_${a.id.slice(0, 6)}`);
+    await fails(saveTeam(admin, await allFields({ [`wa:${a.id}`]: off.phone })), "phoneTaken");
+    const b = await createUser();
+    const kept = await createWaLine(null, true, `Izin_${b.id.slice(0, 6)}`);
+    await sql`UPDATE wa_lines SET consent_at = now(), consent_by = 'Sales lama' WHERE id = ${kept.id}`;
+    await fails(saveTeam(admin, await allFields({ [`wa:${b.id}`]: kept.phone })), "phoneTaken");
+    expect((await sql`SELECT count(*)::int AS n FROM wa_lines WHERE id IN (${off.id}, ${kept.id}) AND user_id IS NULL`)[0].n).toBe(2);
   });
 });
 
