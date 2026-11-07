@@ -193,17 +193,16 @@ export async function saveDefinitions(actor: Actor, form: FormData): Promise<voi
 // ---- Tim sales -----------------------------------------------------------------------------------------------
 
 export const TEAM_ROLES: Role[] = ["sales_rep", "sales_lead", "marketing", "ceo", "admin"];
-export const PRODUCT_LINES = ["IFP", "DSS", "LED"] as const;
 
 export type Member = {
   id: string; fullName: string; email: string; role: Role; isActive: boolean; acceptingLeads: boolean;
-  productLines: string[]; waPhone: string; waLabel: string; deals: number;
+  waPhone: string; waLabel: string; deals: number;
 };
 
 export async function getTeam(): Promise<Member[]> {
   return sql<Member[]>`
     SELECT u.id, u.full_name AS "fullName", u.email, u.role, u.is_active AS "isActive", u.accepting_leads AS "acceptingLeads",
-           u.product_lines::text[] AS "productLines", COALESCE(w.phone_e164, '') AS "waPhone", COALESCE(w.label, '') AS "waLabel",
+           COALESCE(w.phone_e164, '') AS "waPhone", COALESCE(w.label, '') AS "waLabel",
            (SELECT count(*)::int FROM deals d WHERE d.owner_user_id = u.id) AS deals
       FROM users u
       LEFT JOIN LATERAL (SELECT phone_e164, label FROM wa_lines WHERE user_id = u.id ORDER BY is_active DESC, id LIMIT 1) w ON true
@@ -232,7 +231,7 @@ export async function addMember(actor: Actor, form: FormData): Promise<string> {
 
 /**
  * Saves the whole team table. Form fields per person: role:<id>, active:<id> (checkbox), accepting:<id> (checkbox),
- * lines:<id> (one or more of IFP/DSS/LED), wa:<id> (number), walabel:<id>.
+ * wa:<id> (number), walabel:<id>. Every sales person sells all product lines, so none is saved per person.
  * Nobody can change their own role or switch themself off (that would lock them out).
  */
 export async function saveTeam(actor: Actor, form: FormData): Promise<void> {
@@ -244,7 +243,6 @@ export async function saveTeam(actor: Actor, form: FormData): Promise<void> {
     if (!TEAM_ROLES.includes(role)) throw new ForbiddenError();
     const active = form.get(`active:${p.id}`) === "on";
     if (p.id === actor.id && (role !== p.role || active !== p.is_active)) throw new SettingsError("self");
-    const lines = form.getAll(`lines:${p.id}`).map(String).filter((l) => (PRODUCT_LINES as readonly string[]).includes(l));
     const rawPhone = text(form.get(`wa:${p.id}`), 40);
     let phone: string | null = null;
     if (rawPhone) {
@@ -255,13 +253,12 @@ export async function saveTeam(actor: Actor, form: FormData): Promise<void> {
         throw err;
       }
     }
-    return { id: p.id, role, active, accepting: form.get(`accepting:${p.id}`) === "on", lines, phone, label: text(form.get(`walabel:${p.id}`), 60) };
+    return { id: p.id, role, active, accepting: form.get(`accepting:${p.id}`) === "on", phone, label: text(form.get(`walabel:${p.id}`), 60) };
   });
   try {
     await sql.begin(async (tx) => {
       for (const e of edits) {
-        await tx`UPDATE users SET role = ${e.role}::user_role, is_active = ${e.active}, accepting_leads = ${e.accepting},
-                                  product_lines = ${e.lines}::product_line[] WHERE id = ${e.id}`;
+        await tx`UPDATE users SET role = ${e.role}::user_role, is_active = ${e.active}, accepting_leads = ${e.accepting} WHERE id = ${e.id}`;
         if (!e.phone && e.label) await tx`UPDATE wa_lines SET label = ${e.label} WHERE user_id = ${e.id}`;
         if (e.phone) {
           const [line] = await tx<{ id: string }[]>`SELECT id FROM wa_lines WHERE user_id = ${e.id} ORDER BY is_active DESC, id LIMIT 1`;
